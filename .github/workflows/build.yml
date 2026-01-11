@@ -8,20 +8,29 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v3
+      # 1. Kodları Çek (v4 Güncellendi)
+      - uses: actions/checkout@v4
+
+      # 2. Java Kur (v4 Güncellendi)
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
       
-      - name: Generate App
+      # 3. Android Projesini Oluştur
+      - name: Generate App from Script
         run: chmod +x generate_app.sh && ./generate_app.sh
         
+      # 4. APK Derle (Gradle İzinlerini vererek)
       - name: Build APK
         working-directory: ./theapp
-        run: chmod +x gradlew && ./gradlew assembleRelease
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease
         
-      - uses: actions/upload-artifact@v3
+      # 5. APK'yı Yükle (V4 - KRİTİK DÜZELTME BURADA)
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: MerdoldaApp
           path: theapp/app/build/outputs/apk/release/app-release-unsigned.apk
