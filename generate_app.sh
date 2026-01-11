@@ -1,13 +1,14 @@
 #!/bin/bash
 
-# --- AYARLAR (HATA BURADAYDI, DÜZELTİLDİ) ---
-PROJECT_ROOT="theapp"  # GitHub Workflow'un beklediği isim
+# --- AYARLAR (HATA YAPMAMAK İÇİN SABİT) ---
+PROJECT_NAME="ErdinPlayer"
+PROJECT_ROOT="theapp" # GitHub Actions bu klasörü bekliyor
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER ULTIMATE v11.0: KLASÖR YAPISI ONARILIYOR VE SİSTEM KURULUYOR..."
+echo "💎 ERDINPLAYER v12.0: XML HATASI GİDERİLİYOR VE SİSTEM KURULUYOR..."
 
 # 1. TEMİZLİK & KLASÖRLER
 if [ -d "$PROJECT_ROOT" ]; then rm -rf "$PROJECT_ROOT"; fi
@@ -72,17 +73,17 @@ dependencies {
 }
 EOF
 
-# 4. RESOURCES (COLORS & STYLES)
+# 4. RESOURCES (RENKLER VE XML HATASI GİDERİLDİ)
 cat << 'EOF' > "$RES_DIR/values/colors.xml"
 <resources>
     <color name="bg_main">#0F172A</color>
-    <color name="bg_card">#1E293B</color>
+    <color name="bg_gradient_start">#1E293B</color>
+    <color name="bg_gradient_end">#0F172A</color>
+    <color name="card_bg">#25334D</color>
     <color name="primary_accent">#E50914</color>
     <color name="white">#FFFFFF</color>
     <color name="gray_text">#94A3B8</color>
     <color name="input_bg">#334155</color>
-    <color name="bg_gradient_start">#1E293B</color>
-    <color name="bg_gradient_end">#0F172A</color>
 </resources>
 EOF
 
@@ -107,7 +108,7 @@ cat << 'EOF' > "$RES_DIR/values/styles.xml"
 </resources>
 EOF
 
-# DRAWABLES
+# Drawables
 cat << 'EOF' > "$RES_DIR/drawable/bg_main_gradient.xml"
 <shape xmlns:android="http://schemas.android.com/apk/res/android"><gradient android:startColor="#1E293B" android:endColor="#020617" android:angle="270"/></shape>
 EOF
@@ -272,7 +273,7 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
 }
 EOF
 
-# 8. LAYOUTS
+# 8. LAYOUTS (DÜZELTİLMİŞ)
 cat << 'EOF' > "$RES_DIR/layout/activity_selection.xml"
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient">
     <TextView android:id="@+id/header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PLAYLISTS" android:textColor="@color/white" android:textSize="28sp" android:textStyle="bold" android:layout_centerHorizontal="true" android:layout_marginTop="30dp"/>
@@ -292,8 +293,8 @@ cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:orientation="vertical" android:gravity="center" android:padding="20dp">
     <TextView android:id="@+id/tvUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:gravity="center" android:textSize="20sp" android:layout_marginBottom="40dp" android:textStyle="bold"/>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:weightSum="2" android:layout_marginBottom="30dp">
-        <androidx.cardview.widget.CardView android:id="@+id/btnLive" android:layout_width="0dp" android:layout_height="150dp" android:layout_weight="1" android:layout_marginRight="10dp" app:cardBackgroundColor="@color/bg_card" app:cardCornerRadius="15dp"><TextView android:layout_width="match_parent" android:layout_height="match_parent" android:text="LIVE" android:gravity="center" android:textColor="#FFF" android:textSize="24sp" android:textStyle="bold"/></androidx.cardview.widget.CardView>
-        <androidx.cardview.widget.CardView android:id="@+id/btnMovies" android:layout_width="0dp" android:layout_height="150dp" android:layout_weight="1" android:layout_marginLeft="10dp" app:cardBackgroundColor="@color/bg_card" app:cardCornerRadius="15dp"><TextView android:layout_width="match_parent" android:layout_height="match_parent" android:text="VOD" android:gravity="center" android:textColor="#FFF" android:textSize="24sp" android:textStyle="bold"/></androidx.cardview.widget.CardView>
+        <androidx.cardview.widget.CardView android:id="@+id/btnLive" android:layout_width="0dp" android:layout_height="150dp" android:layout_weight="1" android:layout_marginRight="10dp" app:cardBackgroundColor="@color/card_bg" app:cardCornerRadius="15dp"><TextView android:layout_width="match_parent" android:layout_height="match_parent" android:text="LIVE" android:gravity="center" android:textColor="#FFF" android:textSize="24sp" android:textStyle="bold"/></androidx.cardview.widget.CardView>
+        <androidx.cardview.widget.CardView android:id="@+id/btnMovies" android:layout_width="0dp" android:layout_height="150dp" android:layout_weight="1" android:layout_marginLeft="10dp" app:cardBackgroundColor="@color/card_bg" app:cardCornerRadius="15dp"><TextView android:layout_width="match_parent" android:layout_height="match_parent" android:text="VOD" android:gravity="center" android:textColor="#FFF" android:textSize="24sp" android:textStyle="bold"/></androidx.cardview.widget.CardView>
     </LinearLayout>
     <Button android:id="@+id/btnLogout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="CHANGE PLAYLIST" style="@style/ModernButton" android:backgroundTint="@color/primary_accent"/>
 </LinearLayout>
@@ -309,13 +310,14 @@ cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
 </LinearLayout>
 EOF
 
+# BURASI DÜZELTİLDİ: & İŞARETİ YERİNE &amp; KULLANILDI
 cat << 'EOF' > "$RES_DIR/layout/activity_login_single.xml"
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:fillViewport="true">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="30dp" android:gravity="center">
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Paste M3U Content or Link" android:textColor="#FFF" android:textSize="18sp" android:layout_marginBottom="15dp"/>
         <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Playlist Name (Optional)" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
         <EditText android:id="@+id/etUrl" android:layout_width="match_parent" android:layout_height="150dp" android:gravity="top" android:hint="#EXTINF... or http://..." style="@style/ModernInput" android:layout_marginBottom="30dp"/>
-        <Button android:id="@+id/btnPlay" android:layout_width="match_parent" android:layout_height="60dp" android:text="Save & Play" style="@style/ModernButton"/>
+        <Button android:id="@+id/btnPlay" android:layout_width="match_parent" android:layout_height="60dp" android:text="Save &amp; Play" style="@style/ModernButton"/>
     </LinearLayout>
 </ScrollView>
 EOF
@@ -366,7 +368,7 @@ public class SelectionActivity extends AppCompatActivity {
         list = PrefUtils.getPlaylists(this);
         adapter = new PlaylistAdapter(list, new PlaylistAdapter.OnClick() {
             @Override public void onClick(Playlist p) { 
-                PrefUtils.savePlaylist(SelectionActivity.this, p); // Updates active
+                PrefUtils.savePlaylist(SelectionActivity.this, p); 
                 if("Xtream".equals(p.type)) startActivity(new Intent(SelectionActivity.this, DashboardActivity.class)); 
                 else {
                     Intent in = new Intent(SelectionActivity.this, PlayerActivity.class);
@@ -460,7 +462,6 @@ public class LoginSingleActivity extends AppCompatActivity {
         findViewById(R.id.btnPlay).setOnClickListener(v -> {
             String raw = u.getText().toString();
             String link = raw, ref = "", ori = "";
-            // SIMPLE PARSER FOR #EXTVLCOPT
             if(raw.contains("#EXTVLCOPT")) {
                 String[] lines = raw.split("\\n");
                 for(String l : lines) {
@@ -584,5 +585,5 @@ gradle wrapper --gradle-version 8.4
 chmod +x gradlew
 cd ..
 
-echo "✅ ERDINPLAYER v10.1: PROJECT REGENERATED SUCCESSFULLY."
+echo "✅ ERDINPLAYER v12.0: XML FIXED & FULL SYSTEM READY."
 echo "👉 NOW RUN: cd $PROJECT_NAME && ./gradlew assembleRelease --no-daemon"
