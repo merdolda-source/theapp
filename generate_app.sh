@@ -8,7 +8,7 @@ MODULE_DIR="$PROJECT_ROOT/app"
 PKG_DIR="$MODULE_DIR/src/main/java/com/merdolda/player"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "🚀 ERDINPLAYER (JAVA 17 + CACHE) OLUŞTURULUYOR..."
+echo "🚀 ERDINPLAYER OLUŞTURULUYOR..."
 
 # 1. Temizlik
 rm -rf $PROJECT_ROOT
@@ -73,13 +73,11 @@ android {
         }
     }
     
-    // BURASI ÇOK ÖNEMLİ: GITHUB İÇİN JAVA 17 YAPILDI
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    // HATALARI GÖRMEZDEN GELEN KISIM
     lintOptions {
         checkReleaseBuilds false
         abortOnError false
@@ -99,7 +97,6 @@ dependencies {
 EOF
 
 # 5. XML DOSYALARI
-
 cat << 'EOF' > $RES_DIR/values/strings.xml
 <resources>
     <string name="app_name">ErdinPlayer</string>
@@ -162,7 +159,6 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 EOF
 
 # 7. JAVA DOSYALARI
-
 cat << EOF > $PKG_DIR/ApiService.java
 package com.merdolda.player;
 import retrofit2.Call;
