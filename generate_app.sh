@@ -8,7 +8,7 @@ PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER v13.0: SIDE MENU, EXTVLCOPT HEADER, SERIES & PRO TASARIM KURULUYOR..."
+echo "💎 ERDINPLAYER v13.1: SIDE MENU, EXTVLCOPT HEADER, SERIES, AUTO-FIRST-CATEGORY & PRO TASARIM KURULUYOR..."
 
 # 1. TEMİZLİK & KLASÖRLER
 if [ -d "$PROJECT_ROOT" ]; then rm -rf "$PROJECT_ROOT"; fi
@@ -51,7 +51,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.merdolda.player'
     compileSdk 34
-    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 13; versionName "13.0"; multiDexEnabled true }
+    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 13; versionName "13.1"; multiDexEnabled true }
     signingConfigs { release { storeFile file("release.keystore"); storePassword "123456"; keyAlias "erdinplayer"; keyPassword "123456" } }
     buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
@@ -176,18 +176,17 @@ cat << 'EOF' > "$RES_DIR/drawable/ic_launcher_background.xml"
 </vector>
 EOF
 
-# 5. MODELS (Updated for M3U & SERIES)
+# 5. MODELS (M3U & SERIES & EXPIRY)
 cat << EOF > "$PKG_DIR/model/AppModels.java"
 package com.merdolda.player.model;
 import com.google.gson.annotations.SerializedName;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 
 public class AppModels {
     public static class Playlist implements Serializable {
         public String id, name, type, url, user, pass;
         public String m3uContent;
+        public String exp; // Xtream abonelik bitiş (timestamp)
     }
 
     public static class LoginResponse implements Serializable {
@@ -236,7 +235,7 @@ public class AppModels {
 }
 EOF
 
-# 6. API & UTILS (M3U Parser + SERIES INFO)
+# 6. API & UTILS
 cat << EOF > "$PKG_DIR/api/XtreamApi.java"
 package com.merdolda.player.api;
 import com.merdolda.player.model.AppModels.*;
@@ -295,7 +294,6 @@ public class M3UParser {
                 currentItem.group = currentGroup;
 
             } else if (line.startsWith("#EXTVLCOPT:") && currentItem != null) {
-                // Ör: #EXTVLCOPT:http-referrer=https://site.com
                 int idx = line.indexOf("=");
                 if (idx > 0 && idx + 1 < line.length()) {
                     String val = line.substring(idx + 1).trim();
@@ -415,6 +413,7 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.VH> {
     @Override public void onBindViewHolder(@NonNull VH h, int p) {
         h.t.setText(list.get(p).name);
         h.itemView.setBackgroundResource(sel == p ? R.drawable.bg_neon_btn : R.drawable.bg_glass_input);
+        h.itemView.setClickable(true);
         h.itemView.setOnClickListener(v -> {
             int o = sel; sel = h.getAdapterPosition();
             notifyItemChanged(o); notifyItemChanged(sel);
@@ -456,6 +455,7 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
     @Override public void onBindViewHolder(@NonNull VH h, int p) {
         StreamItem i = list.get(p); h.t.setText(i.name);
         Glide.with(h.itemView.getContext()).load(i.icon).placeholder(R.drawable.ic_play).into(h.i);
+        h.itemView.setClickable(true);
         h.itemView.setOnClickListener(v -> listener.onClick(i));
     }
 
@@ -495,6 +495,7 @@ public class EpisodeAdapter extends RecyclerView.Adapter<EpisodeAdapter.VH> {
         Episode e = list.get(pos);
         String title = (e.title != null && !e.title.isEmpty()) ? e.title : ("Episode " + e.id);
         h.t.setText(title);
+        h.itemView.setClickable(true);
         h.itemView.setOnClickListener(v -> listener.onClick(e));
     }
 
@@ -509,7 +510,7 @@ public class EpisodeAdapter extends RecyclerView.Adapter<EpisodeAdapter.VH> {
 }
 EOF
 
-# 8. LAYOUTS (MODERN GLASS UI + SIDE MENU + SERIES)
+# 8. LAYOUTS
 cat << 'EOF' > "$RES_DIR/layout/activity_selection.xml"
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
@@ -568,7 +569,8 @@ cat << 'EOF' > "$RES_DIR/layout/item_playlist.xml"
     style="@style/GlassCard"
     android:layout_marginBottom="12dp"
     android:orientation="horizontal"
-    android:gravity="center_vertical">
+    android:gravity="center_vertical"
+    android:clickable="true">
 
     <LinearLayout
         android:layout_width="0dp" android:layout_height="wrap_content"
@@ -608,7 +610,7 @@ cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
         android:id="@+id/tvUser"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:textColor="#FFF" android:gravity="center"
-        android:textSize="24sp"
+        android:textSize="20sp"
         android:layout_marginBottom="40dp"
         android:textStyle="bold"/>
 
@@ -625,7 +627,8 @@ cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
             android:layout_marginRight="10dp"
             style="@style/GlassCard"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:clickable="true">
 
             <TextView
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -640,7 +643,8 @@ cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
             android:layout_marginLeft="10dp"
             style="@style/GlassCard"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:clickable="true">
 
             <TextView
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -659,7 +663,8 @@ cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
             android:layout_width="match_parent" android:layout_height="140dp"
             style="@style/GlassCard"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:clickable="true">
 
             <TextView
                 android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -762,7 +767,7 @@ cat << 'EOF' > "$RES_DIR/layout/activity_login_m3u.xml"
 </LinearLayout>
 EOF
 
-# SIDE MENU: DrawerLayout ile kategori soldan açılır
+# SIDE MENU: DrawerLayout
 cat << 'EOF' > "$RES_DIR/layout/activity_list.xml"
 <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/drawer_layout"
@@ -835,8 +840,7 @@ cat << 'EOF' > "$RES_DIR/layout/item_channel.xml"
     android:layout_marginBottom="8dp"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:focusable="true"
-    android:focusableInTouchMode="true">
+    android:clickable="true">
 
     <ImageView
         android:id="@+id/ivIcon"
@@ -858,7 +862,8 @@ cat << 'EOF' > "$RES_DIR/layout/item_category.xml"
     android:layout_width="match_parent" android:layout_height="wrap_content"
     android:padding="10dp"
     android:layout_marginBottom="6dp"
-    android:gravity="center_vertical">
+    android:gravity="center_vertical"
+    android:clickable="true">
 
     <TextView
         android:id="@+id/tvCatName"
@@ -920,8 +925,7 @@ cat << 'EOF' > "$RES_DIR/layout/item_episode.xml"
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:padding="14dp"
-    android:focusable="true"
-    android:focusableInTouchMode="true">
+    android:clickable="true">
 
     <TextView
         android:id="@+id/tvEpName"
@@ -932,7 +936,7 @@ cat << 'EOF' > "$RES_DIR/layout/item_episode.xml"
 </LinearLayout>
 EOF
 
-# 9. JAVA CLASSES (LOGIC)
+# 9. JAVA CLASSES
 cat << EOF > "$PKG_DIR/ui/SelectionActivity.java"
 package com.merdolda.player.ui;
 import android.content.Intent;
@@ -989,13 +993,39 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.merdolda.player.R;
 import com.merdolda.player.utils.PrefUtils;
 import com.merdolda.player.model.AppModels.Playlist;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class DashboardActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
         setContentView(R.layout.activity_dashboard);
+        TextView tv = findViewById(R.id.tvUser);
         Playlist p = PrefUtils.getActive(this);
-        if(p != null) ((TextView)findViewById(R.id.tvUser)).setText(p.name);
+        if(p != null) {
+            String text = p.name;
+            if (p.exp != null && !p.exp.isEmpty()) {
+                try {
+                    long expSec = Long.parseLong(p.exp);
+                    if (expSec > 0) {
+                        long nowSec = System.currentTimeMillis()/1000L;
+                        long diff = expSec - nowSec;
+                        String extra;
+                        if (diff > 0) {
+                            long days = diff / (60*60*24);
+                            SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+                            String dateStr = sdf.format(new Date(expSec*1000L));
+                            extra = "Expires: " + dateStr + " (" + days + " days left)";
+                        } else {
+                            extra = "Expired";
+                        }
+                        text = p.name + "\\n" + extra;
+                    }
+                } catch (Exception ignored) {}
+            }
+            tv.setText(text);
+        }
 
         findViewById(R.id.btnLive).setOnClickListener(v -> {
             Intent i = new Intent(this, CommonListActivity.class);
@@ -1061,6 +1091,8 @@ public class LoginXtreamActivity extends AppCompatActivity {
                         pl.user=u.getText().toString();
                         pl.pass=p.getText().toString();
                         pl.name=name.getText().toString();
+                        if (res.body().userInfo.expDate != null)
+                            pl.exp = res.body().userInfo.expDate;
                         PrefUtils.savePlaylist(LoginXtreamActivity.this, pl);
                         startActivity(new Intent(LoginXtreamActivity.this, DashboardActivity.class));
                         finish();
@@ -1174,7 +1206,6 @@ public class CommonListActivity extends AppCompatActivity {
             String url = "";
             if ("Xtream".equals(p.type)) {
                 if ("series".equals(type)) {
-                    // Series: ayrı ekrana gidip bölüm seçimi
                     in = new Intent(this, SeriesActivity.class);
                     in.putExtra("series_id", i.streamId);
                     in.putExtra("series_name", i.name);
@@ -1186,7 +1217,6 @@ public class CommonListActivity extends AppCompatActivity {
                     in.putExtra("url", url);
                 }
             } else {
-                // M3U
                 in = new Intent(this, PlayerActivity.class);
                 url = i.directUrl;
                 in.putExtra("url", url);
@@ -1207,6 +1237,7 @@ public class CommonListActivity extends AppCompatActivity {
         for(String key : m3uMap.keySet()) cats.add(new Category(key, key));
         rvC.setAdapter(new CategoryAdapter(cats, cat ->
                 adp.update(m3uMap.get(cat.id))));
+        // İlk kategori otomatik dolu
         if(!cats.isEmpty()) adp.update(m3uMap.get(cats.get(0).id));
     }
 
@@ -1225,7 +1256,14 @@ public class CommonListActivity extends AppCompatActivity {
         api.getCategories(p.url+"/player_api.php", p.user, p.pass, a)
                 .enqueue(new Callback<List<Category>>() {
             public void onResponse(Call<List<Category>> c, Response<List<Category>> r) {
-                if(r.body()!=null) rvC.setAdapter(new CategoryAdapter(r.body(), cat -> loadItems(cat.id)));
+                if(r.body()!=null) {
+                    List<Category> cats = r.body();
+                    rvC.setAdapter(new CategoryAdapter(cats, cat -> loadItems(cat.id)));
+                    // İlk kategori otomatik yükle
+                    if (!cats.isEmpty()) {
+                        loadItems(cats.get(0).id);
+                    }
+                }
             }
             public void onFailure(Call<List<Category>> c, Throwable t) {}
         });
@@ -1353,13 +1391,19 @@ public class PlayerActivity extends AppCompatActivity {
         setContentView(R.layout.activity_player);
         pv = findViewById(R.id.player_view);
 
+        // Player kontrol barı 3 saniye sonra kaybolsun
+        pv.setControllerShowTimeoutMs(3000);
+        pv.setControllerHideOnTouch(true);
+
         hideSystemUI();
 
         String url = getIntent().getStringExtra("url");
         String origin = getIntent().getStringExtra("origin");
         String ref = getIntent().getStringExtra("ref");
 
-        DefaultHttpDataSource.Factory httpFactory = new DefaultHttpDataSource.Factory();
+        DefaultHttpDataSource.Factory httpFactory =
+                new DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true);
+
         Map<String, String> headers = new HashMap<>();
         if (origin != null && !origin.isEmpty()) headers.put("Origin", origin);
         if (ref != null && !ref.isEmpty()) headers.put("Referer", ref);
@@ -1470,5 +1514,5 @@ gradle wrapper --gradle-version 8.4
 chmod +x gradlew
 cd ..
 
-echo "✅ ERDINPLAYER v13.0: SIDE MENU, EXTVLCOPT HEADER & SERIES HAZIR."
+echo "✅ ERDINPLAYER v13.1: SIDE MENU, EXTVLCOPT HEADER, SERIES, AUTO FIRST CATEGORY & EXPIRY HAZIR."
 echo "👉 NOW RUN: cd $PROJECT_NAME && ./gradlew assembleRelease --no-daemon"
