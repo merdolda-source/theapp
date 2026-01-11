@@ -8,9 +8,9 @@ PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER v15.0: JAVA IMPORT FIX & FULL REBUILD..."
+echo "💎 ERDINPLAYER v16.0: ADAPTER FIX & FULL SYSTEM REBUILD..."
 
-# 1. TEMİZLİK & KLASÖRLER
+# 1. TEMİZLİK
 if [ -d "$PROJECT_ROOT" ]; then rm -rf "$PROJECT_ROOT"; fi
 
 mkdir -p "$PKG_DIR"/{model,adapter,api,utils,ui}
@@ -51,7 +51,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.merdolda.player'
     compileSdk 34
-    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 15; versionName "15.0"; multiDexEnabled true }
+    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 16; versionName "16.0"; multiDexEnabled true }
     signingConfigs { release { storeFile file("release.keystore"); storePassword "123456"; keyAlias "erdinplayer"; keyPassword "123456" } }
     buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
@@ -73,7 +73,7 @@ dependencies {
 }
 EOF
 
-# 4. RESOURCES (COLORS & STYLES)
+# 4. RESOURCES
 cat << 'EOF' > "$RES_DIR/values/colors.xml"
 <resources>
     <color name="bg_main">#0B0C15</color>
@@ -101,7 +101,6 @@ cat << 'EOF' > "$RES_DIR/values/styles.xml"
 </resources>
 EOF
 
-# DRAWABLES
 cat << 'EOF' > "$RES_DIR/drawable/bg_glass.xml"
 <shape xmlns:android="http://schemas.android.com/apk/res/android"><solid android:color="#1AFFFFFF"/><corners android:radius="8dp"/><stroke android:width="1dp" android:color="#33FFFFFF"/></shape>
 EOF
@@ -121,7 +120,7 @@ cat << 'EOF' > "$RES_DIR/drawable/ic_launcher_background.xml"
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#0B0C15" android:pathData="M0,0h108v108h-108z"/></vector>
 EOF
 
-# 5. MODELLER
+# 5. MODELS
 cat << EOF > "$PKG_DIR/model/AppModels.java"
 package com.merdolda.player.model;
 import com.google.gson.annotations.SerializedName;
@@ -158,7 +157,20 @@ public class AppModels {
 }
 EOF
 
-# 6. M3U PARSER
+# 6. API & UTILS
+cat << EOF > "$PKG_DIR/api/XtreamApi.java"
+package com.merdolda.player.api;
+import com.merdolda.player.model.AppModels.*;
+import java.util.List;
+import retrofit2.Call;
+import retrofit2.http.*;
+public interface XtreamApi {
+    @GET Call<LoginResponse> login(@Url String url, @Query("username") String u, @Query("password") String p);
+    @GET Call<List<Category>> getCategories(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a);
+    @GET Call<List<StreamItem>> getStreams(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a, @Query("category_id") String c);
+}
+EOF
+
 cat << EOF > "$PKG_DIR/utils/M3UParser.java"
 package com.merdolda.player.utils;
 import com.merdolda.player.model.AppModels.*;
@@ -189,7 +201,6 @@ public class M3UParser {
                 Pattern pLogo = Pattern.compile("tvg-logo=\"([^\"]*)\"");
                 Matcher mLogo = pLogo.matcher(line);
                 if (mLogo.find()) currentItem.icon = mLogo.group(1);
-                
                 currentItem.group = currentGroup;
             
             } else if (line.startsWith("#EXTVLCOPT")) {
@@ -219,7 +230,7 @@ import com.google.gson.reflect.TypeToken;
 import com.merdolda.player.model.AppModels.Playlist;
 import java.util.*;
 public class PrefUtils {
-    private static SharedPreferences get(Context c) { return c.getSharedPreferences("ERD_V14", 0); }
+    private static SharedPreferences get(Context c) { return c.getSharedPreferences("ERD_V16", 0); }
     public static void savePlaylist(Context c, Playlist p) {
         List<Playlist> l = getPlaylists(c); l.add(p);
         get(c).edit().putString("L", new Gson().toJson(l)).putString("A", p.id).apply();
@@ -241,21 +252,7 @@ public class PrefUtils {
 }
 EOF
 
-# 7. API INTERFACE
-cat << EOF > "$PKG_DIR/api/XtreamApi.java"
-package com.merdolda.player.api;
-import com.merdolda.player.model.AppModels.*;
-import java.util.List;
-import retrofit2.Call;
-import retrofit2.http.*;
-public interface XtreamApi {
-    @GET Call<LoginResponse> login(@Url String url, @Query("username") String u, @Query("password") String p);
-    @GET Call<List<Category>> getCategories(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a);
-    @GET Call<List<StreamItem>> getStreams(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a, @Query("category_id") String c);
-}
-EOF
-
-# 8. ADAPTERS
+# 7. ADAPTERS (FIXED STREAM ADAPTER)
 cat << EOF > "$PKG_DIR/adapter/CategoryAdapter.java"
 package com.merdolda.player.adapter;
 import android.graphics.Color;
@@ -291,8 +288,9 @@ import com.merdolda.player.R;
 import com.merdolda.player.model.AppModels.StreamItem;
 import java.util.List;
 public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
-    private List<StreamItem> list; private OnClick listener;
-    public interface OnItemClick { void onClick(StreamItem item); }
+    private List<StreamItem> list; 
+    private OnItemClick listener; // Fixed Interface Name
+    public interface OnItemClick { void onClick(StreamItem item); } // Interface Definition
     public StreamAdapter(List<StreamItem> list, OnItemClick listener) { this.list = list; this.listener = listener; }
     @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup p, int t) { return new VH(LayoutInflater.from(p.getContext()).inflate(R.layout.item_channel, p, false)); }
     @Override public void onBindViewHolder(@NonNull VH h, int p) {
@@ -329,7 +327,7 @@ public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.VH> {
 }
 EOF
 
-# 9. LAYOUTS
+# 8. LAYOUTS
 cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:background="@color/bg_main">
     <LinearLayout android:layout_width="80dp" android:layout_height="match_parent" android:orientation="vertical" android:background="@color/sidebar_bg" android:gravity="center_horizontal" android:paddingTop="20dp">
@@ -338,7 +336,6 @@ cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
         <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
         <TextView android:id="@+id/btnLogout" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="EXIT" android:textColor="@color/accent" android:gravity="center" android:padding="15dp" android:textStyle="bold" android:background="?attr/selectableItemBackground"/>
     </LinearLayout>
-    
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvCats" android:layout_width="match_parent" android:layout_height="50dp" android:background="@color/glass_white"/>
         <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvStreams" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="10dp"/>
@@ -389,7 +386,7 @@ cat << 'EOF' > "$RES_DIR/layout/activity_player.xml"
 </FrameLayout>
 EOF
 
-# 10. JAVA (SIDEBAR LOGIC & VLCOPT)
+# 9. JAVA CLASSES (IMPORTS FIXED)
 
 cat << EOF > "$PKG_DIR/ui/SelectionActivity.java"
 package com.merdolda.player.ui;
@@ -402,7 +399,7 @@ import com.merdolda.player.R;
 import com.merdolda.player.adapter.PlaylistAdapter;
 import com.merdolda.player.model.AppModels.Playlist;
 import com.merdolda.player.utils.PrefUtils;
-import java.util.List; // THIS WAS THE MISSING IMPORT!
+import java.util.List;
 public class SelectionActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
@@ -449,11 +446,9 @@ public class LoginActivity extends AppCompatActivity {
             String url = u.getText().toString();
             String name = n.getText().toString();
             
-            // If it's just raw content or #EXT, save directly
             if(url.contains("#EXTINF")) {
                 save(name, url, "M3U");
             } else {
-                // Try download
                 new Thread(() -> {
                     try {
                         OkHttpClient client = new OkHttpClient();
@@ -510,7 +505,6 @@ public class DashboardActivity extends AppCompatActivity {
         });
         rvS.setAdapter(adp);
         
-        // M3U Logic
         m3uMap = M3UParser.parse(p.m3uContent);
         List<Category> cats = new ArrayList<>();
         for(String k : m3uMap.keySet()) cats.add(new Category(k, k));
@@ -540,7 +534,6 @@ public class PlayerActivity extends AppCompatActivity {
     ExoPlayer p;
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
-        // IMMERSIVE MODE
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         );
@@ -568,7 +561,7 @@ public class PlayerActivity extends AppCompatActivity {
 }
 EOF
 
-# 11. MANIFEST
+# 10. MANIFEST
 cat << 'EOF' > "$MODULE_DIR/src/main/AndroidManifest.xml"
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
@@ -581,10 +574,11 @@ cat << 'EOF' > "$MODULE_DIR/src/main/AndroidManifest.xml"
 </manifest>
 EOF
 
-# 12. WRAPPER
+# 11. WRAPPER GENERATION
+echo "Generating Gradle Wrapper..."
 cd "$PROJECT_ROOT"
 gradle wrapper --gradle-version 8.4
 chmod +x gradlew
 cd ..
 
-echo "✅ ERDINPLAYER v15.0: IMPORT FIX & FOLDER FIX COMPLETE."
+echo "✅ ERDINPLAYER v16.0: ALL FIXES APPLIED."
