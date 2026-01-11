@@ -1,24 +1,24 @@
 #!/bin/bash
 
-# --- KONFİGÜRASYON ---
+# --- AYARLAR ---
 PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER PRO: DİKEY MOD & DİZİLER SİSTEMİ KURULUYOR..."
+echo "💎 ERDINPLAYER PRO: HATA DÜZELTME VE DİZİ SİSTEMİ KURULUYOR..."
 
-# 1. KLASÖR YAPISI
+# 1. TEMİZLİK VE KLASÖR YAPISI
 rm -rf $PROJECT_ROOT
 mkdir -p $PKG_DIR/model $PKG_DIR/adapter $PKG_DIR/api $PKG_DIR/utils $PKG_DIR/ui
 mkdir -p $RES_DIR/layout $RES_DIR/values $RES_DIR/drawable $RES_DIR/anim
 mkdir -p $PROJECT_ROOT/gradle/wrapper
 
-# 2. KEYSTORE
+# 2. KEYSTORE (İMZA)
 keytool -genkey -v -keystore $MODULE_DIR/release.keystore -alias erdinplayer -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Erdin, O=ErdinPlayer, C=TR" 2>/dev/null
 
-# 3. GRADLE AYARLARI
+# 3. GRADLE AYARLARI (8.4)
 cat << 'EOF' > $PROJECT_ROOT/gradle/wrapper/gradle-wrapper.properties
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
@@ -87,7 +87,7 @@ dependencies {
 }
 EOF
 
-# 4. MODELLER (XTREAM FULL SCHEMA)
+# 4. MODELLER
 cat << EOF > $PKG_DIR/model/XtreamData.java
 package com.merdolda.player.model;
 import com.google.gson.annotations.SerializedName;
@@ -121,7 +121,7 @@ public class XtreamData {
 }
 EOF
 
-# 5. ADAPTER (DIKEY LİSTELEME İÇİN)
+# 5. ADAPTERLER
 cat << EOF > $PKG_DIR/adapter/CategoryAdapter.java
 package com.merdolda.player.adapter;
 import android.graphics.Color;
@@ -221,8 +221,7 @@ public class PrefUtils {
 }
 EOF
 
-# 7. TASARIMLAR (DIKEY MOBİL UYUMLU)
-# Login
+# 7. TASARIMLAR (FIXED)
 cat << 'EOF' > $RES_DIR/layout/activity_login.xml
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#101010" android:orientation="vertical" android:gravity="center" android:padding="30dp">
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ERDIN PLAYER" android:textColor="#E50914" android:textSize="32sp" android:textStyle="bold" android:layout_marginBottom="40dp"/>
@@ -233,7 +232,6 @@ cat << 'EOF' > $RES_DIR/layout/activity_login.xml
 </LinearLayout>
 EOF
 
-# Dashboard (Dikey Menü)
 cat << 'EOF' > $RES_DIR/layout/activity_dashboard.xml
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000" android:orientation="vertical" android:padding="20dp" android:gravity="center">
     <Button android:id="@+id/btnLive" android:layout_width="match_parent" android:layout_height="120dp" android:text="CANLI TV" android:backgroundTint="#E50914" android:textSize="22sp" android:layout_marginBottom="15dp"/>
@@ -243,7 +241,6 @@ cat << 'EOF' > $RES_DIR/layout/activity_dashboard.xml
 </LinearLayout>
 EOF
 
-# Liste Ekranı (Üst Kategori, Alt Liste)
 cat << 'EOF' > $RES_DIR/layout/activity_list.xml
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="#0A0A0A">
     <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvCats" android:layout_width="match_parent" android:layout_height="60dp" android:background="#151515"/>
@@ -256,15 +253,22 @@ cat << 'EOF' > $RES_DIR/layout/item_category.xml
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/item_channel.xml
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="10dp" android:layout_marginBottom="5dp" android:background="#1C1C1C">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="10dp" android:layout_marginBottom="5dp" android:background="#1C1C1C" android:orientation="horizontal">
     <ImageView android:id="@+id/ivIcon" android:layout_width="60dp" android:layout_height="80dp" android:scaleType="centerInside"/>
     <TextView android:id="@+id/tvName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="16sp" android:layout_marginLeft="15dp" android:layout_gravity="center"/>
 </LinearLayout>
 EOF
 
+# HATALI OLANactivity_player.xml DÜZELTİLDİ
 cat << 'EOF' > $RES_DIR/layout/activity_player.xml
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:height="match_parent" android:background="#000">
-    <com.google.android.exoplayer2.ui.StyledPlayerView android:id="@+id/player_view" android:layout_width="match_parent" android:layout_height="match_parent"/>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" 
+    android:layout_width="match_parent" 
+    android:layout_height="match_parent" 
+    android:background="#000">
+    <com.google.android.exoplayer2.ui.StyledPlayerView 
+        android:id="@+id/player_view" 
+        android:layout_width="match_parent" 
+        android:layout_height="match_parent"/>
 </FrameLayout>
 EOF
 
@@ -276,9 +280,8 @@ cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#000000" android:pathData="M0,0h108v108h-108z"/></vector>
 EOF
 
-# 8. ANA KODLAR (UI ACTIVITIES)
+# 8. UI ACTIVITIES
 
-# LoginActivity
 cat << EOF > $PKG_DIR/ui/LoginActivity.java
 package com.merdolda.player.ui;
 import android.content.Intent;
@@ -307,7 +310,7 @@ public class LoginActivity extends AppCompatActivity {
                 public void onResponse(Call<LoginResponse> c, Response<LoginResponse> res) {
                     if(res.body()!=null && res.body().userInfo!=null && res.body().userInfo.auth==1){
                         PrefUtils.saveUser(LoginActivity.this, fU, u.getText().toString(), p.getText().toString()); start();
-                    } else Toast.makeText(LoginActivity.this, "Hata!", 0).show();
+                    } else Toast.makeText(LoginActivity.this, "Giriş Bilgileri Hatalı!", 0).show();
                 }
                 public void onFailure(Call<LoginResponse> c, Throwable t){ Toast.makeText(LoginActivity.this, "Bağlantı Hatası!", 0).show(); }
             });
@@ -317,7 +320,6 @@ public class LoginActivity extends AppCompatActivity {
 }
 EOF
 
-# DashboardActivity (Dikey)
 cat << EOF > $PKG_DIR/ui/DashboardActivity.java
 package com.merdolda.player.ui;
 import android.content.Intent;
@@ -330,26 +332,14 @@ public class DashboardActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
         setContentView(R.layout.activity_dashboard);
-        findViewById(R.id.btnLive).setOnClickListener(v -> {
-            Intent i = new Intent(this, CommonListActivity.class);
-            i.putExtra("type", "live"); startActivity(i);
-        });
-        findViewById(R.id.btnMovies).setOnClickListener(v -> {
-            Intent i = new Intent(this, CommonListActivity.class);
-            i.putExtra("type", "vod"); startActivity(i);
-        });
-        findViewById(R.id.btnSeries).setOnClickListener(v -> {
-            Intent i = new Intent(this, CommonListActivity.class);
-            i.putExtra("type", "series"); startActivity(i);
-        });
-        findViewById(R.id.btnLogout).setOnClickListener(v -> { 
-            PrefUtils.logout(this); startActivity(new Intent(this, LoginActivity.class)); finish(); 
-        });
+        findViewById(R.id.btnLive).setOnClickListener(v -> { Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "live"); startActivity(i); });
+        findViewById(R.id.btnMovies).setOnClickListener(v -> { Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "vod"); startActivity(i); });
+        findViewById(R.id.btnSeries).setOnClickListener(v -> { Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "series"); startActivity(i); });
+        findViewById(R.id.btnLogout).setOnClickListener(v -> { PrefUtils.logout(this); startActivity(new Intent(this, LoginActivity.class)); finish(); });
     }
 }
 EOF
 
-# CommonListActivity (Canlı, Film ve Dizi İçin Ortak Liste)
 cat << EOF > $PKG_DIR/ui/CommonListActivity.java
 package com.merdolda.player.ui;
 import android.content.Intent;
@@ -379,9 +369,10 @@ public class CommonListActivity extends AppCompatActivity {
         sAdapter = new StreamAdapter(new ArrayList<>(), item -> {
             Intent i = new Intent(this, PlayerActivity.class);
             String url;
-            if(type.equals("live")) url = PrefUtils.getD(this)+"/live/"+PrefUtils.getU(this)+"/"+PrefUtils.getP(this)+"/"+item.streamId+".ts";
-            else if(type.equals("series")) url = PrefUtils.getD(this)+"/series/"+PrefUtils.getU(this)+"/"+PrefUtils.getP(this)+"/"+item.seriesId+".mp4"; // Basit seri mantigi
-            else url = PrefUtils.getD(this)+"/movie/"+PrefUtils.getU(this)+"/"+PrefUtils.getP(this)+"/"+item.streamId+"."+(item.ext != null ? item.ext : "mp4");
+            String d = PrefUtils.getD(this), u = PrefUtils.getU(this), p = PrefUtils.getP(this);
+            if(type.equals("live")) url = d+"/live/"+u+"/"+p+"/"+item.streamId+".ts";
+            else if(type.equals("series")) url = d+"/series/"+u+"/"+p+"/"+item.seriesId+".mp4";
+            else url = d+"/movie/"+u+"/"+p+"/"+item.streamId+"."+(item.ext != null ? item.ext : "mp4");
             
             i.putExtra("url", url); startActivity(i);
         });
@@ -410,7 +401,6 @@ public class CommonListActivity extends AppCompatActivity {
 }
 EOF
 
-# PlayerActivity (OTOMATİK YATAY MOD)
 cat << EOF > $PKG_DIR/ui/PlayerActivity.java
 package com.merdolda.player.ui;
 import android.net.Uri;
@@ -437,21 +427,18 @@ public class PlayerActivity extends AppCompatActivity {
 }
 EOF
 
-# 9. MANIFEST (EKRAN YÖNLERİ AYARLANDI)
+# 9. MANIFEST
 cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <application android:name="androidx.multidex.MultiDexApplication" android:label="ErdinPlayer" android:theme="@style/Theme.AppCompat.NoActionBar" android:usesCleartextTraffic="true" android:icon="@drawable/ic_launcher_background">
-        
         <activity android:name=".ui.LoginActivity" android:exported="true" android:screenOrientation="portrait">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
         <activity android:name=".ui.DashboardActivity" android:screenOrientation="portrait" />
         <activity android:name=".ui.CommonListActivity" android:screenOrientation="portrait" />
-        
-        <activity android:name=".ui.PlayerActivity" android:screenOrientation="landscape" />
-        
+        <activity android:name=".ui.PlayerActivity" android:screenOrientation="sensorLandscape" />
     </application>
 </manifest>
 EOF
@@ -462,4 +449,4 @@ gradle wrapper --gradle-version 8.4
 chmod +x gradlew
 cd ..
 
-echo "✅ DİKEY MOD & DİZİLER SİSTEMİ HAZIR."
+echo "✅ TÜM HATALAR DÜZELTİLDİ VE SİSTEM HAZIR."
