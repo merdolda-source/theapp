@@ -8,9 +8,9 @@ MODULE_DIR="$PROJECT_ROOT/app"
 PKG_DIR="$MODULE_DIR/src/main/java/com/merdolda/player"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "🚀 ERDINPLAYER (CLEAN BUILD) OLUŞTURULUYOR..."
+echo "🚀 ERDINPLAYER (JAVA 17 + CACHE) OLUŞTURULUYOR..."
 
-# 1. Temizlik ve Klasörler
+# 1. Temizlik
 rm -rf $PROJECT_ROOT
 mkdir -p $PKG_DIR
 mkdir -p $RES_DIR/layout
@@ -18,15 +18,7 @@ mkdir -p $RES_DIR/values
 mkdir -p $RES_DIR/drawable
 mkdir -p $RES_DIR/mipmap-anydpi-v26
 
-# 2. PROGUARD (Hata Önleyici)
-cat << 'EOF' > $MODULE_DIR/proguard-rules.pro
--dontwarn com.bumptech.glide.**
--keep class com.bumptech.glide.** { *; }
--dontwarn androidx.**
--ignorewarnings
-EOF
-
-# 3. SETTINGS.GRADLE
+# 2. SETTINGS.GRADLE
 cat << 'EOF' > $PROJECT_ROOT/settings.gradle
 pluginManagement {
     repositories {
@@ -47,14 +39,14 @@ rootProject.name = "ErdinPlayer"
 include ':app'
 EOF
 
-# 4. BUILD.GRADLE (PROJECT)
+# 3. BUILD.GRADLE (PROJECT)
 cat << 'EOF' > $PROJECT_ROOT/build.gradle
 plugins {
     id 'com.android.application' version '8.2.0' apply false
 }
 EOF
 
-# 5. BUILD.GRADLE (APP - JAR DOSYALARINI İPTAL ETTİK)
+# 4. BUILD.GRADLE (APP - JAVA 17 AYARLI)
 cat << 'EOF' > $MODULE_DIR/build.gradle
 plugins {
     id 'com.android.application'
@@ -76,15 +68,18 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     
+    // BURASI ÇOK ÖNEMLİ: GITHUB İÇİN JAVA 17 YAPILDI
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
+    // HATALARI GÖRMEZDEN GELEN KISIM
     lintOptions {
         checkReleaseBuilds false
         abortOnError false
@@ -100,23 +95,17 @@ dependencies {
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.github.bumptech.glide:glide:4.16.0'
-
-    // DİKKAT: JAR dosyasını okuyan satırı kaldırdım.
-    // Eğer JAR çok gerekliyse ve hata veriyorsa, JAR bozuktur.
-    // implementation fileTree(dir: 'libs', include: ['*.jar'])
 }
 EOF
 
-# 6. KAYNAK DOSYALAR
+# 5. XML DOSYALARI
 
-# strings.xml (Uygulama Adı Burada Belirlenir)
 cat << 'EOF' > $RES_DIR/values/strings.xml
 <resources>
     <string name="app_name">ErdinPlayer</string>
 </resources>
 EOF
 
-# themes.xml
 cat << 'EOF' > $RES_DIR/values/themes.xml
 <resources>
     <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.NoActionBar">
@@ -127,7 +116,6 @@ cat << 'EOF' > $RES_DIR/values/themes.xml
 </resources>
 EOF
 
-# colors.xml
 cat << 'EOF' > $RES_DIR/values/colors.xml
 <resources>
     <color name="black">#FF000000</color>
@@ -135,7 +123,6 @@ cat << 'EOF' > $RES_DIR/values/colors.xml
 </resources>
 EOF
 
-# ic_launcher_background.xml
 cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
@@ -143,7 +130,7 @@ cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 </vector>
 EOF
 
-# 7. MANIFEST
+# 6. MANIFEST
 cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
@@ -174,9 +161,8 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 </manifest>
 EOF
 
-# 8. JAVA DOSYALARI
+# 7. JAVA DOSYALARI
 
-# ApiService
 cat << EOF > $PKG_DIR/ApiService.java
 package com.merdolda.player;
 import retrofit2.Call;
@@ -194,7 +180,6 @@ public interface ApiService {
 }
 EOF
 
-# SplashActivity
 cat << EOF > $PKG_DIR/SplashActivity.java
 package com.merdolda.player;
 import android.content.Intent;
@@ -234,7 +219,6 @@ public class SplashActivity extends AppCompatActivity {
 }
 EOF
 
-# LoginActivity
 cat << EOF > $PKG_DIR/LoginActivity.java
 package com.merdolda.player;
 import android.content.Intent;
@@ -269,7 +253,6 @@ public class LoginActivity extends AppCompatActivity {
 }
 EOF
 
-# PlayerActivity
 cat << 'EOF' > $PKG_DIR/PlayerActivity.java
 package com.merdolda.player;
 import android.net.Uri;
@@ -306,24 +289,4 @@ public class PlayerActivity extends AppCompatActivity {
 }
 EOF
 
-# 9. LAYOUTS
-cat << 'EOF' > $RES_DIR/layout/activity_splash.xml
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000"><ImageView android:id="@+id/splashImg" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop"/></RelativeLayout>
-EOF
-
-cat << 'EOF' > $RES_DIR/layout/activity_login.xml
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:padding="50dp" android:background="#121212">
-    <EditText android:id="@+id/etDns" android:hint="DNS" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="10dp"/>
-    <EditText android:id="@+id/etUser" android:hint="User" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="10dp"/>
-    <EditText android:id="@+id/etPass" android:hint="Pass" android:inputType="textPassword" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="20dp"/>
-    <Button android:id="@+id/btnLogin" android:text="GİRİŞ" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-</LinearLayout>
-EOF
-
-cat << 'EOF' > $RES_DIR/layout/activity_player.xml
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000">
-    <com.google.android.exoplayer2.ui.StyledPlayerView android:id="@+id/video_view" android:layout_width="match_parent" android:layout_height="match_parent" app:resize_mode="fit" />
-</FrameLayout>
-EOF
-
-echo "✅ ERDINPLAYER TEMİZ KURULUM HAZIR."
+echo "✅ ERDINPLAYER TAMAMLANDI."
