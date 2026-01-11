@@ -1,4 +1,4 @@
-name: Build
+name: Build ErdinPlayer
 
 on:
   push:
@@ -15,16 +15,15 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       
-      # Scripti çalıştır ve dosyaları yarat
-      - name: Generate App
+      - name: Generate ErdinPlayer
         run: chmod +x generate_app.sh && ./generate_app.sh
         
-      # Gradle ile APK derle (Stacktrace ile hata detayını gör)
+      # Hataları görmezden gel ve detayı bas
       - name: Build APK
         working-directory: ./theapp
-        run: gradle assembleRelease --stacktrace --no-daemon
+        run: gradle assembleRelease --info --no-daemon
         
       - uses: actions/upload-artifact@v4
         with:
-          name: MerdoldaApp
+          name: ErdinPlayer-APK
           path: theapp/app/build/outputs/apk/release/app-release-unsigned.apk
