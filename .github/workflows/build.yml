@@ -16,16 +16,18 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
           
-      - name: Create Projct Files
+      - name: Generate App Files
         run: chmod +x generate_app.sh && ./generate_app.sh
         
-      - name: Build APK with System Gradle
-        # gradlew olmadığı için direkt 'gradle' komutunu kullanıyoruz!
+      - name: Build APK with Wrapper
         working-directory: ./theapp
-        run: gradle assembleRelease --no-daemon
+        run: |
+          # generate_app.sh içinde oluşturduğumuz gradlew'i kullanıyoruz
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
           
-      - name: Upload Finished APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ErdinPlayer-Signed-APK
+          name: ErdinPlayer-Final
           path: theapp/app/build/outputs/apk/release/app-release.apk
