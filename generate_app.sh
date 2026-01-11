@@ -2,7 +2,7 @@
 
 # --- SETTINGS ---
 PROJECT_NAME="ErdinPlayer"
-PROJECT_ROOT="./$PROJECT_NAME"  # Explicit relative path
+PROJECT_ROOT="./$PROJECT_NAME"
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
@@ -11,11 +11,7 @@ RES_DIR="$MODULE_DIR/src/main/res"
 echo "💎 ERDINPLAYER v10.1: REGENERATING PROJECT STRUCTURE..."
 
 # 1. CLEANUP & DIRECTORIES
-# Remove existing directory to ensure a clean slate
-if [ -d "$PROJECT_ROOT" ]; then
-    echo "Cleaning up old project..."
-    rm -rf "$PROJECT_ROOT"
-fi
+if [ -d "$PROJECT_ROOT" ]; then rm -rf "$PROJECT_ROOT"; fi
 
 mkdir -p "$PKG_DIR"/{model,adapter,api,utils,ui}
 mkdir -p "$RES_DIR"/{layout,values,drawable,anim,menu,color}
@@ -35,17 +31,8 @@ zipStorePath=wrapper/dists
 EOF
 
 cat << 'EOF' > "$PROJECT_ROOT/build.gradle"
-buildscript { 
-    repositories { google(); mavenCentral() }
-    dependencies { classpath 'com.android.tools.build:gradle:8.1.1' } 
-}
-allprojects { 
-    repositories { 
-        google()
-        mavenCentral()
-        maven { url 'https://jitpack.io' } 
-    } 
-}
+buildscript { repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.1.1' } }
+allprojects { repositories { google(); mavenCentral(); maven { url 'https://jitpack.io' } } }
 EOF
 
 cat << 'EOF' > "$PROJECT_ROOT/settings.gradle"
@@ -61,42 +48,14 @@ EOF
 
 cat << 'EOF' > "$MODULE_DIR/build.gradle"
 plugins { id 'com.android.application' }
-
 android {
     namespace 'com.merdolda.player'
     compileSdk 34
-
-    defaultConfig {
-        applicationId "com.merdolda.player"
-        minSdk 21
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
-        multiDexEnabled true
-    }
-
-    signingConfigs {
-        release {
-            storeFile file("release.keystore")
-            storePassword "123456"
-            keyAlias "erdinplayer"
-            keyPassword "123456"
-        }
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            signingConfig signingConfigs.release
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
+    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 1; versionName "1.0"; multiDexEnabled true }
+    signingConfigs { release { storeFile file("release.keystore"); storePassword "123456"; keyAlias "erdinplayer"; keyPassword "123456" } }
+    buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
-
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
@@ -104,8 +63,6 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.recyclerview:recyclerview:1.3.1'
     implementation 'androidx.cardview:cardview:1.0.0'
-    
-    // Media & Network
     implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
     implementation 'com.github.bumptech.glide:glide:4.16.0'
@@ -116,16 +73,14 @@ dependencies {
 }
 EOF
 
-# 4. RESOURCES (MODERN UI)
+# 4. RESOURCES
 cat << 'EOF' > "$RES_DIR/values/colors.xml"
 <resources>
     <color name="bg_main">#0F172A</color>
     <color name="bg_gradient_start">#1E293B</color>
     <color name="bg_gradient_end">#0F172A</color>
     <color name="card_bg">#25334D</color>
-    <color name="primary_accent">#38BDF8</color>
-    <color name="secondary_accent">#818CF8</color>
-    <color name="danger">#EF4444</color>
+    <color name="primary_accent">#E50914</color>
     <color name="white">#FFFFFF</color>
     <color name="gray_text">#94A3B8</color>
     <color name="input_bg">#334155</color>
@@ -144,44 +99,29 @@ cat << 'EOF' > "$RES_DIR/values/styles.xml"
         <item name="backgroundTint">@null</item>
         <item name="android:background">@drawable/btn_gradient</item>
         <item name="android:textColor">@color/white</item>
-        <item name="cornerRadius">12dp</item>
     </style>
     <style name="ModernInput">
         <item name="android:background">@drawable/bg_input</item>
         <item name="android:textColor">@color/white</item>
-        <item name="android:textColorHint">@color/gray_text</item>
         <item name="android:padding">16dp</item>
     </style>
 </resources>
 EOF
 
 cat << 'EOF' > "$RES_DIR/drawable/bg_main_gradient.xml"
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <gradient android:startColor="#1E293B" android:endColor="#020617" android:angle="270"/>
-</shape>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"><gradient android:startColor="#1E293B" android:endColor="#020617" android:angle="270"/></shape>
 EOF
 
 cat << 'EOF' > "$RES_DIR/drawable/btn_gradient.xml"
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <gradient android:startColor="#38BDF8" android:endColor="#2563EB" android:angle="45"/>
-    <corners android:radius="12dp"/>
-</shape>
-EOF
-
-cat << 'EOF' > "$RES_DIR/drawable/bg_card.xml"
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="#1E293B"/>
-    <corners android:radius="16dp"/>
-    <stroke android:width="1dp" android:color="#334155"/>
-</shape>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"><solid android:color="#E50914"/><corners android:radius="12dp"/></shape>
 EOF
 
 cat << 'EOF' > "$RES_DIR/drawable/bg_input.xml"
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="#0F172A"/>
-    <corners android:radius="10dp"/>
-    <stroke android:width="1dp" android:color="#334155"/>
-</shape>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"><solid android:color="#0F172A"/><corners android:radius="10dp"/><stroke android:width="1dp" android:color="#334155"/></shape>
+EOF
+
+cat << 'EOF' > "$RES_DIR/drawable/bg_card.xml"
+<shape xmlns:android="http://schemas.android.com/apk/res/android"><solid android:color="#1E293B"/><corners android:radius="10dp"/></shape>
 EOF
 
 cat << 'EOF' > "$RES_DIR/drawable/ic_launcher_background.xml"
@@ -212,7 +152,6 @@ public class AppModels {
         @SerializedName("name") public String name; @SerializedName("stream_id") public String streamId; 
         @SerializedName("series_id") public String seriesId; @SerializedName("stream_icon") public String icon; 
         @SerializedName("container_extension") public String ext;
-        public String customRef, customOri; 
     }
 }
 EOF
@@ -239,7 +178,7 @@ import com.google.gson.reflect.TypeToken;
 import com.merdolda.player.model.AppModels.Playlist;
 import java.util.*;
 public class PrefUtils {
-    private static SharedPreferences get(Context c) { return c.getSharedPreferences("X_PREF", 0); }
+    private static SharedPreferences get(Context c) { return c.getSharedPreferences("ERD_PREF", 0); }
     public static void savePlaylist(Context c, Playlist p) {
         List<Playlist> l = getPlaylists(c); l.add(p);
         get(c).edit().putString("L", new Gson().toJson(l)).putString("A", p.id).apply();
@@ -277,7 +216,7 @@ public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.VH> {
     public PlaylistAdapter(List<Playlist> list, OnClick listener) { this.list = list; this.listener = listener; }
     @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup p, int t) { return new VH(LayoutInflater.from(p.getContext()).inflate(R.layout.item_playlist, p, false)); }
     @Override public void onBindViewHolder(@NonNull VH h, int p) {
-        Playlist i = list.get(p); h.n.setText(i.name); h.t.setText(i.type);
+        Playlist i = list.get(p); h.n.setText(i.name); h.t.setText(i.type + (i.expiry!=null ? " | Exp: "+i.expiry : ""));
         h.itemView.setOnClickListener(v -> listener.onClick(i));
         h.d.setOnClickListener(v -> listener.onDelete(i));
     }
@@ -340,59 +279,54 @@ EOF
 # 8. LAYOUTS
 cat << 'EOF' > "$RES_DIR/layout/activity_selection.xml"
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient">
-    <LinearLayout android:id="@+id/header" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:padding="30dp">
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ERDIN PLAYER" android:textColor="@color/white" android:textSize="36sp" android:textStyle="bold" android:letterSpacing="0.05"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Manage your streams" android:textColor="@color/primary_accent" android:textSize="14sp"/>
-    </LinearLayout>
-    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvPlaylists" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_below="@id/header" android:layout_above="@+id/btnGroup" android:padding="10dp" android:clipToPadding="false"/>
+    <TextView android:id="@+id/header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PLAYLISTS" android:textColor="@color/white" android:textSize="28sp" android:textStyle="bold" android:layout_centerHorizontal="true" android:layout_marginTop="30dp"/>
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvPlaylists" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_below="@id/header" android:layout_above="@+id/btnGroup" android:padding="15dp" android:clipToPadding="false"/>
     <LinearLayout android:id="@+id/btnGroup" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_alignParentBottom="true" android:padding="20dp">
-        <Button android:id="@+id/btnXtream" android:layout_width="match_parent" android:layout_height="60dp" android:text="Add Xtream Codes" style="@style/ModernButton" android:layout_marginBottom="15dp"/>
-        <Button android:id="@+id/btnSingle" android:layout_width="match_parent" android:layout_height="60dp" android:text="Single Link / M3U" style="@style/ModernButton"/>
+        <Button android:id="@+id/btnXtream" android:layout_width="match_parent" android:layout_height="60dp" android:text="Add Xtream API" style="@style/ModernButton" android:layout_marginBottom="10dp"/>
+        <Button android:id="@+id/btnSingle" android:layout_width="match_parent" android:layout_height="60dp" android:text="Paste M3U / Link" style="@style/ModernButton"/>
     </LinearLayout>
 </RelativeLayout>
 EOF
 
 cat << 'EOF' > "$RES_DIR/layout/item_playlist.xml"
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_margin="8dp" app:cardBackgroundColor="@android:color/transparent" app:cardElevation="0dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/bg_card" android:padding="16dp" android:orientation="horizontal" android:gravity="center_vertical"><LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical"><TextView android:id="@+id/tvPlayName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="18sp" android:textStyle="bold"/><TextView android:id="@+id/tvPlayInfo" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/gray_text" android:textSize="13sp"/></LinearLayout><ImageButton android:id="@+id/btnDel" android:layout_width="40dp" android:layout_height="40dp" android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_delete" android:tint="@color/danger"/></LinearLayout></androidx.cardview.widget.CardView>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/bg_card" android:padding="15dp" android:layout_marginBottom="10dp" android:orientation="horizontal" android:gravity="center_vertical"><LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical"><TextView android:id="@+id/tvPlayName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="18sp" android:textStyle="bold"/><TextView android:id="@+id/tvPlayInfo" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:textColor="@color/gray_text" android:textSize="13sp"/></LinearLayout><ImageButton android:id="@+id/btnDel" android:layout_width="40dp" android:layout_height="40dp" android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_delete" android:tint="@color/primary_accent"/></LinearLayout>
 EOF
 
 cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:orientation="vertical" android:gravity="center" android:padding="30dp">
-    <TextView android:id="@+id/tvUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:gravity="center" android:textSize="20sp" android:layout_marginBottom="50dp" android:textStyle="bold"/>
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:weightSum="2" android:orientation="horizontal" android:layout_marginBottom="30dp">
-        <androidx.cardview.widget.CardView android:id="@+id/btnLive" android:layout_width="0dp" android:layout_height="160dp" android:layout_weight="1" android:layout_marginRight="10dp" app:cardCornerRadius="16dp" app:cardBackgroundColor="@color/card_bg"><TextView android:layout_width="match_parent" android:layout_height="match_parent" android:text="LIVE TV" android:gravity="center" android:textColor="@color/primary_accent" android:textSize="22sp" android:textStyle="bold"/></androidx.cardview.widget.CardView>
-        <androidx.cardview.widget.CardView android:id="@+id/btnMovies" android:layout_width="0dp" android:layout_height="160dp" android:layout_weight="1" android:layout_marginLeft="10dp" app:cardCornerRadius="16dp" app:cardBackgroundColor="@color/card_bg"><TextView android:layout_width="match_parent" android:layout_height="match_parent" android:text="VOD" android:gravity="center" android:textColor="@color/secondary_accent" android:textSize="22sp" android:textStyle="bold"/></androidx.cardview.widget.CardView>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:orientation="vertical" android:gravity="center" android:padding="20dp">
+    <TextView android:id="@+id/tvUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:gravity="center" android:textSize="20sp" android:layout_marginBottom="40dp" android:textStyle="bold"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:weightSum="2" android:layout_marginBottom="30dp">
+        <androidx.cardview.widget.CardView android:id="@+id/btnLive" android:layout_width="0dp" android:layout_height="150dp" android:layout_weight="1" android:layout_marginRight="10dp" app:cardBackgroundColor="@color/card_bg" app:cardCornerRadius="15dp"><TextView android:layout_width="match_parent" android:layout_height="match_parent" android:text="LIVE" android:gravity="center" android:textColor="#FFF" android:textSize="24sp" android:textStyle="bold"/></androidx.cardview.widget.CardView>
+        <androidx.cardview.widget.CardView android:id="@+id/btnMovies" android:layout_width="0dp" android:layout_height="150dp" android:layout_weight="1" android:layout_marginLeft="10dp" app:cardBackgroundColor="@color/card_bg" app:cardCornerRadius="15dp"><TextView android:layout_width="match_parent" android:layout_height="match_parent" android:text="VOD" android:gravity="center" android:textColor="#FFF" android:textSize="24sp" android:textStyle="bold"/></androidx.cardview.widget.CardView>
     </LinearLayout>
-    <Button android:id="@+id/btnLogout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BACK TO PLAYLISTS" style="@style/ModernButton" android:backgroundTint="@color/danger"/>
+    <Button android:id="@+id/btnLogout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="CHANGE PLAYLIST" style="@style/ModernButton" android:backgroundTint="@color/primary_accent"/>
 </LinearLayout>
 EOF
 
 cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:orientation="vertical" android:padding="30dp" android:gravity="center">
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Xtream Login" android:textColor="@color/white" android:textSize="24sp" android:textStyle="bold" android:layout_marginBottom="30dp"/>
-    <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Playlist Name" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
+    <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Name" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
     <EditText android:id="@+id/etUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Username" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
     <EditText android:id="@+id/etPass" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Password" android:inputType="textPassword" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
     <EditText android:id="@+id/etDns" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="http://url:port" style="@style/ModernInput" android:layout_marginBottom="30dp"/>
-    <Button android:id="@+id/btnLogin" android:layout_width="match_parent" android:layout_height="60dp" android:text="Connect" style="@style/ModernButton"/>
+    <Button android:id="@+id/btnLogin" android:layout_width="match_parent" android:layout_height="60dp" android:text="Login" style="@style/ModernButton"/>
 </LinearLayout>
 EOF
 
 cat << 'EOF' > "$RES_DIR/layout/activity_login_single.xml"
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:fillViewport="true">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="30dp" android:gravity="center">
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Single Stream / M3U" android:textColor="@color/white" android:textSize="24sp" android:textStyle="bold" android:layout_marginBottom="30dp"/>
-        <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Name (Optional)" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
-        <EditText android:id="@+id/etUrl" android:layout_width="match_parent" android:layout_height="120dp" android:gravity="top|left" android:hint="Paste M3U Content or URL here..." style="@style/ModernInput" android:layout_marginBottom="15dp"/>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Supports #EXTVLCOPT for Referer/Origin" android:textColor="@color/gray_text" android:textSize="12sp" android:layout_marginBottom="30dp"/>
-        <Button android:id="@+id/btnPlay" android:layout_width="match_parent" android:layout_height="60dp" android:text="Play / Add" style="@style/ModernButton"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Paste M3U Content or Link" android:textColor="#FFF" android:textSize="18sp" android:layout_marginBottom="15dp"/>
+        <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Playlist Name (Optional)" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
+        <EditText android:id="@+id/etUrl" android:layout_width="match_parent" android:layout_height="150dp" android:gravity="top" android:hint="#EXTINF... or http://..." style="@style/ModernInput" android:layout_marginBottom="30dp"/>
+        <Button android:id="@+id/btnPlay" android:layout_width="match_parent" android:layout_height="60dp" android:text="Save & Play" style="@style/ModernButton"/>
     </LinearLayout>
 </ScrollView>
 EOF
 
 cat << 'EOF' > "$RES_DIR/layout/activity_list.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/bg_main_gradient">
-    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvCats" android:layout_width="match_parent" android:layout_height="60dp" android:padding="5dp" android:clipToPadding="false"/>
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvCats" android:layout_width="match_parent" android:layout_height="50dp" android:padding="5dp" android:clipToPadding="false"/>
     <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvStreams" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="8dp"/>
 </LinearLayout>
 EOF
@@ -405,63 +339,54 @@ cat << 'EOF' > "$RES_DIR/layout/item_channel.xml"
 EOF
 
 cat << 'EOF' > "$RES_DIR/layout/item_category.xml"
-<TextView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tvCatName" android:layout_width="wrap_content" android:layout_height="40dp" android:gravity="center" android:paddingLeft="20dp" android:paddingRight="20dp" android:textColor="#FFF" android:textSize="14sp" android:textStyle="bold" android:layout_margin="5dp"/>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tvCatName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:padding="10dp" android:textColor="#FFF" android:textSize="14sp" android:textStyle="bold"/>
 EOF
 
 cat << 'EOF' > "$RES_DIR/layout/activity_player.xml"
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000"><com.google.android.exoplayer2.ui.StyledPlayerView android:id="@+id/player_view" android:layout_width="match_parent" android:layout_height="match_parent"/></FrameLayout>
 EOF
 
-# 9. JAVA CLASSES (With M3U Parsing Logic)
+# 9. JAVA CLASSES (FULL LOGIC)
 
-# PlayerActivity
-cat << EOF > "$PKG_DIR/ui/PlayerActivity.java"
+cat << EOF > "$PKG_DIR/ui/SelectionActivity.java"
 package com.merdolda.player.ui;
-import android.net.Uri;
+import android.content.Intent;
 import android.os.Bundle;
-import android.view.WindowManager;
 import androidx.appcompat.app.AppCompatActivity;
-import com.google.android.exoplayer2.*;
-import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
-import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
-import com.google.android.exoplayer2.ui.StyledPlayerView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import com.merdolda.player.R;
-import java.util.*;
-public class PlayerActivity extends AppCompatActivity {
-    ExoPlayer p;
-    @Override protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        setContentView(R.layout.activity_player);
-        StyledPlayerView pv = findViewById(R.id.player_view);
-        
-        String url = getIntent().getStringExtra("url");
-        String ref = getIntent().getStringExtra("referer");
-        String ori = getIntent().getStringExtra("origin");
-        
-        DefaultHttpDataSource.Factory f = new DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true);
-        f.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-        Map<String, String> h = new HashMap<>();
-        if(ref != null && !ref.isEmpty()) h.put("Referer", ref);
-        if(ori != null && !ori.isEmpty()) h.put("Origin", ori);
-        f.setDefaultRequestProperties(h);
-        
-        p = new ExoPlayer.Builder(this).setMediaSourceFactory(new DefaultMediaSourceFactory(f)).build();
-        pv.setPlayer(p);
-        
-        if(url != null) { 
-            MediaItem mi = MediaItem.fromUri(Uri.parse(url));
-            p.setMediaItem(mi); 
-            p.prepare(); 
-            p.play(); 
-        }
+import com.merdolda.player.adapter.PlaylistAdapter;
+import com.merdolda.player.model.AppModels.Playlist;
+import com.merdolda.player.utils.PrefUtils;
+import java.util.List;
+public class SelectionActivity extends AppCompatActivity {
+    PlaylistAdapter adapter; List<Playlist> list;
+    @Override protected void onCreate(Bundle s) {
+        super.onCreate(s);
+        setContentView(R.layout.activity_selection);
+        RecyclerView rv = findViewById(R.id.rvPlaylists);
+        rv.setLayoutManager(new LinearLayoutManager(this));
+        list = PrefUtils.getPlaylists(this);
+        adapter = new PlaylistAdapter(list, new PlaylistAdapter.OnClick() {
+            @Override public void onClick(Playlist p) { 
+                PrefUtils.savePlaylist(SelectionActivity.this, p); // Updates active
+                if("Xtream".equals(p.type)) startActivity(new Intent(SelectionActivity.this, DashboardActivity.class)); 
+                else {
+                    Intent in = new Intent(SelectionActivity.this, PlayerActivity.class);
+                    in.putExtra("url", p.url); in.putExtra("referer", p.ref); in.putExtra("origin", p.ori);
+                    startActivity(in);
+                }
+            }
+            @Override public void onDelete(Playlist p) { PrefUtils.deletePlaylist(SelectionActivity.this, p.id); list.remove(p); adapter.notifyDataSetChanged(); }
+        });
+        rv.setAdapter(adapter);
+        findViewById(R.id.btnXtream).setOnClickListener(v -> startActivity(new Intent(this, LoginXtreamActivity.class)));
+        findViewById(R.id.btnSingle).setOnClickListener(v -> startActivity(new Intent(this, LoginSingleActivity.class)));
     }
-    @Override protected void onSaveInstanceState(Bundle o) { super.onSaveInstanceState(o); if(p!=null) o.putLong("P", p.getCurrentPosition()); }
-    @Override protected void onDestroy() { super.onDestroy(); if(p != null) p.release(); }
 }
 EOF
 
-# DashboardActivity
 cat << EOF > "$PKG_DIR/ui/DashboardActivity.java"
 package com.merdolda.player.ui;
 import android.content.Intent;
@@ -476,7 +401,7 @@ public class DashboardActivity extends AppCompatActivity {
         super.onCreate(s);
         setContentView(R.layout.activity_dashboard);
         Playlist p = PrefUtils.getActive(this);
-        if(p != null) ((TextView)findViewById(R.id.tvUser)).setText(p.name);
+        if(p != null) ((TextView)findViewById(R.id.tvUser)).setText(p.name + "\n" + (p.expiry != null ? "Exp: " + p.expiry : "Unlimited"));
         findViewById(R.id.btnLive).setOnClickListener(v -> { if(p!=null && "Xtream".equals(p.type)) { Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "live"); startActivity(i); } });
         findViewById(R.id.btnMovies).setOnClickListener(v -> { if(p!=null && "Xtream".equals(p.type)) { Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "vod"); startActivity(i); } });
         findViewById(R.id.btnLogout).setOnClickListener(v -> { PrefUtils.logout(this); startActivity(new Intent(this, SelectionActivity.class)); finish(); });
@@ -484,7 +409,78 @@ public class DashboardActivity extends AppCompatActivity {
 }
 EOF
 
-# CommonListActivity
+cat << EOF > "$PKG_DIR/ui/LoginXtreamActivity.java"
+package com.merdolda.player.ui;
+import android.content.Intent;
+import android.os.Bundle;
+import android.widget.*;
+import androidx.appcompat.app.AppCompatActivity;
+import com.merdolda.player.R;
+import com.merdolda.player.api.XtreamApi;
+import com.merdolda.player.model.AppModels.*;
+import com.merdolda.player.utils.PrefUtils;
+import java.util.UUID;
+import retrofit2.*;
+import retrofit2.converter.gson.GsonConverterFactory;
+public class LoginXtreamActivity extends AppCompatActivity {
+    @Override protected void onCreate(Bundle s) {
+        super.onCreate(s);
+        setContentView(R.layout.activity_login_xtream);
+        EditText name = findViewById(R.id.etName), u = findViewById(R.id.etUser), p = findViewById(R.id.etPass), d = findViewById(R.id.etDns);
+        findViewById(R.id.btnLogin).setOnClickListener(v -> {
+            String url = d.getText().toString(); if(!url.startsWith("http")) url = "http://"+url;
+            Retrofit r = new Retrofit.Builder().baseUrl(url+"/").addConverterFactory(GsonConverterFactory.create()).build();
+            final String fU = url;
+            r.create(XtreamApi.class).login(fU+"/player_api.php", u.getText().toString(), p.getText().toString()).enqueue(new Callback<LoginResponse>() {
+                @Override public void onResponse(Call<LoginResponse> c, Response<LoginResponse> res) {
+                    if(res.body()!=null && res.body().userInfo != null && res.body().userInfo.auth==1) {
+                        Playlist pl = new Playlist(); pl.id = UUID.randomUUID().toString(); pl.type="Xtream"; pl.url=fU; pl.user=u.getText().toString(); pl.pass=p.getText().toString(); pl.name=name.getText().toString();
+                        if(res.body().userInfo.expDate != null) pl.expiry = new java.util.Date(Long.parseLong(res.body().userInfo.expDate)*1000).toString();
+                        PrefUtils.savePlaylist(LoginXtreamActivity.this, pl); startActivity(new Intent(LoginXtreamActivity.this, DashboardActivity.class)); finish();
+                    } else Toast.makeText(LoginXtreamActivity.this, "Failed", 0).show();
+                }
+                @Override public void onFailure(Call<LoginResponse> c, Throwable t) { Toast.makeText(LoginXtreamActivity.this, "Error", 0).show(); }
+            });
+        });
+    }
+}
+EOF
+
+cat << EOF > "$PKG_DIR/ui/LoginSingleActivity.java"
+package com.merdolda.player.ui;
+import android.content.Intent;
+import android.os.Bundle;
+import android.widget.EditText;
+import androidx.appcompat.app.AppCompatActivity;
+import com.merdolda.player.R;
+import com.merdolda.player.model.AppModels.Playlist;
+import com.merdolda.player.utils.PrefUtils;
+import java.util.UUID;
+public class LoginSingleActivity extends AppCompatActivity {
+    @Override protected void onCreate(Bundle s) {
+        super.onCreate(s);
+        setContentView(R.layout.activity_login_single);
+        EditText n = findViewById(R.id.etName), u = findViewById(R.id.etUrl);
+        findViewById(R.id.btnPlay).setOnClickListener(v -> {
+            String raw = u.getText().toString();
+            String link = raw, ref = "", ori = "";
+            // SIMPLE PARSER FOR #EXTVLCOPT
+            if(raw.contains("#EXTVLCOPT")) {
+                String[] lines = raw.split("\\n");
+                for(String l : lines) {
+                    if(l.startsWith("http")) link = l.trim();
+                    if(l.contains("http-referrer=")) ref = l.split("referrer=")[1].trim();
+                    if(l.contains("http-origin=")) ori = l.split("origin=")[1].trim();
+                }
+            }
+            Playlist pl = new Playlist(); pl.id = UUID.randomUUID().toString(); pl.type="Single"; pl.name=n.getText().toString(); pl.url=link; pl.ref=ref; pl.ori=ori;
+            PrefUtils.savePlaylist(this, pl);
+            Intent in = new Intent(this, PlayerActivity.class); in.putExtra("url", pl.url); in.putExtra("referer", pl.ref); in.putExtra("origin", pl.ori); startActivity(in);
+        });
+    }
+}
+EOF
+
 cat << EOF > "$PKG_DIR/ui/CommonListActivity.java"
 package com.merdolda.player.ui;
 import android.content.Intent;
@@ -534,150 +530,39 @@ public class CommonListActivity extends AppCompatActivity {
 }
 EOF
 
-# LoginXtreamActivity
-cat << EOF > "$PKG_DIR/ui/LoginXtreamActivity.java"
+cat << EOF > "$PKG_DIR/ui/PlayerActivity.java"
 package com.merdolda.player.ui;
-import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.widget.*;
+import android.view.WindowManager;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.exoplayer2.*;
+import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
+import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.merdolda.player.R;
-import com.merdolda.player.api.XtreamApi;
-import com.merdolda.player.model.AppModels.*;
-import com.merdolda.player.utils.PrefUtils;
-import java.util.UUID;
-import retrofit2.*;
-import retrofit2.converter.gson.GsonConverterFactory;
-public class LoginXtreamActivity extends AppCompatActivity {
-    @Override protected void onCreate(Bundle s) {
-        super.onCreate(s);
-        setContentView(R.layout.activity_login_xtream);
-        EditText name = findViewById(R.id.etName), u = findViewById(R.id.etUser), p = findViewById(R.id.etPass), d = findViewById(R.id.etDns);
-        findViewById(R.id.btnLogin).setOnClickListener(v -> {
-            String url = d.getText().toString(); if(!url.startsWith("http")) url = "http://"+url;
-            Retrofit r = new Retrofit.Builder().baseUrl(url+"/").addConverterFactory(GsonConverterFactory.create()).build();
-            final String fU = url;
-            r.create(XtreamApi.class).login(fU+"/player_api.php", u.getText().toString(), p.getText().toString()).enqueue(new Callback<LoginResponse>() {
-                @Override public void onResponse(Call<LoginResponse> c, Response<LoginResponse> res) {
-                    if(res.body()!=null && res.body().userInfo != null && res.body().userInfo.auth==1) {
-                        Playlist pl = new Playlist(); pl.id = UUID.randomUUID().toString(); pl.type="Xtream"; pl.url=fU; pl.user=u.getText().toString(); pl.pass=p.getText().toString(); pl.name=name.getText().toString();
-                        if(res.body().userInfo.expDate != null) pl.expiry = new java.util.Date(Long.parseLong(res.body().userInfo.expDate)*1000).toString();
-                        PrefUtils.savePlaylist(LoginXtreamActivity.this, pl); startActivity(new Intent(LoginXtreamActivity.this, DashboardActivity.class)); finish();
-                    } else Toast.makeText(LoginXtreamActivity.this, "Authentication Failed", 0).show();
-                }
-                @Override public void onFailure(Call<LoginResponse> c, Throwable t) { Toast.makeText(LoginXtreamActivity.this, "Connection Error", 0).show(); }
-            });
-        });
+import java.util.*;
+public class PlayerActivity extends AppCompatActivity {
+    ExoPlayer p;
+    @Override protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setContentView(R.layout.activity_player);
+        StyledPlayerView pv = findViewById(R.id.player_view);
+        String url = getIntent().getStringExtra("url");
+        String ref = getIntent().getStringExtra("referer");
+        String ori = getIntent().getStringExtra("origin");
+        DefaultHttpDataSource.Factory f = new DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true);
+        Map<String, String> h = new HashMap<>();
+        if(ref != null && !ref.isEmpty()) h.put("Referer", ref);
+        if(ori != null && !ori.isEmpty()) h.put("Origin", ori);
+        f.setDefaultRequestProperties(h);
+        p = new ExoPlayer.Builder(this).setMediaSourceFactory(new DefaultMediaSourceFactory(f)).build();
+        pv.setPlayer(p);
+        if(url != null) { p.setMediaItem(MediaItem.fromUri(Uri.parse(url))); p.prepare(); p.play(); }
     }
-}
-EOF
-
-# LoginSingleActivity (M3U PARSING LOGIC HERE)
-cat << EOF > "$PKG_DIR/ui/LoginSingleActivity.java"
-package com.merdolda.player.ui;
-import android.content.Intent;
-import android.os.Bundle;
-import android.widget.EditText;
-import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
-import com.merdolda.player.R;
-import com.merdolda.player.model.AppModels.Playlist;
-import com.merdolda.player.utils.PrefUtils;
-import java.util.UUID;
-import java.util.regex.*;
-public class LoginSingleActivity extends AppCompatActivity {
-    @Override protected void onCreate(Bundle s) {
-        super.onCreate(s);
-        setContentView(R.layout.activity_login_single);
-        EditText n = findViewById(R.id.etName), u = findViewById(R.id.etUrl);
-        
-        findViewById(R.id.btnPlay).setOnClickListener(v -> {
-            String content = u.getText().toString();
-            String name = n.getText().toString();
-            
-            // Logic to parse raw M3U content pasted directly
-            if(content.contains("#EXTINF")) {
-                parseAndPlay(content);
-            } else {
-                // Simple URL
-                Playlist pl = new Playlist(); pl.id = UUID.randomUUID().toString(); pl.type="Single"; pl.name=name; pl.url=content;
-                PrefUtils.savePlaylist(this, pl);
-                play(pl.url, null, null);
-            }
-        });
-    }
-
-    private void parseAndPlay(String m3u) {
-        // Regex to find URL, Referer, Origin
-        String streamUrl = "";
-        String referer = "";
-        String origin = "";
-        
-        // Extract URL (Last line usually)
-        String[] lines = m3u.split("\\n");
-        for(String line : lines) {
-            line = line.trim();
-            if(line.startsWith("http")) streamUrl = line;
-            if(line.startsWith("#EXTVLCOPT:http-referrer=")) referer = line.replace("#EXTVLCOPT:http-referrer=", "");
-            if(line.startsWith("#EXTVLCOPT:http-origin=")) origin = line.replace("#EXTVLCOPT:http-origin=", "");
-        }
-
-        if(!streamUrl.isEmpty()) {
-            play(streamUrl, referer, origin);
-        } else {
-            Toast.makeText(this, "No valid stream URL found", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void play(String url, String ref, String ori) {
-        Intent in = new Intent(this, PlayerActivity.class); 
-        in.putExtra("url", url); 
-        in.putExtra("referer", ref); 
-        in.putExtra("origin", ori); 
-        startActivity(in);
-    }
-}
-EOF
-
-# SelectionActivity
-cat << EOF > "$PKG_DIR/ui/SelectionActivity.java"
-package com.merdolda.player.ui;
-import android.content.Intent;
-import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import com.merdolda.player.R;
-import com.merdolda.player.adapter.PlaylistAdapter;
-import com.merdolda.player.model.AppModels.Playlist;
-import com.merdolda.player.utils.PrefUtils;
-import java.util.List;
-public class SelectionActivity extends AppCompatActivity {
-    PlaylistAdapter adapter; List<Playlist> list;
-    @Override protected void onCreate(Bundle s) {
-        super.onCreate(s);
-        setContentView(R.layout.activity_selection);
-        RecyclerView rv = findViewById(R.id.rvPlaylists);
-        rv.setLayoutManager(new LinearLayoutManager(this));
-        list = PrefUtils.getPlaylists(this);
-        adapter = new PlaylistAdapter(list, new PlaylistAdapter.OnClick() {
-            @Override public void onClick(Playlist p) { 
-                if("Xtream".equals(p.type)) {
-                    PrefUtils.savePlaylist(SelectionActivity.this, p); 
-                    startActivity(new Intent(SelectionActivity.this, DashboardActivity.class)); 
-                } else {
-                    // Direct Play for Single/M3U
-                    Intent in = new Intent(SelectionActivity.this, PlayerActivity.class);
-                    in.putExtra("url", p.url); in.putExtra("referer", p.ref); in.putExtra("origin", p.ori);
-                    startActivity(in);
-                }
-            }
-            @Override public void onDelete(Playlist p) { PrefUtils.deletePlaylist(SelectionActivity.this, p.id); list.remove(p); adapter.notifyDataSetChanged(); }
-        });
-        rv.setAdapter(adapter);
-        findViewById(R.id.btnXtream).setOnClickListener(v -> startActivity(new Intent(this, LoginXtreamActivity.class)));
-        findViewById(R.id.btnSingle).setOnClickListener(v -> startActivity(new Intent(this, LoginSingleActivity.class)));
-    }
+    @Override protected void onSaveInstanceState(Bundle o) { super.onSaveInstanceState(o); if(p!=null) o.putLong("P", p.getCurrentPosition()); }
+    @Override protected void onDestroy() { super.onDestroy(); if(p != null) p.release(); }
 }
 EOF
 
@@ -696,12 +581,10 @@ cat << 'EOF' > "$MODULE_DIR/src/main/AndroidManifest.xml"
 </manifest>
 EOF
 
-# 11. WRAPPER GENERATION
-echo "Generating Gradle Wrapper..."
+# 11. WRAPPER & FINISH
 cd "$PROJECT_ROOT"
 gradle wrapper --gradle-version 8.4
 chmod +x gradlew
 cd ..
 
-echo "✅ ERDINPLAYER v10.1: PROJECT REGENERATED SUCCESSFULLY."
-echo "👉 NOW RUN: cd $PROJECT_NAME && ./gradlew assembleRelease --no-daemon"
+echo "✅ ERDINPLAYER v10.1: FULL SYSTEM READY."
