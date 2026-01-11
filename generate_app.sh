@@ -1,23 +1,32 @@
 #!/bin/bash
 
-# --- KONFİGÜRASYON ---
+# --- AYARLAR ---
 PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER MEGA GENERATOR: PROFESYONEL IPTV SİSTEMİ KURULUYOR..."
+echo "💎 ERDINPLAYER MEGA PRO: FULL XTREAM & M3U ENGINE OLUŞTURULUYOR..."
 
-# 1. KLASÖR YAPILANDIRMASI
+# 1. TEMİZLİK VE KLASÖR YAPISI
 rm -rf $PROJECT_ROOT
 mkdir -p $PKG_DIR/model $PKG_DIR/adapter $PKG_DIR/api $PKG_DIR/utils $PKG_DIR/ui
 mkdir -p $RES_DIR/layout $RES_DIR/values $RES_DIR/drawable $RES_DIR/anim
+mkdir -p $PROJECT_ROOT/gradle/wrapper
 
 # 2. KEYSTORE (İMZA)
 keytool -genkey -v -keystore $MODULE_DIR/release.keystore -alias erdinplayer -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Erdin, O=ErdinPlayer, C=TR" 2>/dev/null
 
-# 3. GRADLE VE AYARLAR
+# 3. PROJE YAPILANDIRMASI (GRADLE 8.4)
+cat << 'EOF' > $PROJECT_ROOT/gradle/wrapper/gradle-wrapper.properties
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+EOF
+
 cat << 'EOF' > $PROJECT_ROOT/build.gradle
 buildscript {
     repositories { google(); mavenCentral() }
@@ -56,7 +65,11 @@ android {
         release { storeFile file("release.keystore"); storePassword "123456"; keyAlias "erdinplayer"; keyPassword "123456" }
     }
     buildTypes {
-        release { minifyEnabled false; signingConfig signingConfigs.release; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
+        release { 
+            minifyEnabled false
+            signingConfig signingConfigs.release 
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' 
+        }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
@@ -74,40 +87,48 @@ dependencies {
 }
 EOF
 
-# 4. MODELLER (PROFESYONEL XTREAM YAPISI)
+# 4. MODELLER (HATALI OLAN BÖLÜM DÜZELTİLDİ)
 cat << EOF > $PKG_DIR/model/XtreamData.java
 package com.merdolda.player.model;
 import com.google.gson.annotations.SerializedName;
 import java.io.Serializable;
-import java.util.List;
 
 public class XtreamData {
-    public static class LoginResponse implements Serializable {
-        @SerializedName("user_info") public UserInfo userInfo;
-        @SerializedName("server_info") public ServerInfo serverInfo;
-    }
+    
     public static class UserInfo implements Serializable {
         @SerializedName("username") public String username;
         @SerializedName("auth") public int auth;
         @SerializedName("status") public String status;
         @SerializedName("expiry_date") public String expiry;
     }
+
+    public static class ServerInfo implements Serializable {
+        @SerializedName("url") public String url;
+        @SerializedName("port") public String port;
+    }
+
+    public static class LoginResponse implements Serializable {
+        @SerializedName("user_info") public UserInfo userInfo;
+        @SerializedName("server_info") public ServerInfo serverInfo;
+    }
+
     public static class Category implements Serializable {
         @SerializedName("category_id") public String id;
         @SerializedName("category_name") public String name;
     }
+
     public static class StreamItem implements Serializable {
         @SerializedName("name") public String name;
         @SerializedName("stream_id") public String streamId;
         @SerializedName("stream_icon") public String icon;
         @SerializedName("category_id") public String catId;
-        @SerializedName("rating") public String rating;
-        @SerializedName("container_extension") public String ext;
+        @SerializedName("stream_type") public String type;
     }
 }
 EOF
 
-# 5. ADAPTERLER (SOL MENÜ + SAĞ LİSTE)
+# 5. ADAPTERLER (SMARTERS STİLİ)
+# Kategori Adaptörü
 cat << EOF > $PKG_DIR/adapter/CategoryAdapter.java
 package com.merdolda.player.adapter;
 import android.graphics.Color;
@@ -143,6 +164,7 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.VH> {
 }
 EOF
 
+# Kanal Adaptörü
 cat << EOF > $PKG_DIR/adapter/StreamAdapter.java
 package com.merdolda.player.adapter;
 import android.view.*;
@@ -222,10 +244,10 @@ EOF
 
 cat << 'EOF' > $RES_DIR/layout/activity_dashboard.xml
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000" android:padding="20dp">
-    <TextView android:id="@+id/tvUser" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="18sp"/>
+    <TextView android:id="@+id/tvUser" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="18sp" android:layout_alignParentTop="true"/>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_centerInParent="true" android:gravity="center" android:orientation="horizontal">
         <Button android:id="@+id/btnLive" android:layout_width="250dp" android:layout_height="180dp" android:text="CANLI TV" android:backgroundTint="#E50914" android:textSize="22sp" android:layout_margin="10dp"/>
-        <Button android:id="@+id/btnMovies" android:layout_width="250dp" android:layout_height="180dp" android:text="FİLMLER" android:backgroundTint="#222" android:textSize="22sp" android:layout_margin="10dp"/>
+        <Button android:id="@+id/btnVod" android:layout_width="250dp" android:layout_height="180dp" android:text="FİLMLER" android:backgroundTint="#222" android:textSize="22sp" android:layout_margin="10dp"/>
     </LinearLayout>
     <Button android:id="@+id/btnLogout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ÇIKIŞ" android:layout_alignParentBottom="true" android:backgroundTint="#333"/>
 </RelativeLayout>
@@ -244,7 +266,7 @@ EOF
 
 cat << 'EOF' > $RES_DIR/layout/item_channel.xml
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="10dp" android:focusable="true" android:clickable="true" android:background="?attr/selectableItemBackground">
-    <ImageView android:id="@+id/ivIcon" android:layout_width="60dp" android:layout_height="60dp"/>
+    <ImageView android:id="@+id/ivIcon" android:layout_width="70dp" android:layout_height="70dp" android:scaleType="centerInside"/>
     <TextView android:id="@+id/tvName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="18sp" android:layout_marginLeft="15dp" android:layout_gravity="center"/>
 </LinearLayout>
 EOF
@@ -278,27 +300,28 @@ import retrofit2.*;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class LoginActivity extends AppCompatActivity {
-    @Override protected void onCreate(Bundle s) {
-        super.onCreate(s);
-        if(!PrefUtils.getU(this).isEmpty()){ start(); return; }
+    @Override protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if(!PrefUtils.getU(this).isEmpty()) { start(); return; }
         setContentView(R.layout.activity_login);
         EditText u = findViewById(R.id.etUser), p = findViewById(R.id.etPass), d = findViewById(R.id.etDns);
         findViewById(R.id.btnLogin).setOnClickListener(v -> {
-            String url = d.getText().toString(); if(!url.startsWith("http")) url = "http://"+url;
+            String url = d.getText().toString();
+            if(!url.startsWith("http")) url = "http://" + url;
             if(url.endsWith("/")) url = url.substring(0, url.length()-1);
             final String fU = url;
             Retrofit r = new Retrofit.Builder().baseUrl(fU+"/").addConverterFactory(GsonConverterFactory.create()).build();
             r.create(XtreamApi.class).login(u.getText().toString(), p.getText().toString()).enqueue(new Callback<LoginResponse>() {
                 public void onResponse(Call<LoginResponse> c, Response<LoginResponse> res) {
-                    if(res.body()!=null && res.body().userInfo!=null && res.body().userInfo.auth==1){
+                    if(res.body() != null && res.body().userInfo != null && res.body().userInfo.auth == 1) {
                         PrefUtils.saveUser(LoginActivity.this, fU, u.getText().toString(), p.getText().toString()); start();
-                    } else Toast.makeText(LoginActivity.this, "Hata!", 0).show();
+                    } else Toast.makeText(LoginActivity.this, "Hatalı Giriş!", 0).show();
                 }
-                public void onFailure(Call<LoginResponse> c, Throwable t){ Toast.makeText(LoginActivity.this, "Bağlantı Hatası!", 0).show(); }
+                public void onFailure(Call<LoginResponse> c, Throwable t) { Toast.makeText(LoginActivity.this, "Bağlantı Hatası!", 0).show(); }
             });
         });
     }
-    void start(){ startActivity(new Intent(this, DashboardActivity.class)); finish(); }
+    void start() { startActivity(new Intent(this, DashboardActivity.class)); finish(); }
 }
 EOF
 
@@ -312,10 +335,10 @@ import com.merdolda.player.R;
 import com.merdolda.player.utils.PrefUtils;
 
 public class DashboardActivity extends AppCompatActivity {
-    @Override protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    @Override protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
-        ((TextView)findViewById(R.id.tvUser)).setText("Kullanıcı: " + PrefUtils.getU(this));
+        ((TextView)findViewById(R.id.tvUser)).setText("Hoşgeldin: " + PrefUtils.getU(this));
         findViewById(R.id.btnLive).setOnClickListener(v -> startActivity(new Intent(this, LiveActivity.class)));
         findViewById(R.id.btnLogout).setOnClickListener(v -> { PrefUtils.logout(this); startActivity(new Intent(this, LoginActivity.class)); finish(); });
     }
@@ -340,15 +363,15 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class LiveActivity extends AppCompatActivity {
     XtreamApi api; RecyclerView rvC, rvS; StreamAdapter sAdapter;
-    @Override protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    @Override protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_live);
         rvC = findViewById(R.id.rvCats); rvS = findViewById(R.id.rvStreams);
         rvC.setLayoutManager(new LinearLayoutManager(this));
         rvS.setLayoutManager(new GridLayoutManager(this, 3));
-        sAdapter = new StreamAdapter(new ArrayList<>(), item -> {
+        sAdapter = new StreamAdapter(new ArrayList<>(), s -> {
             Intent i = new Intent(this, PlayerActivity.class);
-            i.putExtra("url", PrefUtils.getD(this)+"/live/"+PrefUtils.getU(this)+"/"+PrefUtils.getP(this)+"/"+item.streamId+".ts");
+            i.putExtra("url", PrefUtils.getD(this)+"/live/"+PrefUtils.getU(this)+"/"+PrefUtils.getP(this)+"/"+s.streamId+".ts");
             startActivity(i);
         });
         rvS.setAdapter(sAdapter);
@@ -358,17 +381,17 @@ public class LiveActivity extends AppCompatActivity {
     void loadCats() {
         api.getCategories(PrefUtils.getU(this), PrefUtils.getP(this), "get_live_categories").enqueue(new Callback<List<Category>>() {
             public void onResponse(Call<List<Category>> c, Response<List<Category>> r) {
-                if(r.body()!=null) rvC.setAdapter(new CategoryAdapter(r.body(), cat -> loadStreams(cat.id)));
+                if(r.body() != null) rvC.setAdapter(new CategoryAdapter(r.body(), cat -> loadStreams(cat.id)));
             }
-            public void onFailure(Call<List<Category>> c, Throwable t){}
+            public void onFailure(Call<List<Category>> c, Throwable t) {}
         });
     }
     void loadStreams(String id) {
         api.getStreams(PrefUtils.getU(this), PrefUtils.getP(this), "get_live_streams", id).enqueue(new Callback<List<StreamItem>>() {
             public void onResponse(Call<List<StreamItem>> c, Response<List<StreamItem>> r) {
-                if(r.body()!=null) sAdapter.update(r.body());
+                if(r.body() != null) sAdapter.update(r.body());
             }
-            public void onFailure(Call<List<StreamItem>> c, Throwable t){}
+            public void onFailure(Call<List<StreamItem>> c, Throwable t) {}
         });
     }
 }
@@ -385,16 +408,16 @@ import com.merdolda.player.R;
 
 public class PlayerActivity extends AppCompatActivity {
     ExoPlayer p;
-    @Override protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    @Override protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_player);
         StyledPlayerView v = findViewById(R.id.player_view);
         p = new ExoPlayer.Builder(this).build();
         v.setPlayer(p);
         String url = getIntent().getStringExtra("url");
-        if(url!=null){ p.setMediaItem(MediaItem.fromUri(Uri.parse(url))); p.prepare(); p.play(); }
+        if(url != null) { p.setMediaItem(MediaItem.fromUri(Uri.parse(url))); p.prepare(); p.play(); }
     }
-    @Override protected void onDestroy(){ super.onDestroy(); if(p!=null) p.release(); }
+    @Override protected void onDestroy() { super.onDestroy(); if(p != null) p.release(); }
 }
 EOF
 
@@ -414,4 +437,10 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 </manifest>
 EOF
 
-echo "✅ MEGA PROJE OLUŞTURULDU."
+# 10. GRADLEW OLUŞTURUCU
+cd $PROJECT_ROOT
+gradle wrapper --gradle-version 8.4
+chmod +x gradlew
+cd ..
+
+echo "✅ TÜM SİSTEM VE MODELLER HAZIR."
