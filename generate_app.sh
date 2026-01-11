@@ -2,7 +2,7 @@
 
 # --- AYARLAR ---
 PROJECT_NAME="ErdinPlayerPro"
-PROJECT_ROOT="theapp_v14"
+PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
