@@ -8,7 +8,7 @@ MODULE_DIR="$PROJECT_ROOT/app"
 PKG_DIR="$MODULE_DIR/src/main/java/com/merdolda/player"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "🚀 ERDINPLAYER (FIXED) OLUŞTURULUYOR..."
+echo "🚀 ERDINPLAYER (CLEAN BUILD) OLUŞTURULUYOR..."
 
 # 1. Temizlik ve Klasörler
 rm -rf $PROJECT_ROOT
@@ -18,12 +18,12 @@ mkdir -p $RES_DIR/values
 mkdir -p $RES_DIR/drawable
 mkdir -p $RES_DIR/mipmap-anydpi-v26
 
-# 2. PROGUARD (Çakışmaları önlemek için kurallar)
+# 2. PROGUARD (Hata Önleyici)
 cat << 'EOF' > $MODULE_DIR/proguard-rules.pro
 -dontwarn com.bumptech.glide.**
 -keep class com.bumptech.glide.** { *; }
 -dontwarn androidx.**
--keep class androidx.** { *; }
+-ignorewarnings
 EOF
 
 # 3. SETTINGS.GRADLE
@@ -47,14 +47,14 @@ rootProject.name = "ErdinPlayer"
 include ':app'
 EOF
 
-# 4. BUILD.GRADLE (PROJECT LEVEL)
+# 4. BUILD.GRADLE (PROJECT)
 cat << 'EOF' > $PROJECT_ROOT/build.gradle
 plugins {
     id 'com.android.application' version '8.2.0' apply false
 }
 EOF
 
-# 5. BUILD.GRADLE (APP LEVEL - Java 17 & MultiDex Eklendi)
+# 5. BUILD.GRADLE (APP - JAR DOSYALARINI İPTAL ETTİK)
 cat << 'EOF' > $MODULE_DIR/build.gradle
 plugins {
     id 'com.android.application'
@@ -70,8 +70,6 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
-        
-        // KRİTİK AYAR: Büyük kütüphaneler için gerekli
         multiDexEnabled true
     }
 
@@ -82,17 +80,9 @@ android {
         }
     }
     
-    // JAVA 17 AYARI (GitHub Runner ile uyumlu olması için)
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    
-    // ÇAKIŞMALARI ENGELLEYEN AYARLAR
-    packagingOptions {
-        resources {
-            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/license.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt', 'META-INF/notice.txt', 'META-INF/ASL2.0', 'META-INF/*.kotlin_module']
-        }
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     lintOptions {
@@ -102,7 +92,7 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.multidex:multidex:2.0.1' // MultiDex Kütüphanesi
+    implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
@@ -111,14 +101,15 @@ dependencies {
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.github.bumptech.glide:glide:4.16.0'
 
-    // Eklediğin JAR dosyalarını dahil et
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    // DİKKAT: JAR dosyasını okuyan satırı kaldırdım.
+    // Eğer JAR çok gerekliyse ve hata veriyorsa, JAR bozuktur.
+    // implementation fileTree(dir: 'libs', include: ['*.jar'])
 }
 EOF
 
 # 6. KAYNAK DOSYALAR
 
-# strings.xml
+# strings.xml (Uygulama Adı Burada Belirlenir)
 cat << 'EOF' > $RES_DIR/values/strings.xml
 <resources>
     <string name="app_name">ErdinPlayer</string>
@@ -129,9 +120,9 @@ EOF
 cat << 'EOF' > $RES_DIR/values/themes.xml
 <resources>
     <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.NoActionBar">
-        <item name="colorPrimary">#FF0000</item>
-        <item name="colorPrimaryDark">#990000</item>
-        <item name="colorAccent">#FF0000</item>
+        <item name="colorPrimary">#E50914</item>
+        <item name="colorPrimaryDark">#B81D24</item>
+        <item name="colorAccent">#E50914</item>
     </style>
 </resources>
 EOF
@@ -335,4 +326,4 @@ cat << 'EOF' > $RES_DIR/layout/activity_player.xml
 </FrameLayout>
 EOF
 
-echo "✅ ERDINPLAYER DOSYALARI (FIXED) HAZIRLANDI."
+echo "✅ ERDINPLAYER TEMİZ KURULUM HAZIR."
