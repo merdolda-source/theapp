@@ -10,26 +10,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # 1. DOSYALARI OLUŞTUR (gradlew burada oluşacak)
       - name: Generate App Files
         run: chmod +x generate_app.sh && ./generate_app.sh
 
-      # 2. JAVA KUR
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
 
-      # 3. APK DERLE
       - name: Build APK
         working-directory: ./theapp
         run: |
           chmod +x gradlew
           ./gradlew clean assembleRelease --stacktrace --no-daemon
         
-      # 4. APK YÜKLE
       - uses: actions/upload-artifact@v4
         with:
           name: ErdinPlayer-APK
-          path: theapp/app/build/outputs/apk/release/app-release-unsigned.apk
+          # İmzalı olduğu için artık '-unsigned' eki kalktı!
+          path: theapp/app/build/outputs/apk/release/app-release.apk
