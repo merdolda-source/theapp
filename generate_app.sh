@@ -7,26 +7,17 @@ PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER ULTRA PRO: XTREAM ENGINE OLUŞTURULUYOR..."
+echo "💎 ERDINPLAYER MEGA GENERATOR: PROFESYONEL IPTV SİSTEMİ KURULUYOR..."
 
-# 1. KLASÖR YAPISI
+# 1. KLASÖR YAPILANDIRMASI
 rm -rf $PROJECT_ROOT
 mkdir -p $PKG_DIR/model $PKG_DIR/adapter $PKG_DIR/api $PKG_DIR/utils $PKG_DIR/ui
 mkdir -p $RES_DIR/layout $RES_DIR/values $RES_DIR/drawable $RES_DIR/anim
-mkdir -p $PROJECT_ROOT/gradle/wrapper
 
 # 2. KEYSTORE (İMZA)
 keytool -genkey -v -keystore $MODULE_DIR/release.keystore -alias erdinplayer -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Erdin, O=ErdinPlayer, C=TR" 2>/dev/null
 
-# 3. GRADLE 8.4 SABİTLEME (HATAYI ÇÖZEN KISIM)
-cat << 'EOF' > $PROJECT_ROOT/gradle/wrapper/gradle-wrapper.properties
-distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists
-EOF
-
+# 3. GRADLE VE AYARLAR
 cat << 'EOF' > $PROJECT_ROOT/build.gradle
 buildscript {
     repositories { google(); mavenCentral() }
@@ -65,11 +56,7 @@ android {
         release { storeFile file("release.keystore"); storePassword "123456"; keyAlias "erdinplayer"; keyPassword "123456" }
     }
     buildTypes {
-        release { 
-            minifyEnabled false
-            signingConfig signingConfigs.release 
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' 
-        }
+        release { minifyEnabled false; signingConfig signingConfigs.release; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
@@ -87,7 +74,7 @@ dependencies {
 }
 EOF
 
-# 4. MODELLER (FULL XTREAM SCHEMA)
+# 4. MODELLER (PROFESYONEL XTREAM YAPISI)
 cat << EOF > $PKG_DIR/model/XtreamData.java
 package com.merdolda.player.model;
 import com.google.gson.annotations.SerializedName;
@@ -105,10 +92,6 @@ public class XtreamData {
         @SerializedName("status") public String status;
         @SerializedName("expiry_date") public String expiry;
     }
-    public static class ServerInfo implements Serializable {
-        @SerializedName("url") public String url;
-        @SerializedName("port") public String port;
-    }
     public static class Category implements Serializable {
         @SerializedName("category_id") public String id;
         @SerializedName("category_name") public String name;
@@ -124,7 +107,7 @@ public class XtreamData {
 }
 EOF
 
-# 5. ADAPTERLER (KATEGORİ VE LİSTE)
+# 5. ADAPTERLER (SOL MENÜ + SAĞ LİSTE)
 cat << EOF > $PKG_DIR/adapter/CategoryAdapter.java
 package com.merdolda.player.adapter;
 import android.graphics.Color;
@@ -194,7 +177,7 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
 }
 EOF
 
-# 6. API INTERFACE
+# 6. API VE UTILS
 cat << EOF > $PKG_DIR/api/XtreamApi.java
 package com.merdolda.player.api;
 import com.merdolda.player.model.XtreamData.*;
@@ -209,7 +192,6 @@ public interface XtreamApi {
 }
 EOF
 
-# 7. UTILS
 cat << EOF > $PKG_DIR/utils/PrefUtils.java
 package com.merdolda.player.utils;
 import android.content.*;
@@ -225,14 +207,14 @@ public class PrefUtils {
 }
 EOF
 
-# 8. LAYOUTS
+# 7. TASARIMLAR (LAYOUT)
 cat << 'EOF' > $RES_DIR/layout/activity_login.xml
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#101010">
     <LinearLayout android:layout_width="450dp" android:layout_height="wrap_content" android:layout_centerInParent="true" android:orientation="vertical" android:padding="30dp" android:background="#1C1C1C">
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ERDIN PLAYER" android:textColor="#E50914" android:textSize="32sp" android:textStyle="bold" android:layout_gravity="center" android:layout_marginBottom="30dp"/>
-        <EditText android:id="@+id/etUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Kullanıcı" android:textColor="#FFF" android:padding="15dp" android:background="#2C2C2C"/>
-        <EditText android:id="@+id/etPass" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Şifre" android:inputType="textPassword" android:textColor="#FFF" android:padding="15dp" android:background="#2C2C2C" android:layout_marginTop="10dp"/>
-        <EditText android:id="@+id/etDns" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="http://server.com:8080" android:textColor="#FFF" android:padding="15dp" android:background="#2C2C2C" android:layout_marginTop="10dp"/>
+        <EditText android:id="@+id/etUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Kullanıcı" android:textColor="#FFF"/>
+        <EditText android:id="@+id/etPass" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Şifre" android:inputType="textPassword" android:textColor="#FFF"/>
+        <EditText android:id="@+id/etDns" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="http://server.com:8080" android:textColor="#FFF"/>
         <Button android:id="@+id/btnLogin" android:layout_width="match_parent" android:layout_height="60dp" android:text="GİRİŞ YAP" android:layout_marginTop="20dp" android:backgroundTint="#E50914"/>
     </LinearLayout>
 </RelativeLayout>
@@ -240,9 +222,10 @@ EOF
 
 cat << 'EOF' > $RES_DIR/layout/activity_dashboard.xml
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000" android:padding="20dp">
+    <TextView android:id="@+id/tvUser" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="18sp"/>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_centerInParent="true" android:gravity="center" android:orientation="horizontal">
-        <Button android:id="@+id/btnLive" android:layout_width="250dp" android:layout_height="200dp" android:text="CANLI TV" android:backgroundTint="#E50914" android:textSize="24sp" android:layout_margin="10dp"/>
-        <Button android:id="@+id/btnMovies" android:layout_width="250dp" android:layout_height="200dp" android:text="FİLMLER" android:backgroundTint="#1A1A1A" android:textSize="24sp" android:layout_margin="10dp"/>
+        <Button android:id="@+id/btnLive" android:layout_width="250dp" android:layout_height="180dp" android:text="CANLI TV" android:backgroundTint="#E50914" android:textSize="22sp" android:layout_margin="10dp"/>
+        <Button android:id="@+id/btnMovies" android:layout_width="250dp" android:layout_height="180dp" android:text="FİLMLER" android:backgroundTint="#222" android:textSize="22sp" android:layout_margin="10dp"/>
     </LinearLayout>
     <Button android:id="@+id/btnLogout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ÇIKIŞ" android:layout_alignParentBottom="true" android:backgroundTint="#333"/>
 </RelativeLayout>
@@ -256,12 +239,12 @@ cat << 'EOF' > $RES_DIR/layout/activity_live.xml
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/item_category.xml
-<TextView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tvCatName" android:layout_width="match_parent" android:layout_height="60dp" android:gravity="center_vertical" android:paddingLeft="20dp" android:textColor="#FFF" android:textSize="16sp" android:focusable="true" android:clickable="true" android:background="?attr/selectableItemBackground"/>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tvCatName" android:layout_width="match_parent" android:layout_height="60dp" android:gravity="center_vertical" android:paddingLeft="20dp" android:textColor="#FFF" android:textSize="16sp" android:textStyle="bold" android:focusable="true" android:clickable="true" android:background="?attr/selectableItemBackground"/>
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/item_channel.xml
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="10dp" android:focusable="true" android:clickable="true" android:background="?attr/selectableItemBackground">
-    <ImageView android:id="@+id/ivIcon" android:layout_width="70dp" android:layout_height="70dp"/>
+    <ImageView android:id="@+id/ivIcon" android:layout_width="60dp" android:layout_height="60dp"/>
     <TextView android:id="@+id/tvName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="18sp" android:layout_marginLeft="15dp" android:layout_gravity="center"/>
 </LinearLayout>
 EOF
@@ -280,7 +263,7 @@ cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#000000" android:pathData="M0,0h108v108h-108z"/></vector>
 EOF
 
-# 9. UI ACTIVITIES
+# 8. ANA KODLAR (UI)
 cat << EOF > $PKG_DIR/ui/LoginActivity.java
 package com.merdolda.player.ui;
 import android.content.Intent;
@@ -302,6 +285,7 @@ public class LoginActivity extends AppCompatActivity {
         EditText u = findViewById(R.id.etUser), p = findViewById(R.id.etPass), d = findViewById(R.id.etDns);
         findViewById(R.id.btnLogin).setOnClickListener(v -> {
             String url = d.getText().toString(); if(!url.startsWith("http")) url = "http://"+url;
+            if(url.endsWith("/")) url = url.substring(0, url.length()-1);
             final String fU = url;
             Retrofit r = new Retrofit.Builder().baseUrl(fU+"/").addConverterFactory(GsonConverterFactory.create()).build();
             r.create(XtreamApi.class).login(u.getText().toString(), p.getText().toString()).enqueue(new Callback<LoginResponse>() {
@@ -322,6 +306,7 @@ cat << EOF > $PKG_DIR/ui/DashboardActivity.java
 package com.merdolda.player.ui;
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import com.merdolda.player.R;
 import com.merdolda.player.utils.PrefUtils;
@@ -330,6 +315,7 @@ public class DashboardActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
         setContentView(R.layout.activity_dashboard);
+        ((TextView)findViewById(R.id.tvUser)).setText("Kullanıcı: " + PrefUtils.getU(this));
         findViewById(R.id.btnLive).setOnClickListener(v -> startActivity(new Intent(this, LiveActivity.class)));
         findViewById(R.id.btnLogout).setOnClickListener(v -> { PrefUtils.logout(this); startActivity(new Intent(this, LoginActivity.class)); finish(); });
     }
@@ -412,7 +398,7 @@ public class PlayerActivity extends AppCompatActivity {
 }
 EOF
 
-# 10. MANIFEST
+# 9. MANIFEST
 cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
@@ -428,10 +414,4 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 </manifest>
 EOF
 
-# 11. GRADLEW OLUŞTURMA (HAYATİ ADIM)
-cd $PROJECT_ROOT
-gradle wrapper --gradle-version 8.4 --distribution-type bin
-chmod +x gradlew
-cd ..
-
-echo "✅ MEGA SİSTEM VE GRADLEW HAZIR."
+echo "✅ MEGA PROJE OLUŞTURULDU."
