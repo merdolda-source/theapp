@@ -8,7 +8,7 @@ PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER v14.0: SIDE MENU, TV MODU, HEADER DESTEĞİ VE TARİH GÖSTERİMİ KURULUYOR..."
+echo "💎 ERDINPLAYER v15.0: SERIES SUPPORT + VLCOPT HEADERS + DASHBOARD UPDATE..."
 
 # 1. TEMİZLİK & KLASÖRLER
 if [ -d "$PROJECT_ROOT" ]; then rm -rf "$PROJECT_ROOT"; fi
@@ -51,7 +51,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.merdolda.player'
     compileSdk 34
-    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 14; versionName "14.0"; multiDexEnabled true }
+    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 15; versionName "15.0"; multiDexEnabled true }
     signingConfigs { release { storeFile file("release.keystore"); storePassword "123456"; keyAlias "erdinplayer"; keyPassword "123456" } }
     buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
@@ -72,7 +72,7 @@ dependencies {
 }
 EOF
 
-# 4. RESOURCES (MODERN DESIGN & ICONS)
+# 4. RESOURCES
 cat << 'EOF' > "$RES_DIR/values/colors.xml"
 <resources>
     <color name="bg_dark">#050505</color>
@@ -139,6 +139,12 @@ EOF
 cat << 'EOF' > "$RES_DIR/drawable/ic_play.xml"
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFF" android:pathData="M8,5v14l11,-7z"/></vector>
 EOF
+cat << 'EOF' > "$RES_DIR/drawable/ic_movie.xml"
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFF" android:pathData="M18,4l2,4h-3l-2,-4h-2l2,4h-3l-2,-4h-2l2,4h-3l-2,-4h-2l2,4h-3l-2,-4h-1v12h20v-12zM4,8h16v8h-16z"/></vector>
+EOF
+cat << 'EOF' > "$RES_DIR/drawable/ic_tv.xml"
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFF" android:pathData="M21,3H3C1.9,3 1,3.9 1,5v12c0,1.1 0.9,2 2,2h5v2h8v-2h5c1.1,0 1.99,-0.9 1.99,-2L23,5C23,3.9 22.1,3 21,3zM21,17H3V5h18V17z"/></vector>
+EOF
 cat << 'EOF' > "$RES_DIR/drawable/ic_delete.xml"
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FF3D00" android:pathData="M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z"/></vector>
 EOF
@@ -152,7 +158,7 @@ cat << 'EOF' > "$RES_DIR/drawable/ic_launcher_background.xml"
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#050505" android:pathData="M0,0h108v108h-108z"/></vector>
 EOF
 
-# 5. MODELS (Updated for M3U Headers & Expiration)
+# 5. MODELS
 cat << EOF > "$PKG_DIR/model/AppModels.java"
 package com.merdolda.player.model;
 import com.google.gson.annotations.SerializedName;
@@ -165,7 +171,7 @@ public class AppModels {
     public static class Playlist implements Serializable {
         public String id, name, type, url, user, pass;
         public String m3uContent;
-        public String expDate; // Expiration Date
+        public String expDate;
     }
     public static class LoginResponse implements Serializable { 
         @SerializedName("user_info") public UserInfo userInfo; 
@@ -187,14 +193,16 @@ public class AppModels {
         @SerializedName("stream_id") public String streamId; 
         @SerializedName("stream_icon") public String icon; 
         @SerializedName("container_extension") public String ext;
+        @SerializedName("series_id") public String seriesId; // For Series
+        @SerializedName("cover") public String cover; // For Series
         public String directUrl;
         public String group;
-        public Map<String, String> headers = new HashMap<>(); // Headers for VLCOPT
+        public Map<String, String> headers = new HashMap<>(); 
     }
 }
 EOF
 
-# 6. API & UTILS (Advanced M3U Parser)
+# 6. API & UTILS (UPDATED FOR SERIES & VLCOPT)
 cat << EOF > "$PKG_DIR/api/XtreamApi.java"
 package com.merdolda.player.api;
 import com.merdolda.player.model.AppModels.*;
@@ -203,8 +211,18 @@ import retrofit2.Call;
 import retrofit2.http.*;
 public interface XtreamApi {
     @GET Call<LoginResponse> login(@Url String url, @Query("username") String u, @Query("password") String p);
-    @GET Call<List<Category>> getCategories(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a);
-    @GET Call<List<StreamItem>> getStreams(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a, @Query("category_id") String c);
+    
+    // LIVE
+    @GET Call<List<Category>> getLiveCategories(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a);
+    @GET Call<List<StreamItem>> getLiveStreams(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a, @Query("category_id") String c);
+    
+    // VOD (Movies)
+    @GET Call<List<Category>> getVodCategories(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a);
+    @GET Call<List<StreamItem>> getVodStreams(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a, @Query("category_id") String c);
+
+    // SERIES
+    @GET Call<List<Category>> getSeriesCategories(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a);
+    @GET Call<List<StreamItem>> getSeriesStreams(@Url String url, @Query("username") String u, @Query("password") String p, @Query("action") String a, @Query("category_id") String c);
 }
 EOF
 
@@ -227,19 +245,20 @@ public class M3UParser {
         for (String line : lines) {
             line = line.trim();
             
-            // 1. Check VLCOPT Headers
-            if (line.startsWith("#EXTVLCOPT")) {
-                if (line.contains("http-user-agent=")) {
-                    tempHeaders.put("User-Agent", line.substring(line.indexOf("=")+1));
-                } else if (line.contains("http-referrer=")) {
-                    tempHeaders.put("Referer", line.substring(line.indexOf("=")+1));
-                } else if (line.contains("http-origin=")) {
-                    tempHeaders.put("Origin", line.substring(line.indexOf("=")+1));
+            // --- VLCOPT PARSING ---
+            if (line.startsWith("#EXTVLCOPT:")) {
+                String opt = line.substring(11).trim(); // Remove #EXTVLCOPT:
+                if (opt.toLowerCase().startsWith("http-user-agent=")) {
+                    tempHeaders.put("User-Agent", opt.substring(16));
+                } else if (opt.toLowerCase().startsWith("http-referrer=")) {
+                    tempHeaders.put("Referer", opt.substring(14));
+                } else if (opt.toLowerCase().startsWith("http-origin=")) {
+                    tempHeaders.put("Origin", opt.substring(12));
                 }
                 continue;
             }
 
-            // 2. Check EXTINF
+            // --- EXTINF PARSING ---
             if (line.startsWith("#EXTINF")) {
                 currentItem = new StreamItem();
                 int comma = line.lastIndexOf(",");
@@ -255,18 +274,16 @@ public class M3UParser {
                 if (mLogo.find()) currentItem.icon = mLogo.group(1);
                 
                 currentItem.group = currentGroup;
-                
-                // Transfer headers
-                currentItem.headers.putAll(tempHeaders);
+                currentItem.headers.putAll(tempHeaders); // Attach headers found so far
                 
             } else if (!line.startsWith("#") && !line.isEmpty() && currentItem != null) {
-                // 3. URL Line
+                // --- URL LINE ---
                 currentItem.directUrl = line;
                 if (!map.containsKey(currentGroup)) map.put(currentGroup, new ArrayList<>());
                 map.get(currentGroup).add(currentItem);
                 
                 currentItem = null; 
-                tempHeaders.clear(); // Reset headers for next item
+                tempHeaders.clear(); // Reset for next item
             }
         }
         return map;
@@ -282,7 +299,7 @@ import com.google.gson.reflect.TypeToken;
 import com.merdolda.player.model.AppModels.Playlist;
 import java.util.*;
 public class PrefUtils {
-    private static SharedPreferences get(Context c) { return c.getSharedPreferences("ERD_V14", 0); }
+    private static SharedPreferences get(Context c) { return c.getSharedPreferences("ERD_V15", 0); }
     public static void savePlaylist(Context c, Playlist p) {
         List<Playlist> l = getPlaylists(c); l.add(p);
         get(c).edit().putString("L", new Gson().toJson(l)).putString("A", p.id).apply();
@@ -370,7 +387,9 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
     @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup p, int t) { return new VH(LayoutInflater.from(p.getContext()).inflate(R.layout.item_channel, p, false)); }
     @Override public void onBindViewHolder(@NonNull VH h, int p) {
         StreamItem i = list.get(p); h.t.setText(i.name);
-        Glide.with(h.itemView.getContext()).load(i.icon).placeholder(R.drawable.ic_play).into(h.i);
+        String url = i.icon;
+        if(url == null || url.isEmpty()) url = i.cover; // Try cover for series
+        Glide.with(h.itemView.getContext()).load(url).placeholder(R.drawable.ic_play).into(h.i);
         h.itemView.setOnClickListener(v -> listener.onClick(i));
     }
     @Override public int getItemCount() { return list == null ? 0 : list.size(); }
@@ -379,7 +398,7 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
 }
 EOF
 
-# 8. LAYOUTS (DRAWER & TV FRIENDLY)
+# 8. LAYOUTS (UPDATED FOR 3 BUTTONS)
 
 # Menu Header
 cat << 'EOF' > "$RES_DIR/layout/nav_header.xml"
@@ -390,12 +409,13 @@ cat << 'EOF' > "$RES_DIR/layout/nav_header.xml"
 </LinearLayout>
 EOF
 
-# Menu Items
+# Menu Items (Added Series)
 cat << 'EOF' > "$RES_DIR/menu/drawer_menu.xml"
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:checkableBehavior="single">
-        <item android:id="@+id/nav_live" android:title="Live TV" android:icon="@drawable/ic_play"/>
-        <item android:id="@+id/nav_vod" android:title="Movies / VOD" android:icon="@drawable/ic_play"/>
+        <item android:id="@+id/nav_live" android:title="Live TV" android:icon="@drawable/ic_tv"/>
+        <item android:id="@+id/nav_movies" android:title="Movies" android:icon="@drawable/ic_movie"/>
+        <item android:id="@+id/nav_series" android:title="Series" android:icon="@drawable/ic_play"/>
     </group>
     <item android:title="Settings">
         <menu>
@@ -405,34 +425,43 @@ cat << 'EOF' > "$RES_DIR/menu/drawer_menu.xml"
 </menu>
 EOF
 
+# Dashboard (3 Buttons: Live, Movies, Series)
 cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
 <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/drawer_layout" android:layout_width="match_parent" android:layout_height="match_parent" android:fitsSystemWindows="true">
     
-    <!-- Main Content -->
     <RelativeLayout android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg_dark">
-        <!-- Toolbar Area -->
+        <!-- Toolbar -->
         <LinearLayout android:id="@+id/toolbar" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="20dp" android:gravity="center_vertical">
             <ImageView android:id="@+id/btnMenu" android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_menu" android:background="@drawable/bg_glass" android:padding="8dp" android:focusable="true" android:clickable="true"/>
             <TextView android:id="@+id/tvTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DASHBOARD" android:textColor="#FFF" android:textSize="20sp" android:textStyle="bold" android:layout_marginLeft="20dp"/>
         </LinearLayout>
         
-        <!-- Expiration Date Display -->
         <TextView android:id="@+id/tvExpDateMain" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_below="@id/toolbar" android:layout_centerHorizontal="true" android:textColor="@color/accent" android:textSize="14sp" android:text="Expires: Loading..." android:layout_marginBottom="20dp"/>
 
-        <!-- Buttons (TV Friendly) -->
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_centerInParent="true" android:orientation="horizontal" android:weightSum="2" android:padding="20dp">
-            <LinearLayout android:id="@+id/btnLive" android:layout_width="0dp" android:layout_height="180dp" android:layout_weight="1" android:layout_marginRight="10dp" style="@style/GlassCard" android:gravity="center" android:orientation="vertical" android:focusable="true">
-                <ImageView android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/ic_play" android:tint="#FFF"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LIVE TV" android:textColor="#FFF" android:textSize="22sp" android:textStyle="bold" android:layout_marginTop="10dp"/>
+        <!-- 3 Main Buttons -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_centerInParent="true" android:orientation="horizontal" android:weightSum="3" android:padding="10dp">
+            
+            <!-- LIVE -->
+            <LinearLayout android:id="@+id/btnLive" android:layout_width="0dp" android:layout_height="160dp" android:layout_weight="1" android:layout_margin="5dp" style="@style/GlassCard" android:gravity="center" android:orientation="vertical" android:focusable="true">
+                <ImageView android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_tv" android:tint="#FFF"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LIVE TV" android:textColor="#FFF" android:textSize="16sp" android:textStyle="bold" android:layout_marginTop="10dp"/>
             </LinearLayout>
-            <LinearLayout android:id="@+id/btnMovies" android:layout_width="0dp" android:layout_height="180dp" android:layout_weight="1" android:layout_marginLeft="10dp" style="@style/GlassCard" android:gravity="center" android:orientation="vertical" android:focusable="true">
-                <ImageView android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/ic_play" android:tint="#FFF"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="VOD" android:textColor="#FFF" android:textSize="22sp" android:textStyle="bold" android:layout_marginTop="10dp"/>
+            
+            <!-- MOVIES -->
+            <LinearLayout android:id="@+id/btnMovies" android:layout_width="0dp" android:layout_height="160dp" android:layout_weight="1" android:layout_margin="5dp" style="@style/GlassCard" android:gravity="center" android:orientation="vertical" android:focusable="true">
+                <ImageView android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_movie" android:tint="#FFF"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MOVIES" android:textColor="#FFF" android:textSize="16sp" android:textStyle="bold" android:layout_marginTop="10dp"/>
             </LinearLayout>
+
+            <!-- SERIES -->
+            <LinearLayout android:id="@+id/btnSeries" android:layout_width="0dp" android:layout_height="160dp" android:layout_weight="1" android:layout_margin="5dp" style="@style/GlassCard" android:gravity="center" android:orientation="vertical" android:focusable="true">
+                <ImageView android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_play" android:tint="#FFF"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SERIES" android:textColor="#FFF" android:textSize="16sp" android:textStyle="bold" android:layout_marginTop="10dp"/>
+            </LinearLayout>
+
         </LinearLayout>
     </RelativeLayout>
 
-    <!-- Side Menu -->
     <com.google.android.material.navigation.NavigationView android:id="@+id/nav_view" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_gravity="start" android:background="@color/nav_bg" app:itemTextColor="#FFF" app:itemIconTint="#FFF" app:headerLayout="@layout/nav_header" app:menu="@menu/drawer_menu"/>
 
 </androidx.drawerlayout.widget.DrawerLayout>
@@ -576,12 +605,10 @@ public class DashboardActivity extends AppCompatActivity implements NavigationVi
         
         Playlist p = PrefUtils.getActive(this);
         if(p != null) {
-            // Update Main UI
             ((TextView)findViewById(R.id.tvTitle)).setText(p.name);
             String exp = (p.expDate != null && !p.expDate.isEmpty()) ? "Expires: " + p.expDate : "Expires: Unlimited";
             ((TextView)findViewById(R.id.tvExpDateMain)).setText(exp);
 
-            // Update Header
             TextView hUser = nav.getHeaderView(0).findViewById(R.id.navUser);
             TextView hExp = nav.getHeaderView(0).findViewById(R.id.navExp);
             hUser.setText(p.name);
@@ -589,8 +616,11 @@ public class DashboardActivity extends AppCompatActivity implements NavigationVi
         }
         
         findViewById(R.id.btnMenu).setOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
+        
+        // 3 Main Buttons
         findViewById(R.id.btnLive).setOnClickListener(v -> openList("live"));
         findViewById(R.id.btnMovies).setOnClickListener(v -> openList("vod"));
+        findViewById(R.id.btnSeries).setOnClickListener(v -> openList("series"));
     }
     
     void openList(String type) {
@@ -602,7 +632,8 @@ public class DashboardActivity extends AppCompatActivity implements NavigationVi
     @Override public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         int id = item.getItemId();
         if(id == R.id.nav_live) openList("live");
-        else if(id == R.id.nav_vod) openList("vod");
+        else if(id == R.id.nav_movies) openList("vod");
+        else if(id == R.id.nav_series) openList("series");
         else if(id == R.id.nav_logout) {
             PrefUtils.logout(this); 
             startActivity(new Intent(this, SelectionActivity.class)); 
@@ -648,7 +679,6 @@ public class LoginXtreamActivity extends AppCompatActivity {
                         pl.pass=p.getText().toString(); 
                         pl.name=name.getText().toString();
                         
-                        // Save Expiration Date
                         if(res.body().userInfo.expDate != null) {
                             try {
                                 long expTs = Long.parseLong(res.body().userInfo.expDate);
@@ -742,10 +772,11 @@ public class CommonListActivity extends AppCompatActivity {
             Intent in = new Intent(this, PlayerActivity.class);
             String url = "";
             if("Xtream".equals(p.type)) {
-                url = p.url + "/" + (type.equals("live") ? "live" : "movie") + "/" + p.user + "/" + p.pass + "/" + i.streamId + "." + (i.ext!=null?i.ext:"ts");
+                if("live".equals(type)) url = p.url + "/live/" + p.user + "/" + p.pass + "/" + i.streamId + ".ts";
+                else if("vod".equals(type)) url = p.url + "/movie/" + p.user + "/" + p.pass + "/" + i.streamId + "." + (i.ext!=null?i.ext:"mp4");
+                else if("series".equals(type)) url = p.url + "/series/" + p.user + "/" + p.pass + "/" + i.seriesId + "." + (i.ext!=null?i.ext:"mp4");
             } else {
                 url = i.directUrl;
-                // Pass headers if exist
                 if(i.headers != null && !i.headers.isEmpty()) {
                      in.putExtra("headers", (java.io.Serializable)i.headers);
                 }
@@ -768,15 +799,24 @@ public class CommonListActivity extends AppCompatActivity {
 
     void loadXtream() {
         api = new Retrofit.Builder().baseUrl(p.url+"/").addConverterFactory(GsonConverterFactory.create()).build().create(XtreamApi.class);
-        String a = type.equals("live") ? "get_live_categories" : "get_vod_categories";
-        api.getCategories(p.url+"/player_api.php", p.user, p.pass, a).enqueue(new Callback<List<Category>>() {
+        
+        Call<List<Category>> call = null;
+        if("live".equals(type)) call = api.getLiveCategories(p.url+"/player_api.php", p.user, p.pass, "get_live_categories");
+        else if("vod".equals(type)) call = api.getVodCategories(p.url+"/player_api.php", p.user, p.pass, "get_vod_categories");
+        else if("series".equals(type)) call = api.getSeriesCategories(p.url+"/player_api.php", p.user, p.pass, "get_series_categories");
+
+        if(call!=null) call.enqueue(new Callback<List<Category>>() {
             public void onResponse(Call<List<Category>> c, Response<List<Category>> r) { if(r.body()!=null) rvC.setAdapter(new CategoryAdapter(r.body(), cat -> loadItems(cat.id))); }
             public void onFailure(Call<List<Category>> c, Throwable t) {}
         });
     }
     void loadItems(String id) {
-        String a = type.equals("live") ? "get_live_streams" : "get_vod_streams";
-        api.getStreams(p.url+"/player_api.php", p.user, p.pass, a, id).enqueue(new Callback<List<StreamItem>>() {
+        Call<List<StreamItem>> call = null;
+        if("live".equals(type)) call = api.getLiveStreams(p.url+"/player_api.php", p.user, p.pass, "get_live_streams", id);
+        else if("vod".equals(type)) call = api.getVodStreams(p.url+"/player_api.php", p.user, p.pass, "get_vod_streams", id);
+        else if("series".equals(type)) call = api.getSeriesStreams(p.url+"/player_api.php", p.user, p.pass, "get_series", id); // Often get_series
+
+        if(call!=null) call.enqueue(new Callback<List<StreamItem>>() {
             public void onResponse(Call<List<StreamItem>> c, Response<List<StreamItem>> r) { if(r.body()!=null) adp.update(r.body()); }
             public void onFailure(Call<List<StreamItem>> c, Throwable t) {}
         });
@@ -809,7 +849,6 @@ public class PlayerActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // IMMERSIVE STICKY MODE (Hide Status Bar & Navigation)
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         controller.hide(WindowInsetsCompat.Type.systemBars());
@@ -830,7 +869,7 @@ public class PlayerActivity extends AppCompatActivity {
         if(url != null) { 
             MediaItem.Builder mediaBuilder = new MediaItem.Builder().setUri(Uri.parse(url));
             
-            // Apply Headers if exist (VLCOPT support)
+            // --- APPLY HEADERS (VLCOPT) ---
             if(headers != null && !headers.isEmpty()) {
                 DefaultHttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSource.Factory();
                 if(headers.containsKey("User-Agent")) {
@@ -894,5 +933,5 @@ gradle wrapper --gradle-version 8.4
 chmod +x gradlew
 cd ..
 
-echo "✅ ERDINPLAYER v14.0: TAMAMLANDI."
+echo "✅ ERDINPLAYER v15.0: TAMAMLANDI."
 echo "👉 ÇALIŞTIRMAK İÇİN: cd $PROJECT_NAME && ./gradlew assembleRelease --no-daemon"
