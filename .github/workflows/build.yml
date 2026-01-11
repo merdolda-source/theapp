@@ -10,19 +10,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # 1. DOSYALARI OLUŞTUR
+      # 1. DOSYALARI OLUŞTUR (gradlew burada oluşacak)
       - name: Generate App Files
         run: chmod +x generate_app.sh && ./generate_app.sh
 
-      # 2. JAVA KUR VE CACHE
+      # 2. JAVA KUR
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
 
-      # 3. APK DERLE (ARTIK GRADLEW KULLANIYORUZ)
-      # gradle clean yerine ./gradlew clean kullanıyoruz ki versiyon hatası olmasın
+      # 3. APK DERLE
       - name: Build APK
         working-directory: ./theapp
         run: |
