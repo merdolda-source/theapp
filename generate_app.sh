@@ -1,18 +1,18 @@
 #!/bin/bash
 
 # --- AYARLAR ---
-PROJECT_ROOT="theapp"
+PROJECT_ROOT="ErdinPlayerV10"
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER v9.0: JAVA SINIFLARI EKSİKSİZ OLUŞTURULUYOR..."
+echo "💎 ERDINPLAYER v10.0: MODERN UI & ADVANCED M3U PARSING..."
 
 # 1. TEMİZLİK & KLASÖRLER
 rm -rf $PROJECT_ROOT
 mkdir -p $PKG_DIR/{model,adapter,api,utils,ui}
-mkdir -p $RES_DIR/{layout,values,drawable,anim,menu}
+mkdir -p $RES_DIR/{layout,values,drawable,anim,menu,color}
 mkdir -p $PROJECT_ROOT/gradle/wrapper
 
 # 2. KEYSTORE
@@ -70,41 +70,88 @@ dependencies {
 }
 EOF
 
-# 4. KAYNAKLAR (ICONS & COLORS)
+# 4. KAYNAKLAR (MODERN UI COLORS & DRAWABLES)
 cat << 'EOF' > $RES_DIR/values/colors.xml
 <resources>
-    <color name="bg_dark">#0F172A</color><color name="bg_card">#1E293B</color>
-    <color name="accent_cyan">#00E5FF</color><color name="primary_red">#BD081C</color>
-    <color name="white">#FFFFFF</color><color name="gray_text">#94A3B8</color>
+    <color name="bg_main">#0F172A</color>
+    <color name="bg_gradient_start">#1E293B</color>
+    <color name="bg_gradient_end">#0F172A</color>
+    <color name="card_bg">#25334D</color>
+    <color name="card_bg_transparent">#CC1E293B</color>
+    <color name="primary_accent">#38BDF8</color> <!-- Light Blue -->
+    <color name="secondary_accent">#818CF8</color> <!-- Indigo -->
+    <color name="danger">#EF4444</color>
+    <color name="white">#FFFFFF</color>
+    <color name="gray_text">#94A3B8</color>
+    <color name="input_bg">#334155</color>
 </resources>
 EOF
 
 cat << 'EOF' > $RES_DIR/values/styles.xml
 <resources>
     <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
-        <item name="android:windowBackground">@color/bg_dark</item>
-        <item name="colorPrimary">@color/bg_dark</item>
-        <item name="colorAccent">@color/accent_cyan</item>
+        <item name="android:windowBackground">@drawable/bg_main_gradient</item>
+        <item name="colorPrimary">@color/bg_main</item>
+        <item name="colorAccent">@color/primary_accent</item>
+        <item name="android:statusBarColor">@color/bg_main</item>
+    </style>
+    
+    <style name="ModernButton" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@null</item>
+        <item name="android:background">@drawable/btn_gradient</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <style name="ModernInput">
+        <item name="android:background">@drawable/bg_input</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorHint">@color/gray_text</item>
+        <item name="android:padding">16dp</item>
     </style>
 </resources>
+EOF
+
+# Custom Drawables for Modern Look
+cat << 'EOF' > $RES_DIR/drawable/bg_main_gradient.xml
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient android:startColor="#1E293B" android:endColor="#020617" android:angle="270"/>
+</shape>
+EOF
+
+cat << 'EOF' > $RES_DIR/drawable/btn_gradient.xml
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient android:startColor="#38BDF8" android:endColor="#2563EB" android:angle="45"/>
+    <corners android:radius="12dp"/>
+</shape>
+EOF
+
+cat << 'EOF' > $RES_DIR/drawable/bg_card.xml
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#1E293B"/>
+    <corners android:radius="16dp"/>
+    <stroke android:width="1dp" android:color="#334155"/>
+</shape>
+EOF
+
+cat << 'EOF' > $RES_DIR/drawable/bg_input.xml
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#0F172A"/>
+    <corners android:radius="10dp"/>
+    <stroke android:width="1dp" android:color="#334155"/>
+</shape>
 EOF
 
 cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#0F172A" android:pathData="M0,0h108v108h-108z"/></vector>
 EOF
 
-cat << 'EOF' > $RES_DIR/menu/bottom_nav_menu.xml
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/nav_home" android:title="Home" android:icon="@android:drawable/ic_menu_today"/>
-</menu>
-EOF
-
-# 5. MODELLER (EKSİKSİZ)
+# 5. MODELLER
 cat << EOF > $PKG_DIR/model/AppModels.java
 package com.merdolda.player.model;
 import com.google.gson.annotations.SerializedName;
 import java.io.Serializable;
-import java.util.List;
 public class AppModels {
     public static class Playlist implements Serializable {
         public String id, name, type, url, user, pass, ref, ori, expiry;
@@ -214,7 +261,8 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.VH> {
     public CategoryAdapter(List<Category> list, OnClick listener) { this.list = list; this.listener = listener; }
     @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup p, int t) { return new VH(LayoutInflater.from(p.getContext()).inflate(R.layout.item_category, p, false)); }
     @Override public void onBindViewHolder(@NonNull VH h, int p) {
-        h.t.setText(list.get(p).name); h.t.setTextColor(sel == p ? Color.parseColor("#00E5FF") : Color.WHITE);
+        h.t.setText(list.get(p).name); 
+        h.t.setBackgroundResource(sel == p ? R.drawable.btn_gradient : R.drawable.bg_input);
         h.itemView.setOnClickListener(v -> { int o = sel; sel = h.getAdapterPosition(); notifyItemChanged(o); notifyItemChanged(sel); listener.onClick(list.get(p)); });
     }
     @Override public int getItemCount() { return list.size(); }
@@ -248,76 +296,82 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
 }
 EOF
 
-# 8. LAYOUTS
+# 8. LAYOUTS (MODERNIZED)
 cat << 'EOF' > $RES_DIR/layout/activity_selection.xml
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg_dark">
-    <TextView android:id="@+id/t1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ERDIN PLAYER" android:textColor="@color/accent_cyan" android:textSize="32sp" android:textStyle="bold" android:layout_centerHorizontal="true" android:layout_marginTop="40dp"/>
-    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvPlaylists" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_below="@id/t1" android:layout_above="@+id/btnGroup" android:padding="10dp"/>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient">
+    <LinearLayout android:id="@+id/header" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:padding="30dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ERDIN PLAYER" android:textColor="@color/white" android:textSize="36sp" android:textStyle="bold" android:letterSpacing="0.05"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Manage your streams" android:textColor="@color/primary_accent" android:textSize="14sp"/>
+    </LinearLayout>
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvPlaylists" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_below="@id/header" android:layout_above="@+id/btnGroup" android:padding="10dp" android:clipToPadding="false"/>
     <LinearLayout android:id="@+id/btnGroup" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_alignParentBottom="true" android:padding="20dp">
-        <Button android:id="@+id/btnXtream" android:layout_width="match_parent" android:layout_height="65dp" android:text="Add Xtream Codes" android:backgroundTint="@color/primary_red" android:layout_marginBottom="10dp"/>
-        <Button android:id="@+id/btnSingle" android:layout_width="match_parent" android:layout_height="65dp" android:text="Single Link / M3U" android:backgroundTint="@color/primary_red"/>
+        <Button android:id="@+id/btnXtream" android:layout_width="match_parent" android:layout_height="60dp" android:text="Add Xtream Codes" style="@style/ModernButton" android:layout_marginBottom="15dp"/>
+        <Button android:id="@+id/btnSingle" android:layout_width="match_parent" android:layout_height="60dp" android:text="Single Link / M3U" style="@style/ModernButton"/>
     </LinearLayout>
 </RelativeLayout>
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/item_playlist.xml
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_margin="5dp" app:cardBackgroundColor="@color/bg_card" app:cardCornerRadius="10dp"><RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="15dp"><TextView android:id="@+id/tvPlayName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="18sp" android:textStyle="bold"/><TextView android:id="@+id/tvPlayInfo" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_below="@id/tvPlayName" android:textColor="@color/gray_text" android:textSize="13sp"/><ImageButton android:id="@+id/btnDel" android:layout_width="40dp" android:layout_height="40dp" android:layout_alignParentRight="true" android:background="?attr/selectableItemBackground" android:src="@android:drawable/ic_menu_delete" android:tint="#FF0000"/></RelativeLayout></androidx.cardview.widget.CardView>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_margin="8dp" app:cardBackgroundColor="@android:color/transparent" app:cardElevation="0dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/bg_card" android:padding="16dp" android:orientation="horizontal" android:gravity="center_vertical"><LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical"><TextView android:id="@+id/tvPlayName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="18sp" android:textStyle="bold"/><TextView android:id="@+id/tvPlayInfo" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/gray_text" android:textSize="13sp"/></LinearLayout><ImageButton android:id="@+id/btnDel" android:layout_width="40dp" android:layout_height="40dp" android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_delete" android:tint="@color/danger"/></LinearLayout></androidx.cardview.widget.CardView>
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/activity_dashboard.xml
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg_dark" android:orientation="vertical" android:gravity="center" android:padding="20dp">
-    <TextView android:id="@+id/tvUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:gravity="center" android:textSize="18sp" android:layout_marginBottom="40dp" android:textStyle="bold"/>
-    <Button android:id="@+id/btnLive" android:layout_width="match_parent" android:layout_height="140dp" android:text="CANLI TV" android:backgroundTint="@color/bg_card" android:textSize="24sp" android:layout_marginBottom="15dp"/>
-    <Button android:id="@+id/btnMovies" android:layout_width="match_parent" android:layout_height="140dp" android:text="VOD / FİLMLER" android:backgroundTint="@color/bg_card" android:textSize="24sp" android:layout_marginBottom="30dp"/>
-    <Button android:id="@+id/btnLogout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LİSTELERİME DÖN" android:backgroundTint="@color/primary_red"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:orientation="vertical" android:gravity="center" android:padding="30dp">
+    <TextView android:id="@+id/tvUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:gravity="center" android:textSize="20sp" android:layout_marginBottom="50dp" android:textStyle="bold"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:weightSum="2" android:orientation="horizontal" android:layout_marginBottom="30dp">
+        <androidx.cardview.widget.CardView android:id="@+id/btnLive" android:layout_width="0dp" android:layout_height="160dp" android:layout_weight="1" android:layout_marginRight="10dp" app:cardCornerRadius="16dp" app:cardBackgroundColor="@color/card_bg"><TextView android:layout_width="match_parent" android:layout_height="match_parent" android:text="LIVE TV" android:gravity="center" android:textColor="@color/primary_accent" android:textSize="22sp" android:textStyle="bold"/></androidx.cardview.widget.CardView>
+        <androidx.cardview.widget.CardView android:id="@+id/btnMovies" android:layout_width="0dp" android:layout_height="160dp" android:layout_weight="1" android:layout_marginLeft="10dp" app:cardCornerRadius="16dp" app:cardBackgroundColor="@color/card_bg"><TextView android:layout_width="match_parent" android:layout_height="match_parent" android:text="VOD" android:gravity="center" android:textColor="@color/secondary_accent" android:textSize="22sp" android:textStyle="bold"/></androidx.cardview.widget.CardView>
+    </LinearLayout>
+    <Button android:id="@+id/btnLogout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="BACK TO PLAYLISTS" style="@style/ModernButton" android:backgroundTint="@color/danger"/>
 </LinearLayout>
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/activity_login_xtream.xml
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg_dark" android:orientation="vertical" android:padding="25dp" android:gravity="center">
-    <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="55dp" android:hint="Playlist Name" android:textColor="#FFF" android:background="@color/bg_card" android:padding="10dp" android:layout_marginBottom="10dp"/>
-    <EditText android:id="@+id/etUser" android:layout_width="match_parent" android:layout_height="55dp" android:hint="Username" android:textColor="#FFF" android:background="@color/bg_card" android:padding="10dp" android:layout_marginBottom="10dp"/>
-    <EditText android:id="@+id/etPass" android:layout_width="match_parent" android:layout_height="55dp" android:hint="Password" android:inputType="textPassword" android:textColor="#FFF" android:background="@color/bg_card" android:padding="10dp" android:layout_marginBottom="10dp"/>
-    <EditText android:id="@+id/etDns" android:layout_width="match_parent" android:layout_height="55dp" android:hint="http://url:port" android:textColor="#FFF" android:background="@color/bg_card" android:padding="10dp" android:layout_marginBottom="20dp"/>
-    <Button android:id="@+id/btnLogin" android:layout_width="match_parent" android:layout_height="60dp" android:text="ADD PLAYLIST" android:backgroundTint="@color/primary_red"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:orientation="vertical" android:padding="30dp" android:gravity="center">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Xtream Login" android:textColor="@color/white" android:textSize="24sp" android:textStyle="bold" android:layout_marginBottom="30dp"/>
+    <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Playlist Name" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
+    <EditText android:id="@+id/etUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Username" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
+    <EditText android:id="@+id/etPass" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Password" android:inputType="textPassword" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
+    <EditText android:id="@+id/etDns" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="http://url:port" style="@style/ModernInput" android:layout_marginBottom="30dp"/>
+    <Button android:id="@+id/btnLogin" android:layout_width="match_parent" android:layout_height="60dp" android:text="Connect" style="@style/ModernButton"/>
 </LinearLayout>
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/activity_login_single.xml
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg_dark" android:fillViewport="true">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="25dp" android:gravity="center">
-        <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="55dp" android:hint="Kanal/Liste Adı" android:textColor="#FFF" android:background="@color/bg_card" android:padding="10dp" android:layout_marginBottom="10dp"/>
-        <EditText android:id="@+id/etUrl" android:layout_width="match_parent" android:layout_height="55dp" android:hint="M3U URL veya Akış URL" android:textColor="#FFF" android:background="@color/bg_card" android:padding="10dp" android:layout_marginBottom="10dp"/>
-        <EditText android:id="@+id/etRef" android:layout_width="match_parent" android:layout_height="55dp" android:hint="Referer (İsteğe Bağlı)" android:textColor="#FFF" android:background="@color/bg_card" android:padding="10dp" android:layout_marginBottom="10dp"/>
-        <EditText android:id="@+id/etOri" android:layout_width="match_parent" android:layout_height="55dp" android:hint="Origin (İsteğe Bağlı)" android:textColor="#FFF" android:background="@color/bg_card" android:padding="10dp" android:layout_marginBottom="20dp"/>
-        <Button android:id="@+id/btnPlay" android:layout_width="match_parent" android:layout_height="60dp" android:text="EKLE" android:backgroundTint="@color/primary_red"/>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="30dp" android:gravity="center">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Single Stream / M3U" android:textColor="@color/white" android:textSize="24sp" android:textStyle="bold" android:layout_marginBottom="30dp"/>
+        <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Name (Optional)" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
+        <EditText android:id="@+id/etUrl" android:layout_width="match_parent" android:layout_height="120dp" android:gravity="top|left" android:hint="Paste M3U Content or URL here..." style="@style/ModernInput" android:layout_marginBottom="15dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Supports #EXTVLCOPT for Referer/Origin" android:textColor="@color/gray_text" android:textSize="12sp" android:layout_marginBottom="30dp"/>
+        <Button android:id="@+id/btnPlay" android:layout_width="match_parent" android:layout_height="60dp" android:text="Play / Add" style="@style/ModernButton"/>
     </LinearLayout>
 </ScrollView>
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/activity_list.xml
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@color/bg_dark">
-    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvCats" android:layout_width="match_parent" android:layout_height="55dp" android:background="@color/bg_card"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/bg_main_gradient">
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvCats" android:layout_width="match_parent" android:layout_height="60dp" android:padding="5dp" android:clipToPadding="false"/>
     <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvStreams" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="8dp"/>
 </LinearLayout>
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/item_channel.xml
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="10dp" android:background="@color/bg_card" android:layout_marginBottom="5dp" android:orientation="horizontal">
-    <ImageView android:id="@+id/ivIcon" android:layout_width="60dp" android:layout_height="80dp" android:scaleType="centerInside"/>
-    <TextView android:id="@+id/tvName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="16sp" android:layout_marginLeft="15dp" android:layout_gravity="center"/>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="10dp" android:background="@drawable/bg_card" android:layout_marginBottom="8dp" android:orientation="horizontal" android:gravity="center_vertical">
+    <ImageView android:id="@+id/ivIcon" android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/ic_launcher_background"/>
+    <TextView android:id="@+id/tvName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="16sp" android:layout_marginLeft="15dp" android:textStyle="bold"/>
 </LinearLayout>
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/item_category.xml
-<TextView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tvCatName" android:layout_width="wrap_content" android:layout_height="match_parent" android:gravity="center" android:paddingLeft="20dp" android:paddingRight="20dp" android:textColor="#FFF" android:textSize="14sp" android:textStyle="bold"/>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tvCatName" android:layout_width="wrap_content" android:layout_height="40dp" android:gravity="center" android:paddingLeft="20dp" android:paddingRight="20dp" android:textColor="#FFF" android:textSize="14sp" android:textStyle="bold" android:layout_margin="5dp"/>
 EOF
 
 cat << 'EOF' > $RES_DIR/layout/activity_player.xml
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000"><com.google.android.exoplayer2.ui.StyledPlayerView android:id="@+id/player_view" android:layout_width="match_parent" android:layout_height="match_parent"/></FrameLayout>
 EOF
 
-# 9. JAVA SINIFLARI (HER BİRİ FİZİKSEL OLARAK YAZILIYOR)
+# 9. JAVA SINIFLARI (GÜNCELLENMİŞ M3U PARSING)
 
 # PlayerActivity
 cat << EOF > $PKG_DIR/ui/PlayerActivity.java
@@ -339,17 +393,28 @@ public class PlayerActivity extends AppCompatActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_player);
         StyledPlayerView pv = findViewById(R.id.player_view);
+        
         String url = getIntent().getStringExtra("url");
         String ref = getIntent().getStringExtra("referer");
         String ori = getIntent().getStringExtra("origin");
+        
+        // Headers Setup
         DefaultHttpDataSource.Factory f = new DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true);
+        f.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
         Map<String, String> h = new HashMap<>();
         if(ref != null && !ref.isEmpty()) h.put("Referer", ref);
         if(ori != null && !ori.isEmpty()) h.put("Origin", ori);
         f.setDefaultRequestProperties(h);
+        
         p = new ExoPlayer.Builder(this).setMediaSourceFactory(new DefaultMediaSourceFactory(f)).build();
         pv.setPlayer(p);
-        if(url != null) { p.setMediaItem(MediaItem.fromUri(Uri.parse(url))); p.prepare(); p.play(); }
+        
+        if(url != null) { 
+            MediaItem mi = MediaItem.fromUri(Uri.parse(url));
+            p.setMediaItem(mi); 
+            p.prepare(); 
+            p.play(); 
+        }
     }
     @Override protected void onSaveInstanceState(Bundle o) { super.onSaveInstanceState(o); if(p!=null) o.putLong("P", p.getCurrentPosition()); }
     @Override protected void onDestroy() { super.onDestroy(); if(p != null) p.release(); }
@@ -371,9 +436,9 @@ public class DashboardActivity extends AppCompatActivity {
         super.onCreate(s);
         setContentView(R.layout.activity_dashboard);
         Playlist p = PrefUtils.getActive(this);
-        if(p != null) ((TextView)findViewById(R.id.tvUser)).setText(p.name + "\n" + (p.expiry != null ? "Expire: " + p.expiry : ""));
-        findViewById(R.id.btnLive).setOnClickListener(v -> { if(p!=null && p.type.equals("Xtream")) { Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "live"); startActivity(i); } });
-        findViewById(R.id.btnMovies).setOnClickListener(v -> { if(p!=null && p.type.equals("Xtream")) { Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "vod"); startActivity(i); } });
+        if(p != null) ((TextView)findViewById(R.id.tvUser)).setText(p.name);
+        findViewById(R.id.btnLive).setOnClickListener(v -> { if(p!=null && "Xtream".equals(p.type)) { Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "live"); startActivity(i); } });
+        findViewById(R.id.btnMovies).setOnClickListener(v -> { if(p!=null && "Xtream".equals(p.type)) { Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "vod"); startActivity(i); } });
         findViewById(R.id.btnLogout).setOnClickListener(v -> { PrefUtils.logout(this); startActivity(new Intent(this, SelectionActivity.class)); finish(); });
     }
 }
@@ -458,36 +523,78 @@ public class LoginXtreamActivity extends AppCompatActivity {
                         Playlist pl = new Playlist(); pl.id = UUID.randomUUID().toString(); pl.type="Xtream"; pl.url=fU; pl.user=u.getText().toString(); pl.pass=p.getText().toString(); pl.name=name.getText().toString();
                         if(res.body().userInfo.expDate != null) pl.expiry = new java.util.Date(Long.parseLong(res.body().userInfo.expDate)*1000).toString();
                         PrefUtils.savePlaylist(LoginXtreamActivity.this, pl); startActivity(new Intent(LoginXtreamActivity.this, DashboardActivity.class)); finish();
-                    } else Toast.makeText(LoginXtreamActivity.this, "Hata!", 0).show();
+                    } else Toast.makeText(LoginXtreamActivity.this, "Authentication Failed", 0).show();
                 }
-                @Override public void onFailure(Call<LoginResponse> c, Throwable t) { Toast.makeText(LoginXtreamActivity.this, "Bağlantı Yok!", 0).show(); }
+                @Override public void onFailure(Call<LoginResponse> c, Throwable t) { Toast.makeText(LoginXtreamActivity.this, "Connection Error", 0).show(); }
             });
         });
     }
 }
 EOF
 
-# LoginSingleActivity
+# LoginSingleActivity (M3U PARSING LOGIC HERE)
 cat << EOF > $PKG_DIR/ui/LoginSingleActivity.java
 package com.merdolda.player.ui;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.EditText;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.merdolda.player.R;
 import com.merdolda.player.model.AppModels.Playlist;
 import com.merdolda.player.utils.PrefUtils;
 import java.util.UUID;
+import java.util.regex.*;
 public class LoginSingleActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
         setContentView(R.layout.activity_login_single);
-        EditText n = findViewById(R.id.etName), u = findViewById(R.id.etUrl), r = findViewById(R.id.etRef), o = findViewById(R.id.etOri);
+        EditText n = findViewById(R.id.etName), u = findViewById(R.id.etUrl);
+        
         findViewById(R.id.btnPlay).setOnClickListener(v -> {
-            Playlist pl = new Playlist(); pl.id = UUID.randomUUID().toString(); pl.type="Single"; pl.name=n.getText().toString(); pl.url=u.getText().toString(); pl.ref=r.getText().toString(); pl.ori=o.getText().toString();
-            PrefUtils.savePlaylist(this, pl);
-            Intent in = new Intent(this, PlayerActivity.class); in.putExtra("url", pl.url); in.putExtra("referer", pl.ref); in.putExtra("origin", pl.ori); startActivity(in);
+            String content = u.getText().toString();
+            String name = n.getText().toString();
+            
+            // Logic to parse raw M3U content pasted directly
+            if(content.contains("#EXTINF")) {
+                parseAndPlay(content);
+            } else {
+                // Simple URL
+                Playlist pl = new Playlist(); pl.id = UUID.randomUUID().toString(); pl.type="Single"; pl.name=name; pl.url=content;
+                PrefUtils.savePlaylist(this, pl);
+                play(pl.url, null, null);
+            }
         });
+    }
+
+    private void parseAndPlay(String m3u) {
+        // Regex to find URL, Referer, Origin
+        String streamUrl = "";
+        String referer = "";
+        String origin = "";
+        
+        // Extract URL (Last line usually)
+        String[] lines = m3u.split("\\n");
+        for(String line : lines) {
+            line = line.trim();
+            if(line.startsWith("http")) streamUrl = line;
+            if(line.startsWith("#EXTVLCOPT:http-referrer=")) referer = line.replace("#EXTVLCOPT:http-referrer=", "");
+            if(line.startsWith("#EXTVLCOPT:http-origin=")) origin = line.replace("#EXTVLCOPT:http-origin=", "");
+        }
+
+        if(!streamUrl.isEmpty()) {
+            play(streamUrl, referer, origin);
+        } else {
+            Toast.makeText(this, "No valid stream URL found", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void play(String url, String ref, String ori) {
+        Intent in = new Intent(this, PlayerActivity.class); 
+        in.putExtra("url", url); 
+        in.putExtra("referer", ref); 
+        in.putExtra("origin", ori); 
+        startActivity(in);
     }
 }
 EOF
@@ -514,7 +621,17 @@ public class SelectionActivity extends AppCompatActivity {
         rv.setLayoutManager(new LinearLayoutManager(this));
         list = PrefUtils.getPlaylists(this);
         adapter = new PlaylistAdapter(list, new PlaylistAdapter.OnClick() {
-            @Override public void onClick(Playlist p) { PrefUtils.savePlaylist(SelectionActivity.this, p); startActivity(new Intent(SelectionActivity.this, DashboardActivity.class)); }
+            @Override public void onClick(Playlist p) { 
+                if("Xtream".equals(p.type)) {
+                    PrefUtils.savePlaylist(SelectionActivity.this, p); 
+                    startActivity(new Intent(SelectionActivity.this, DashboardActivity.class)); 
+                } else {
+                    // Direct Play for Single/M3U
+                    Intent in = new Intent(SelectionActivity.this, PlayerActivity.class);
+                    in.putExtra("url", p.url); in.putExtra("referer", p.ref); in.putExtra("origin", p.ori);
+                    startActivity(in);
+                }
+            }
             @Override public void onDelete(Playlist p) { PrefUtils.deletePlaylist(SelectionActivity.this, p.id); list.remove(p); adapter.notifyDataSetChanged(); }
         });
         rv.setAdapter(adapter);
@@ -528,7 +645,7 @@ EOF
 cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
-    <application android:name="androidx.multidex.MultiDexApplication" android:label="ErdinPlayer" android:theme="@style/Theme.AppCompat.NoActionBar" android:usesCleartextTraffic="true" android:icon="@drawable/ic_launcher_background">
+    <application android:name="androidx.multidex.MultiDexApplication" android:label="ErdinPlayer" android:theme="@style/AppTheme" android:usesCleartextTraffic="true" android:icon="@drawable/ic_launcher_background">
         <activity android:name=".ui.SelectionActivity" android:exported="true" android:screenOrientation="portrait"><intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter></activity>
         <activity android:name=".ui.LoginXtreamActivity" android:screenOrientation="portrait" />
         <activity android:name=".ui.LoginSingleActivity" android:screenOrientation="portrait" />
@@ -542,4 +659,4 @@ EOF
 # 11. WRAPPER
 cd $PROJECT_ROOT; gradle wrapper --gradle-version 8.4; chmod +x gradlew; cd ..
 
-echo "✅ v9.0 FİNAL SÜRÜM HAZIR. JAVA HATALARI GİDERİLDİ!"
+echo "✅ v10.0 GENERATION COMPLETE. READY TO BUILD!"
