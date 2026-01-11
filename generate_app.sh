@@ -8,7 +8,7 @@ MODULE_DIR="$PROJECT_ROOT/app"
 PKG_DIR="$MODULE_DIR/src/main/java/com/merdolda/player"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "🚀 ERDINPLAYER (GRADLE FIX) OLUŞTURULUYOR..."
+echo "🚀 ERDINPLAYER OLUŞTURULUYOR..."
 
 # 1. Temizlik
 rm -rf $PROJECT_ROOT
@@ -17,19 +17,8 @@ mkdir -p $RES_DIR/layout
 mkdir -p $RES_DIR/values
 mkdir -p $RES_DIR/drawable
 mkdir -p $RES_DIR/mipmap-anydpi-v26
-# Wrapper klasörünü oluştur (ÖNEMLİ)
-mkdir -p $PROJECT_ROOT/gradle/wrapper
 
-# 2. GRADLE WRAPPER PROPERTIES (BU, SİSTEMİ GRADLE 8.2 KULLANMAYA ZORLAR)
-cat << 'EOF' > $PROJECT_ROOT/gradle/wrapper/gradle-wrapper.properties
-distributionBase=GRADLE_USER_HOME
-distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-8.2-bin.zip
-zipStoreBase=GRADLE_USER_HOME
-zipStorePath=wrapper/dists
-EOF
-
-# 3. SETTINGS.GRADLE
+# 2. SETTINGS.GRADLE
 cat << 'EOF' > $PROJECT_ROOT/settings.gradle
 pluginManagement {
     repositories {
@@ -50,21 +39,21 @@ rootProject.name = "ErdinPlayer"
 include ':app'
 EOF
 
-# 4. GRADLE.PROPERTIES
+# 3. GRADLE.PROPERTIES
 cat << 'EOF' > $PROJECT_ROOT/gradle.properties
 android.useAndroidX=true
 android.enableJetifier=true
 org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
 EOF
 
-# 5. BUILD.GRADLE (PROJECT)
+# 4. BUILD.GRADLE (PROJECT)
 cat << 'EOF' > $PROJECT_ROOT/build.gradle
 plugins {
     id 'com.android.application' version '8.2.0' apply false
 }
 EOF
 
-# 6. BUILD.GRADLE (APP - GÜNCELLENMİŞ SÖZDİZİMİ)
+# 5. BUILD.GRADLE (APP)
 cat << 'EOF' > $MODULE_DIR/build.gradle
 plugins {
     id 'com.android.application'
@@ -96,16 +85,9 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    // YENİ DSL YAPISI (Gradle 8+ Uyumlu)
     lint {
         checkReleaseBuilds = false
         abortOnError = false
-    }
-    
-    packaging {
-        resources {
-            excludes += '/META-INF/{AL2.0,LGPL2.1}'
-        }
     }
 }
 
@@ -121,7 +103,7 @@ dependencies {
 }
 EOF
 
-# 7. XML DOSYALARI
+# 6. XML DOSYALARI
 cat << 'EOF' > $RES_DIR/values/strings.xml
 <resources>
     <string name="app_name">ErdinPlayer</string>
@@ -152,7 +134,7 @@ cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 </vector>
 EOF
 
-# 8. MANIFEST
+# 7. MANIFEST
 cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
@@ -183,7 +165,7 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 </manifest>
 EOF
 
-# 9. JAVA DOSYALARI
+# 8. JAVA DOSYALARI
 cat << EOF > $PKG_DIR/ApiService.java
 package com.merdolda.player;
 import retrofit2.Call;
@@ -277,4 +259,43 @@ EOF
 cat << 'EOF' > $PKG_DIR/PlayerActivity.java
 package com.merdolda.player;
 import android.net.Uri;
-import android.os.
+import android.os.Bundle;
+import android.view.KeyEvent;
+import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
+import com.google.android.exoplayer2.ui.StyledPlayerView;
+
+public class PlayerActivity extends AppCompatActivity {
+    ExoPlayer player;
+    StyledPlayerView view;
+    int[] modes = {0, 3, 4, 1}; 
+    int modeIdx = 0;
+
+    protected void onCreate(Bundle s) {
+        super.onCreate(s);
+        setContentView(R.layout.activity_player);
+        view = findViewById(R.id.video_view);
+        player = new ExoPlayer.Builder(this).build();
+        view.setPlayer(player);
+        String url = getIntent().getStringExtra("url");
+        if(url!=null) { player.setMediaItem(MediaItem.fromUri(Uri.parse(url))); player.prepare(); player.play(); }
+    }
+    public boolean onKeyDown(int k, KeyEvent e) {
+        if(k==KeyEvent.KEYCODE_PROG_BLUE || k==KeyEvent.KEYCODE_DPAD_CENTER || k==KeyEvent.KEYCODE_ENTER) {
+             if(!view.isControllerFullyVisible()){ modeIdx=(modeIdx+1)%4; view.setResizeMode(modes[modeIdx]); return true; }
+        }
+        return super.onKeyDown(k, e);
+    }
+    protected void onStop(){ super.onStop(); if(player!=null) player.release(); }
+}
+EOF
+
+# --- BURASI ÇOK ÖNEMLİ: GRADLE WRAPPER OLUŞTURMA ---
+# Sunucudaki gradle'ı kullanarak 'gradlew' dosyasını oluşturuyoruz.
+cd $PROJECT_ROOT
+gradle wrapper --gradle-version 8.2 --distribution-type bin
+cd ..
+
+echo "✅ ERDINPLAYER TAMAMLANDI."
