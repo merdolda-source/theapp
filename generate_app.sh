@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# --- AYARLAR ---
-PROJECT_NAME="ErdinPlayer_v13"
-PROJECT_ROOT="theapp_v13" 
+# --- AYARLAR (HATA BURADAYDI, DÜZELTİLDİ) ---
+PROJECT_NAME="ErdinPlayer"
+PROJECT_ROOT="theapp"  # GitHub Actions bu klasör ismini bekliyor!
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER v13.0: M3U PARSER & PRO PLAYER DESIGN UPDATE..."
+echo "💎 ERDINPLAYER v13.0: KLASÖR İSMİ DÜZELTİLDİ, M3U PARSER VE PRO TASARIM KURULUYOR..."
 
 # 1. TEMİZLİK & KLASÖRLER
 if [ -d "$PROJECT_ROOT" ]; then rm -rf "$PROJECT_ROOT"; fi
@@ -133,6 +133,10 @@ EOF
 cat << 'EOF' > "$RES_DIR/drawable/ic_zoom.xml"
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFF" android:pathData="M15,3l2.3,2.3 -2.89,2.87 1.42,1.42L18.7,6.7 21,9V3zM3,9l2.3,-2.3 2.87,2.89 1.42,-1.42L6.7,5.3 9,3H3zM9,21l-2.3,-2.3 2.89,-2.87 -1.42,-1.42L5.3,17.3 3,15v6zM21,15l-2.3,2.3 -2.87,-2.89 -1.42,1.42L17.3,18.7 15,21h6z"/></vector>
 EOF
+# Missing Icon Fix
+cat << 'EOF' > "$RES_DIR/drawable/ic_launcher_background.xml"
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#050505" android:pathData="M0,0h108v108h-108z"/></vector>
+EOF
 
 # 5. MODELS (Updated for M3U Parsing)
 cat << EOF > "$PKG_DIR/model/AppModels.java"
@@ -145,9 +149,8 @@ import java.util.List;
 public class AppModels {
     public static class Playlist implements Serializable {
         public String id, name, type, url, user, pass;
-        public String m3uContent; // Stores raw M3U string for local parsing
+        public String m3uContent; 
     }
-    // Xtream Models
     public static class LoginResponse implements Serializable { 
         @SerializedName("user_info") public UserInfo userInfo; 
         @SerializedName("server_info") public ServerInfo serverInfo;
@@ -168,7 +171,6 @@ public class AppModels {
         @SerializedName("stream_id") public String streamId; 
         @SerializedName("stream_icon") public String icon; 
         @SerializedName("container_extension") public String ext;
-        // For M3U
         public String directUrl;
         public String group;
     }
@@ -206,17 +208,14 @@ public class M3UParser {
             line = line.trim();
             if (line.startsWith("#EXTINF")) {
                 currentItem = new StreamItem();
-                // Parse Name (after last comma)
                 int comma = line.lastIndexOf(",");
                 if (comma > 0) currentItem.name = line.substring(comma + 1).trim();
                 else currentItem.name = "Unknown Channel";
 
-                // Parse Group
                 Pattern pGroup = Pattern.compile("group-title=\"([^\"]*)\"");
                 Matcher mGroup = pGroup.matcher(line);
                 if (mGroup.find()) currentGroup = mGroup.group(1);
                 
-                // Parse Logo
                 Pattern pLogo = Pattern.compile("tvg-logo=\"([^\"]*)\"");
                 Matcher mLogo = pLogo.matcher(line);
                 if (mLogo.find()) currentItem.icon = mLogo.group(1);
@@ -226,7 +225,7 @@ public class M3UParser {
                 currentItem.directUrl = line;
                 if (!map.containsKey(currentGroup)) map.put(currentGroup, new ArrayList<>());
                 map.get(currentGroup).add(currentItem);
-                currentItem = null; // Reset
+                currentItem = null; 
             }
         }
         return map;
