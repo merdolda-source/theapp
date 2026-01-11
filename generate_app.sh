@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# --- AYARLAR (HATA BURADA DÜZELTİLDİ: "theapp" OLARAK SABİTLENDİ) ---
+# --- AYARLAR ---
 PROJECT_NAME="ErdinPlayer"
 PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
@@ -8,9 +8,9 @@ PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER v14.0: SIDEBAR UI & ADVANCED M3U ENGINE..."
+echo "💎 ERDINPLAYER v15.0: JAVA IMPORT FIX & FULL REBUILD..."
 
-# 1. TEMİZLİK
+# 1. TEMİZLİK & KLASÖRLER
 if [ -d "$PROJECT_ROOT" ]; then rm -rf "$PROJECT_ROOT"; fi
 
 mkdir -p "$PKG_DIR"/{model,adapter,api,utils,ui}
@@ -51,7 +51,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.merdolda.player'
     compileSdk 34
-    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 14; versionName "14.0"; multiDexEnabled true }
+    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 15; versionName "15.0"; multiDexEnabled true }
     signingConfigs { release { storeFile file("release.keystore"); storePassword "123456"; keyAlias "erdinplayer"; keyPassword "123456" } }
     buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
@@ -73,7 +73,7 @@ dependencies {
 }
 EOF
 
-# 4. RESOURCES (SIDEBAR & GLASS THEME)
+# 4. RESOURCES (COLORS & STYLES)
 cat << 'EOF' > "$RES_DIR/values/colors.xml"
 <resources>
     <color name="bg_main">#0B0C15</color>
@@ -92,16 +92,6 @@ cat << 'EOF' > "$RES_DIR/values/styles.xml"
         <item name="colorPrimary">@color/bg_main</item>
         <item name="colorAccent">@color/accent</item>
         <item name="android:statusBarColor">@color/sidebar_bg</item>
-    </style>
-    <style name="SidebarButton">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:padding">15dp</item>
-        <item name="android:textColor">@color/text_secondary</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:background">?attr/selectableItemBackground</item>
-        <item name="android:drawablePadding">10dp</item>
-        <item name="android:gravity">center_vertical|left</item>
     </style>
     <style name="GlassInput">
         <item name="android:background">@drawable/bg_glass</item>
@@ -168,7 +158,7 @@ public class AppModels {
 }
 EOF
 
-# 6. M3U PARSER (VLCOPT SUPPORT)
+# 6. M3U PARSER
 cat << EOF > "$PKG_DIR/utils/M3UParser.java"
 package com.merdolda.player.utils;
 import com.merdolda.player.model.AppModels.*;
@@ -188,17 +178,14 @@ public class M3UParser {
 
             if (line.startsWith("#EXTINF")) {
                 currentItem = new StreamItem();
-                // Name parse
                 int comma = line.lastIndexOf(",");
                 if (comma > 0) currentItem.name = line.substring(comma + 1).trim();
                 else currentItem.name = "Kanal";
 
-                // Group parse
                 Pattern pGroup = Pattern.compile("group-title=\"([^\"]*)\"");
                 Matcher mGroup = pGroup.matcher(line);
                 if (mGroup.find()) currentGroup = mGroup.group(1);
                 
-                // Logo parse
                 Pattern pLogo = Pattern.compile("tvg-logo=\"([^\"]*)\"");
                 Matcher mLogo = pLogo.matcher(line);
                 if (mLogo.find()) currentItem.icon = mLogo.group(1);
@@ -206,14 +193,11 @@ public class M3UParser {
                 currentItem.group = currentGroup;
             
             } else if (line.startsWith("#EXTVLCOPT")) {
-                // EXTVLCOPT Support for Headers
                 if (currentItem != null) {
                     if (line.contains("http-referrer=")) currentItem.referer = line.split("http-referrer=")[1].trim();
                     if (line.contains("http-origin=")) currentItem.origin = line.split("http-origin=")[1].trim();
-                    if (line.contains("http-user-agent=")) {/* Agent desteği eklenebilir */}
                 }
             } else if (!line.startsWith("#")) {
-                // It's a URL
                 if (currentItem != null) {
                     currentItem.directUrl = line;
                     if (!map.containsKey(currentGroup)) map.put(currentGroup, new ArrayList<>());
@@ -308,8 +292,8 @@ import com.merdolda.player.model.AppModels.StreamItem;
 import java.util.List;
 public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
     private List<StreamItem> list; private OnClick listener;
-    public interface OnClick { void onClick(StreamItem item); }
-    public StreamAdapter(List<StreamItem> list, OnClick listener) { this.list = list; this.listener = listener; }
+    public interface OnItemClick { void onClick(StreamItem item); }
+    public StreamAdapter(List<StreamItem> list, OnItemClick listener) { this.list = list; this.listener = listener; }
     @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup p, int t) { return new VH(LayoutInflater.from(p.getContext()).inflate(R.layout.item_channel, p, false)); }
     @Override public void onBindViewHolder(@NonNull VH h, int p) {
         StreamItem i = list.get(p); h.t.setText(i.name);
@@ -345,7 +329,7 @@ public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.VH> {
 }
 EOF
 
-# 9. LAYOUTS (SIDEBAR UI)
+# 9. LAYOUTS
 cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:background="@color/bg_main">
     <LinearLayout android:layout_width="80dp" android:layout_height="match_parent" android:orientation="vertical" android:background="@color/sidebar_bg" android:gravity="center_horizontal" android:paddingTop="20dp">
@@ -418,6 +402,7 @@ import com.merdolda.player.R;
 import com.merdolda.player.adapter.PlaylistAdapter;
 import com.merdolda.player.model.AppModels.Playlist;
 import com.merdolda.player.utils.PrefUtils;
+import java.util.List; // THIS WAS THE MISSING IMPORT!
 public class SelectionActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
@@ -602,4 +587,4 @@ gradle wrapper --gradle-version 8.4
 chmod +x gradlew
 cd ..
 
-echo "✅ ERDINPLAYER v14.0: FIXED FOLDER & VLCOPT SUPPORT READY."
+echo "✅ ERDINPLAYER v15.0: IMPORT FIX & FOLDER FIX COMPLETE."
