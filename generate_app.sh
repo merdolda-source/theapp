@@ -8,7 +8,7 @@ MODULE_DIR="$PROJECT_ROOT/app"
 PKG_DIR="$MODULE_DIR/src/main/java/com/merdolda/player"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "🚀 ERDINPLAYER OLUŞTURULUYOR..."
+echo "🚀 ERDINPLAYER (ANDROIDX FIX) OLUŞTURULUYOR..."
 
 # 1. Temizlik
 rm -rf $PROJECT_ROOT
@@ -39,14 +39,21 @@ rootProject.name = "ErdinPlayer"
 include ':app'
 EOF
 
-# 3. BUILD.GRADLE (PROJECT)
+# 3. GRADLE.PROPERTIES (BU DOSYA EKSİKTİ - ŞİMDİ EKLENDİ)
+cat << 'EOF' > $PROJECT_ROOT/gradle.properties
+android.useAndroidX=true
+android.enableJetifier=true
+org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+EOF
+
+# 4. BUILD.GRADLE (PROJECT)
 cat << 'EOF' > $PROJECT_ROOT/build.gradle
 plugins {
     id 'com.android.application' version '8.2.0' apply false
 }
 EOF
 
-# 4. BUILD.GRADLE (APP - JAVA 17 AYARLI)
+# 5. BUILD.GRADLE (APP)
 cat << 'EOF' > $MODULE_DIR/build.gradle
 plugins {
     id 'com.android.application'
@@ -96,7 +103,7 @@ dependencies {
 }
 EOF
 
-# 5. XML DOSYALARI
+# 6. XML DOSYALARI
 cat << 'EOF' > $RES_DIR/values/strings.xml
 <resources>
     <string name="app_name">ErdinPlayer</string>
@@ -127,7 +134,7 @@ cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 </vector>
 EOF
 
-# 6. MANIFEST
+# 7. MANIFEST
 cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
@@ -158,7 +165,7 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 </manifest>
 EOF
 
-# 7. JAVA DOSYALARI
+# 8. JAVA DOSYALARI
 cat << EOF > $PKG_DIR/ApiService.java
 package com.merdolda.player;
 import retrofit2.Call;
