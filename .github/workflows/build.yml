@@ -8,28 +8,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. Kodları Çek
       - uses: actions/checkout@v4
-
-      # 2. Java 17 Kur
+      
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
       
-      # 3. Android Projesini Oluştur (Scripti Çalıştır)
-      - name: Generate App from Script
+      # Scripti çalıştır ve dosyaları yarat
+      - name: Generate App
         run: chmod +x generate_app.sh && ./generate_app.sh
         
-      # 4. APK Derle (DÜZELTİLEN KISIM)
-      # gradlew dosyası olmadığı için direkt sunucudaki 'gradle'ı kullanıyoruz.
+      # Gradle ile APK derle (Stacktrace ile hata detayını gör)
       - name: Build APK
         working-directory: ./theapp
-        run: gradle assembleRelease --no-daemon
+        run: gradle assembleRelease --stacktrace --no-daemon
         
-      # 5. APK'yı Yükle (v4 Versiyonu)
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: MerdoldaApp
           path: theapp/app/build/outputs/apk/release/app-release-unsigned.apk
