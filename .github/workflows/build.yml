@@ -15,10 +15,9 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       
-      - name: Generate ErdinPlayer
+      - name: Generate App
         run: chmod +x generate_app.sh && ./generate_app.sh
         
-      # Hataları görmezden gel ve detayı bas
       - name: Build APK
         working-directory: ./theapp
         run: gradle assembleRelease --info --no-daemon
