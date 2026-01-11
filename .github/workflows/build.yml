@@ -10,21 +10,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # 1. ÖNCE DOSYALARI OLUŞTUR (Java gerekmez, Bash yeterli)
+      # 1. DOSYALARI OLUŞTUR
       - name: Generate App Files
         run: chmod +x generate_app.sh && ./generate_app.sh
 
-      # 2. SONRA JAVA VE CACHE KUR (Artık build.gradle var, hata vermez)
+      # 2. JAVA KUR VE CACHE
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle' # Dosyaları bulup cache yapacak
+          cache: 'gradle'
 
-      # 3. APK DERLE
+      # 3. APK DERLE (ARTIK GRADLEW KULLANIYORUZ)
+      # gradle clean yerine ./gradlew clean kullanıyoruz ki versiyon hatası olmasın
       - name: Build APK
         working-directory: ./theapp
-        run: gradle clean assembleRelease --stacktrace --no-daemon
+        run: |
+          chmod +x gradlew
+          ./gradlew clean assembleRelease --stacktrace --no-daemon
         
       # 4. APK YÜKLE
       - uses: actions/upload-artifact@v4
