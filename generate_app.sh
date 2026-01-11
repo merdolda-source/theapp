@@ -1,11 +1,12 @@
 #!/bin/bash
 
+# --- AYARLAR ---
 PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_DIR="$MODULE_DIR/src/main/java/com/merdolda/player"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "🚀 ERDINPLAYER (DIRECT LOGIN - FAST MODE) OLUŞTURULUYOR..."
+echo "🚀 ERDINPLAYER (ULTRA STABLE) OLUŞTURULUYOR..."
 
 # 1. TEMİZLİK
 rm -rf $PROJECT_ROOT
@@ -17,8 +18,7 @@ mkdir -p $RES_DIR/drawable
 mkdir -p $RES_DIR/mipmap-anydpi-v26
 mkdir -p $PROJECT_ROOT/gradle/wrapper
 
-# 2. KEYSTORE (İMZA)
-echo "🔑 İmza Anahtarı..."
+# 2. KEYSTORE (HATA VERMEMESİ İÇİN BASİT ANAHTAR)
 keytool -genkey -v -keystore $MODULE_DIR/release.keystore -alias erdinplayer -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Erdin, OU=Player, O=Merdolda, L=Ist, S=Tr, C=TR" 2>/dev/null
 
 # 3. GRADLE DOSYALARI
@@ -83,10 +83,7 @@ dependencies {
 }
 EOF
 
-# ==========================================
-# 5. RESOURCES (TEMİZ VE BASİT)
-# ==========================================
-
+# 5. RESOURCES
 cat << 'EOF' > $RES_DIR/values/strings.xml
 <resources>
     <string name="app_name">ErdinPlayer</string>
@@ -102,7 +99,6 @@ cat << 'EOF' > $RES_DIR/values/colors.xml
 </resources>
 EOF
 
-# İkonlar
 cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
@@ -119,29 +115,31 @@ EOF
 
 # 6. LAYOUTS (TASARIMLAR)
 
-# Login Ekranı (Sade ve Net)
+# Login Ekranı (Basitleştirildi)
 cat << 'EOF' > $RES_DIR/layout/activity_login.xml
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:gravity="center" android:padding="40dp" android:background="#101010">
+    android:orientation="vertical" android:gravity="center" android:padding="30dp" android:background="#101010">
     
-    <TextView android:text="ERDIN PLAYER" android:textColor="#E50914" android:textSize="30sp" android:textStyle="bold" android:layout_marginBottom="40dp"/>
+    <TextView android:text="ERDIN PLAYER" android:textColor="#E50914" android:textSize="32sp" android:textStyle="bold" android:layout_marginBottom="40dp"/>
     
-    <EditText android:id="@+id/etName" android:hint="Liste Adı (Örn: Ev)" 
-        android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="10dp"/>
+    <EditText android:id="@+id/etName" android:hint="Liste İsmi (Örn: Ev)" 
+        android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="15dp"/>
 
     <EditText android:id="@+id/etUser" android:hint="Kullanıcı Adı" 
-        android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="10dp"/>
+        android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="15dp"/>
         
     <EditText android:id="@+id/etPass" android:hint="Şifre" android:inputType="textPassword" 
-        android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="10dp"/>
+        android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="15dp"/>
         
     <EditText android:id="@+id/etDns" android:hint="URL (http://site.com:8080)" 
-        android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="20dp"/>
+        android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:layout_marginBottom="30dp"/>
         
     <Button android:id="@+id/btnLogin" android:text="GİRİŞ YAP" 
-        android:backgroundTint="#E50914" android:textColor="#FFF"
-        android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        android:backgroundTint="#E50914" android:textColor="#FFF" android:textStyle="bold"
+        android:layout_width="match_parent" android:layout_height="60dp"/>
+        
+    <TextView android:id="@+id/tvStatus" android:text="" android:textColor="#FFFF00" android:layout_marginTop="20dp"/>
 </LinearLayout>
 EOF
 
@@ -159,14 +157,9 @@ cat << 'EOF' > $RES_DIR/layout/activity_dashboard.xml
             android:focusable="true" android:clickable="true" android:layout_margin="10dp">
             <TextView android:text="CANLI TV" android:textColor="#FFF" android:textStyle="bold" android:textSize="18sp"/>
         </LinearLayout>
-        <LinearLayout android:id="@+id/btnMovies" android:layout_width="160dp" android:layout_height="120dp"
-            android:background="#222" android:orientation="vertical" android:gravity="center"
-            android:focusable="true" android:clickable="true" android:layout_margin="10dp">
-            <TextView android:text="FİLMLER" android:textColor="#FFF" android:textStyle="bold" android:textSize="18sp"/>
-        </LinearLayout>
     </LinearLayout>
     
-    <Button android:id="@+id/btnLogout" android:text="ÇIKIŞ YAP" android:layout_marginTop="30dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+    <Button android:id="@+id/btnLogout" android:text="ÇIKIŞ YAP" android:layout_marginTop="50dp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
 </LinearLayout>
 EOF
 
@@ -323,12 +316,13 @@ public class SessionManager {
 }
 EOF
 
-# LOGIN ACTIVITY - ARTIK BAŞLANGIÇ AKTİVİTESİ BU (SPLASH YOK)
+# LOGIN ACTIVITY - FİX: ONCREATE'DE HİÇBİR NETWORK İŞLEMİ YAPILMIYOR
 cat << EOF > $PKG_DIR/LoginActivity.java
 package com.merdolda.player;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import retrofit2.Retrofit;
@@ -340,69 +334,73 @@ import com.merdolda.player.model.LoginResponse;
 
 public class LoginActivity extends AppCompatActivity {
     SessionManager session;
+    TextView tvStatus;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // 1. OTOMATİK GİRİŞ KONTROLÜ
         session = new SessionManager(this);
+        
+        // Eğer daha önce giriş yapılmışsa direkt Dashboard'u aç
+        // Bu işlem UI'dan bağımsız ve hızlıdır, çökme yapmaz
         if(session.isLoggedIn()){
-            openDashboard();
+            startActivity(new Intent(this, DashboardActivity.class));
+            finish();
             return;
         }
 
         setContentView(R.layout.activity_login);
         
-        EditText etName = findViewById(R.id.etName);
         EditText etDns = findViewById(R.id.etDns);
         EditText etUser = findViewById(R.id.etUser);
         EditText etPass = findViewById(R.id.etPass);
+        tvStatus = findViewById(R.id.tvStatus);
         
         findViewById(R.id.btnLogin).setOnClickListener(v -> {
             String d = etDns.getText().toString().trim();
             if(!d.startsWith("http")) d = "http://" + d;
+            // Sonunda / varsa sil (örn: http://site.com/ -> http://site.com)
+            if(d.endsWith("/")) d = d.substring(0, d.length() - 1);
             
             String u = etUser.getText().toString().trim();
             String p = etPass.getText().toString().trim();
 
             if(d.length() < 5 || u.isEmpty() || p.isEmpty()) { 
-                Toast.makeText(this, "Lütfen tüm alanları doldurun!", Toast.LENGTH_SHORT).show(); 
+                Toast.makeText(this, "Eksik bilgi!", Toast.LENGTH_SHORT).show(); 
                 return; 
             }
             
+            tvStatus.setText("Bağlanıyor...");
             performXtreamLogin(d, u, p);
         });
     }
 
     void performXtreamLogin(String d, String u, String p) {
         try {
-            // Geçici base URL (Retrofit gereği), asıl URL dinamik olacak
-            Retrofit retrofit = new Retrofit.Builder().baseUrl("http://localhost/").addConverterFactory(GsonConverterFactory.create()).build();
+            // Dummy base URL (Retrofit hatasız başlasın diye)
+            Retrofit retrofit = new Retrofit.Builder().baseUrl("http://127.0.0.1/").addConverterFactory(GsonConverterFactory.create()).build();
+            
             String apiPath = d + "/player_api.php";
             
             retrofit.create(ApiService.class).xtreamLogin(apiPath, u, p).enqueue(new Callback<LoginResponse>() {
                 public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
                     if(response.body() != null && response.body().userInfo != null) {
-                        // Giriş Başarılı -> Kaydet
+                        tvStatus.setText("Giriş Başarılı!");
                         session.createLoginSession(d, u, p);
-                        openDashboard();
+                        startActivity(new Intent(LoginActivity.this, DashboardActivity.class));
+                        finish();
                     } else {
-                        Toast.makeText(LoginActivity.this, "Giriş Başarısız! Kullanıcı/Şifre Hatalı.", Toast.LENGTH_LONG).show();
+                        tvStatus.setText("HATA: Kullanıcı adı veya şifre yanlış.");
                     }
                 }
                 public void onFailure(Call<LoginResponse> c, Throwable t) { 
-                    Toast.makeText(LoginActivity.this, "Sunucuya Erişilemedi! URL'yi kontrol et.", Toast.LENGTH_LONG).show(); 
+                    tvStatus.setText("BAĞLANTI HATASI: " + t.getMessage());
                 }
             });
         } catch(Exception e) { 
-            Toast.makeText(this, "Hata: " + e.getMessage(), Toast.LENGTH_SHORT).show(); 
+            tvStatus.setText("KRİTİK HATA: " + e.getMessage());
         }
-    }
-    
-    void openDashboard(){
-        startActivity(new Intent(this, DashboardActivity.class));
-        finish();
     }
 }
 EOF
@@ -468,7 +466,7 @@ public class LiveListActivity extends AppCompatActivity {
     }
     void fetchChannels(String d, String u, String p) {
         try {
-            Retrofit retrofit = new Retrofit.Builder().baseUrl("http://localhost/").addConverterFactory(GsonConverterFactory.create()).build();
+            Retrofit retrofit = new Retrofit.Builder().baseUrl("http://127.0.0.1/").addConverterFactory(GsonConverterFactory.create()).build();
             String apiPath = d + "/player_api.php";
             retrofit.create(ApiService.class).getLiveStreams(apiPath, u, p, "get_live_streams").enqueue(new Callback<List<StreamItem>>() {
                 public void onResponse(Call<List<StreamItem>> call, Response<List<StreamItem>> response) {
@@ -498,6 +496,7 @@ import android.view.KeyEvent;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.android.exoplayer2.ui.StyledPlayerView;
 
 public class PlayerActivity extends AppCompatActivity {
@@ -522,7 +521,7 @@ public class PlayerActivity extends AppCompatActivity {
 }
 EOF
 
-# 8. MANIFEST (Splash Activity Silindi - LoginActivity Launcher Oldu)
+# 8. MANIFEST
 cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
@@ -544,7 +543,7 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 </manifest>
 EOF
 
-# --- WRAPPER ---
+# --- WRAPPER OLUŞTURMA ---
 cd $PROJECT_ROOT
 gradle wrapper --gradle-version 8.2 --distribution-type bin
 cd ..
