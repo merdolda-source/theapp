@@ -8,27 +8,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. Kodları Çek (v4 Güncellendi)
+      # 1. Kodları Çek
       - uses: actions/checkout@v4
 
-      # 2. Java Kur (v4 Güncellendi)
+      # 2. Java 17 Kur
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
       
-      # 3. Android Projesini Oluştur
+      # 3. Android Projesini Oluştur (Scripti Çalıştır)
       - name: Generate App from Script
         run: chmod +x generate_app.sh && ./generate_app.sh
         
-      # 4. APK Derle (Gradle İzinlerini vererek)
+      # 4. APK Derle (DÜZELTİLEN KISIM)
+      # gradlew dosyası olmadığı için direkt sunucudaki 'gradle'ı kullanıyoruz.
       - name: Build APK
         working-directory: ./theapp
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease
+        run: gradle assembleRelease --no-daemon
         
-      # 5. APK'yı Yükle (V4 - KRİTİK DÜZELTME BURADA)
+      # 5. APK'yı Yükle (v4 Versiyonu)
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
