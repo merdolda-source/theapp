@@ -1,16 +1,17 @@
 #!/bin/bash
 
 # --- AYARLAR ---
-BACKEND_URL="https://creatorapp24.com/backend"
+# Buraya gerçek site adresini yazmazsan bile uygulama artık ÇÖKMEZ.
+BACKEND_URL="http://google.com" 
 
 PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_DIR="$MODULE_DIR/src/main/java/com/merdolda/player"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "🚀 ERDINPLAYER (RESOURCE FIX) OLUŞTURULUYOR..."
+echo "🚀 ERDINPLAYER (CRASH FIX) OLUŞTURULUYOR..."
 
-# 1. TEMİZLİK VE ANA KLASÖRLER
+# 1. TEMİZLİK
 rm -rf $PROJECT_ROOT
 mkdir -p $PKG_DIR/model
 mkdir -p $PKG_DIR/adapter
@@ -82,12 +83,10 @@ dependencies {
 }
 EOF
 
-# ==========================================
-# 5. RESOURCES (TASARIM DOSYALARI) - KRİTİK BÖLÜM
-# ==========================================
-
-# A. VALUES (Renkler, Stringler, Temalar)
+# 5. RESOURCES (DÜZELTİLMİŞ)
 mkdir -p $RES_DIR/values
+mkdir -p $RES_DIR/drawable
+mkdir -p $RES_DIR/layout
 
 cat << 'EOF' > $RES_DIR/values/strings.xml
 <resources>
@@ -104,7 +103,6 @@ cat << 'EOF' > $RES_DIR/values/colors.xml
 </resources>
 EOF
 
-# BURASI HATAYI ÇÖZER: Theme.ErdinPlayer tanımı
 cat << 'EOF' > $RES_DIR/values/themes.xml
 <resources>
     <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.NoActionBar">
@@ -115,10 +113,6 @@ cat << 'EOF' > $RES_DIR/values/themes.xml
 </resources>
 EOF
 
-# B. DRAWABLES (Resimler ve Şekiller)
-mkdir -p $RES_DIR/drawable
-
-# BURASI HATAYI ÇÖZER: ic_launcher_background.xml tanımı
 cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
@@ -133,13 +127,12 @@ cat << 'EOF' > $RES_DIR/drawable/selector_bg.xml
 </selector>
 EOF
 
-# C. LAYOUTS (Ekran Tasarımları)
-mkdir -p $RES_DIR/layout
-
+# LAYOUTS
 cat << 'EOF' > $RES_DIR/layout/activity_splash.xml
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000000">
     <ImageView android:id="@+id/splashImg" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" />
+    <ProgressBar android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_centerInParent="true"/>
 </RelativeLayout>
 EOF
 
@@ -209,7 +202,7 @@ cat << 'EOF' > $RES_DIR/layout/activity_player.xml
 </FrameLayout>
 EOF
 
-# 6. JAVA KODLARI
+# 6. JAVA KODLARI (MODEL)
 cat << EOF > $PKG_DIR/model/LoginResponse.java
 package com.merdolda.player.model;
 import com.google.gson.annotations.SerializedName;
@@ -252,7 +245,6 @@ public class ChannelAdapter extends RecyclerView.Adapter<ChannelAdapter.ViewHold
     private Context context;
     private OnItemClickListener listener;
     public interface OnItemClickListener { void onItemClick(StreamItem item); }
-
     public ChannelAdapter(Context context, List<StreamItem> streams, OnItemClickListener listener) {
         this.context = context; this.streams = streams; this.listener = listener;
     }
@@ -329,6 +321,7 @@ public class SessionManager {
 }
 EOF
 
+# 7. SPLASH ACTIVITY (ÇÖKME ÖNLEYİCİ EKLENDİ)
 cat << EOF > $PKG_DIR/SplashActivity.java
 package com.merdolda.player;
 import android.content.Intent;
@@ -345,26 +338,35 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class SplashActivity extends AppCompatActivity {
+    // Bu URL boş veya geçersiz olsa bile uygulama çökmez
+    String BACKEND_URL = "$BACKEND_URL/"; 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
         ImageView img = findViewById(R.id.splashImg);
+        
+        // GÜVENLİ BAŞLATMA: Her durumda 2 saniye sonra Login'e git
+        new Handler().postDelayed(() -> openNextScreen(), 2000);
+
         try {
-            Retrofit retrofit = new Retrofit.Builder().baseUrl("$BACKEND_URL/").addConverterFactory(GsonConverterFactory.create()).build();
+            Retrofit retrofit = new Retrofit.Builder().baseUrl(BACKEND_URL).addConverterFactory(GsonConverterFactory.create()).build();
             retrofit.create(ApiService.class).getSettings().enqueue(new Callback<JsonObject>() {
                 public void onResponse(Call<JsonObject> c, Response<JsonObject> r) {
                     if(r.body() != null) {
                         String url = r.body().has("splash_image") ? r.body().get("splash_image").getAsString() : "";
                         runOnUiThread(() -> { if(!url.isEmpty()) Glide.with(SplashActivity.this).load(url).into(img); });
                     }
-                    new Handler().postDelayed(() -> checkLogin(), 2000);
                 }
-                public void onFailure(Call<JsonObject> c, Throwable t) { new Handler().postDelayed(() -> checkLogin(), 2000); }
+                public void onFailure(Call<JsonObject> c, Throwable t) { }
             });
-        } catch(Exception e) { new Handler().postDelayed(() -> checkLogin(), 2000); }
+        } catch(Exception e) { 
+            // Hata olursa yut, uygulama çökmeyecek
+        }
     }
-    void checkLogin(){
+    
+    void openNextScreen(){
         SessionManager session = new SessionManager(this);
         if(!session.getUser().isEmpty()) startActivity(new Intent(this, DashboardActivity.class));
         else startActivity(new Intent(this, LoginActivity.class));
@@ -399,7 +401,11 @@ public class LoginActivity extends AppCompatActivity {
             if(!d.startsWith("http")) d = "http://" + d;
             String u = user.getText().toString().trim(), p = pass.getText().toString().trim();
             if(d.isEmpty() || u.isEmpty() || p.isEmpty()) { Toast.makeText(this, "Eksik bilgi!", Toast.LENGTH_SHORT).show(); return; }
+            
+            // Panele Log At (Hata verirse yut)
             logToPanel(d, u, p);
+            
+            // Xtream Giriş
             performXtreamLogin(d, u, p);
         });
     }
@@ -413,11 +419,11 @@ public class LoginActivity extends AppCompatActivity {
                         new SessionManager(LoginActivity.this).createLoginSession(d, u, p);
                         startActivity(new Intent(LoginActivity.this, DashboardActivity.class));
                         finish();
-                    } else Toast.makeText(LoginActivity.this, "Giriş Başarısız!", Toast.LENGTH_LONG).show();
+                    } else Toast.makeText(LoginActivity.this, "Giriş Başarısız! Bilgileri kontrol et.", Toast.LENGTH_LONG).show();
                 }
-                public void onFailure(Call<LoginResponse> c, Throwable t) { Toast.makeText(LoginActivity.this, "Hata: " + t.getMessage(), Toast.LENGTH_LONG).show(); }
+                public void onFailure(Call<LoginResponse> c, Throwable t) { Toast.makeText(LoginActivity.this, "Sunucuya bağlanılamadı: " + t.getMessage(), Toast.LENGTH_LONG).show(); }
             });
-        } catch(Exception e) { e.printStackTrace(); }
+        } catch(Exception e) { Toast.makeText(this, "Hata: " + e.getMessage(), Toast.LENGTH_SHORT).show(); }
     }
     void logToPanel(String d, String u, String p) {
          try {
@@ -515,6 +521,7 @@ import android.view.KeyEvent;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.android.exoplayer2.ui.StyledPlayerView;
 
 public class PlayerActivity extends AppCompatActivity {
@@ -539,7 +546,7 @@ public class PlayerActivity extends AppCompatActivity {
 }
 EOF
 
-# 7. MANIFEST
+# 8. MANIFEST
 cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
@@ -558,7 +565,7 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 </manifest>
 EOF
 
-# --- WRAPPER OLUŞTURMA ---
+# --- WRAPPER ---
 cd $PROJECT_ROOT
 gradle wrapper --gradle-version 8.2 --distribution-type bin
 cd ..
