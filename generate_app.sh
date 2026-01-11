@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# --- AYARLAR (HATA BURADAYDI, DÜZELTİLDİ) ---
+# --- AYARLAR ---
 PROJECT_NAME="ErdinPlayer"
-PROJECT_ROOT="theapp"  # GitHub Actions bu klasör ismini bekliyor!
+PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER v13.0: KLASÖR İSMİ DÜZELTİLDİ, M3U PARSER VE PRO TASARIM KURULUYOR..."
+echo "💎 ERDINPLAYER v14.0: SIDE MENU, M3U HEADERS & FULLSCREEN MODE..."
 
 # 1. TEMİZLİK & KLASÖRLER
 if [ -d "$PROJECT_ROOT" ]; then rm -rf "$PROJECT_ROOT"; fi
@@ -51,7 +51,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'com.merdolda.player'
     compileSdk 34
-    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 13; versionName "13.0"; multiDexEnabled true }
+    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 14; versionName "14.0"; multiDexEnabled true }
     signingConfigs { release { storeFile file("release.keystore"); storePassword "123456"; keyAlias "erdinplayer"; keyPassword "123456" } }
     buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
@@ -72,7 +72,7 @@ dependencies {
 }
 EOF
 
-# 4. RESOURCES (MODERN DESIGN)
+# 4. RESOURCES (FULLSCREEN & THEMES)
 cat << 'EOF' > "$RES_DIR/values/colors.xml"
 <resources>
     <color name="bg_dark">#050505</color>
@@ -82,9 +82,11 @@ cat << 'EOF' > "$RES_DIR/values/colors.xml"
     <color name="text_primary">#FFFFFF</color>
     <color name="text_secondary">#B0B0B0</color>
     <color name="black_overlay">#CC000000</color>
+    <color name="drawer_bg">#121212</color>
 </resources>
 EOF
 
+# Styles güncellendi: Fullscreen eklendi
 cat << 'EOF' > "$RES_DIR/values/styles.xml"
 <resources>
     <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
@@ -93,6 +95,8 @@ cat << 'EOF' > "$RES_DIR/values/styles.xml"
         <item name="colorAccent">@color/accent</item>
         <item name="android:statusBarColor">@color/bg_dark</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
     </style>
     <style name="GlassCard">
         <item name="android:background">@drawable/bg_glass</item>
@@ -133,12 +137,14 @@ EOF
 cat << 'EOF' > "$RES_DIR/drawable/ic_zoom.xml"
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFF" android:pathData="M15,3l2.3,2.3 -2.89,2.87 1.42,1.42L18.7,6.7 21,9V3zM3,9l2.3,-2.3 2.87,2.89 1.42,-1.42L6.7,5.3 9,3H3zM9,21l-2.3,-2.3 2.89,-2.87 -1.42,-1.42L5.3,17.3 3,15v6zM21,15l-2.3,2.3 -2.87,-2.89 -1.42,1.42L17.3,18.7 15,21h6z"/></vector>
 EOF
-# Missing Icon Fix
+cat << 'EOF' > "$RES_DIR/drawable/ic_menu.xml"
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:fillColor="#FFF" android:pathData="M3,18h18v-2H3v2zm0,-5h18v-2H3v2zm0,-7v2h18V6H3z"/></vector>
+EOF
 cat << 'EOF' > "$RES_DIR/drawable/ic_launcher_background.xml"
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#050505" android:pathData="M0,0h108v108h-108z"/></vector>
 EOF
 
-# 5. MODELS (Updated for M3U Parsing)
+# 5. MODELS (Updated for Headers)
 cat << EOF > "$PKG_DIR/model/AppModels.java"
 package com.merdolda.player.model;
 import com.google.gson.annotations.SerializedName;
@@ -173,11 +179,14 @@ public class AppModels {
         @SerializedName("container_extension") public String ext;
         public String directUrl;
         public String group;
+        // NEW: Headers support
+        public String userAgent;
+        public String referer;
     }
 }
 EOF
 
-# 6. API & UTILS (M3U Parser Added)
+# 6. API & UTILS (M3U Parser Updated for EXTVLCOPT)
 cat << EOF > "$PKG_DIR/api/XtreamApi.java"
 package com.merdolda.player.api;
 import com.merdolda.player.model.AppModels.*;
@@ -204,10 +213,35 @@ public class M3UParser {
         String currentGroup = "Uncategorized";
         StreamItem currentItem = null;
 
+        // Header temp vars
+        String tempAgent = null;
+        String tempReferer = null;
+
         for (String line : lines) {
             line = line.trim();
+            
+            // Handle VLC Options for Headers
+            if (line.startsWith("#EXTVLCOPT:")) {
+                String opt = line.substring(11).trim();
+                if (opt.startsWith("http-user-agent=")) {
+                    tempAgent = opt.substring(16);
+                } else if (opt.startsWith("http-referrer=")) {
+                    tempReferer = opt.substring(14);
+                } else if (opt.startsWith("http-origin=")) {
+                    tempReferer = opt.substring(12); // Treat origin as referer
+                }
+                continue;
+            }
+
             if (line.startsWith("#EXTINF")) {
                 currentItem = new StreamItem();
+                // Assign captured headers to this item
+                currentItem.userAgent = tempAgent;
+                currentItem.referer = tempReferer;
+                // Reset temps
+                tempAgent = null;
+                tempReferer = null;
+
                 int comma = line.lastIndexOf(",");
                 if (comma > 0) currentItem.name = line.substring(comma + 1).trim();
                 else currentItem.name = "Unknown Channel";
@@ -241,7 +275,7 @@ import com.google.gson.reflect.TypeToken;
 import com.merdolda.player.model.AppModels.Playlist;
 import java.util.*;
 public class PrefUtils {
-    private static SharedPreferences get(Context c) { return c.getSharedPreferences("ERD_V13", 0); }
+    private static SharedPreferences get(Context c) { return c.getSharedPreferences("ERD_V14", 0); }
     public static void savePlaylist(Context c, Playlist p) {
         List<Playlist> l = getPlaylists(c); l.add(p);
         get(c).edit().putString("L", new Gson().toJson(l)).putString("A", p.id).apply();
@@ -338,7 +372,7 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
 }
 EOF
 
-# 8. LAYOUTS (MODERN GLASS UI)
+# 8. LAYOUTS (DRAWER LAYOUT ADDED)
 cat << 'EOF' > "$RES_DIR/layout/activity_selection.xml"
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg_dark">
     <ImageView android:layout_width="match_parent" android:layout_height="match_parent" android:alpha="0.3" android:scaleType="centerCrop" android:src="@android:drawable/ic_menu_gallery"/>
@@ -365,20 +399,66 @@ cat << 'EOF' > "$RES_DIR/layout/item_playlist.xml"
 </LinearLayout>
 EOF
 
+# YENİ DASHBOARD: DrawerLayout ile
 cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg_dark" android:orientation="vertical" android:gravity="center" android:padding="30dp">
-    <TextView android:id="@+id/tvUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:gravity="center" android:textSize="24sp" android:layout_marginBottom="60dp" android:textStyle="bold"/>
-    
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:weightSum="2" android:layout_marginBottom="40dp">
-        <LinearLayout android:id="@+id/btnLive" android:layout_width="0dp" android:layout_height="160dp" android:layout_weight="1" android:layout_marginRight="10dp" style="@style/GlassCard" android:gravity="center" android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LIVE TV" android:textColor="#FFF" android:textSize="22sp" android:textStyle="bold"/>
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark">
+
+    <!-- ANA İÇERİK -->
+    <RelativeLayout android:layout_width="match_parent" android:layout_height="match_parent">
+        
+        <!-- TV için Menü Butonu -->
+        <ImageButton android:id="@+id/btnMenuOpen" android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/ic_menu" android:background="@drawable/bg_glass" android:layout_margin="20dp" android:padding="12dp"/>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:padding="30dp">
+            <TextView android:id="@+id/tvUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:gravity="center" android:textSize="24sp" android:layout_marginBottom="60dp" android:textStyle="bold"/>
+            
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:weightSum="2">
+                <LinearLayout android:id="@+id/btnLive" android:layout_width="0dp" android:layout_height="180dp" android:layout_weight="1" android:layout_marginRight="10dp" style="@style/GlassCard" android:gravity="center" android:orientation="vertical" android:focusable="true" android:clickable="true">
+                    <ImageView android:layout_width="60dp" android:layout_height="60dp" android:src="@drawable/ic_play" android:layout_marginBottom="10dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="LIVE TV" android:textColor="#FFF" android:textSize="22sp" android:textStyle="bold"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/btnMovies" android:layout_width="0dp" android:layout_height="180dp" android:layout_weight="1" android:layout_marginLeft="10dp" style="@style/GlassCard" android:gravity="center" android:orientation="vertical" android:focusable="true" android:clickable="true">
+                    <ImageView android:layout_width="60dp" android:layout_height="60dp" android:src="@android:drawable/ic_media_play" android:layout_marginBottom="10dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="VOD" android:textColor="#FFF" android:textSize="22sp" android:textStyle="bold"/>
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
-        <LinearLayout android:id="@+id/btnMovies" android:layout_width="0dp" android:layout_height="160dp" android:layout_weight="1" android:layout_marginLeft="10dp" style="@style/GlassCard" android:gravity="center" android:orientation="vertical">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="VOD" android:textColor="#FFF" android:textSize="22sp" android:textStyle="bold"/>
-        </LinearLayout>
-    </LinearLayout>
-    
-    <Button android:id="@+id/btnLogout" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SWITCH PLAYLIST" style="@style/NeonButton" android:paddingLeft="40dp" android:paddingRight="40dp"/>
+    </RelativeLayout>
+
+    <!-- YAN MENÜ (NAVIGATION VIEW) -->
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/nav_view"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="@color/drawer_bg"
+        app:itemTextColor="#FFF"
+        app:itemIconTint="#FFF"
+        app:menu="@menu/drawer_menu"
+        app:headerLayout="@layout/nav_header"/>
+
+</androidx.drawerlayout.widget.DrawerLayout>
+EOF
+
+# Drawer Menu Items
+cat << 'EOF' > "$RES_DIR/menu/drawer_menu.xml"
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/nav_switch" android:icon="@drawable/ic_play" android:title="Switch Playlist"/>
+    <item android:id="@+id/nav_settings" android:icon="@android:drawable/ic_menu_preferences" android:title="Settings"/>
+    <item android:id="@+id/nav_logout" android:icon="@drawable/ic_delete" android:title="Logout"/>
+</menu>
+EOF
+
+# Drawer Header
+cat << 'EOF' > "$RES_DIR/layout/nav_header.xml"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="150dp" android:background="@color/accent" android:gravity="bottom" android:orientation="vertical" android:padding="16dp" android:theme="@style/ThemeOverlay.AppCompat.Dark">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ErdinPlayer" android:textAppearance="@style/TextAppearance.AppCompat.Body1" android:textSize="24sp" android:textStyle="bold"/>
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="v14.0 Pro" android:textSize="14sp"/>
 </LinearLayout>
 EOF
 
@@ -422,6 +502,7 @@ cat << 'EOF' > "$RES_DIR/layout/item_category.xml"
 </LinearLayout>
 EOF
 
+# Player Layout (Dokunulmadı, sadece ID'ler korundu)
 cat << 'EOF' > "$RES_DIR/layout/activity_player.xml"
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000">
     <com.google.android.exoplayer2.ui.StyledPlayerView android:id="@+id/player_view" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_gravity="center"/>
@@ -469,21 +550,37 @@ public class SelectionActivity extends AppCompatActivity {
 }
 EOF
 
+# Dashboard Updated with Drawer Logic
 cat << EOF > "$PKG_DIR/ui/DashboardActivity.java"
 package com.merdolda.player.ui;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.widget.TextView;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import com.google.android.material.navigation.NavigationView;
 import com.merdolda.player.R;
 import com.merdolda.player.utils.PrefUtils;
 import com.merdolda.player.model.AppModels.Playlist;
-public class DashboardActivity extends AppCompatActivity {
+
+public class DashboardActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+    DrawerLayout drawer;
+    
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
         setContentView(R.layout.activity_dashboard);
+        
+        drawer = findViewById(R.id.drawer_layout);
+        NavigationView nav = findViewById(R.id.nav_view);
+        nav.setNavigationItemSelectedListener(this);
+        
         Playlist p = PrefUtils.getActive(this);
         if(p != null) ((TextView)findViewById(R.id.tvUser)).setText(p.name);
+        
+        findViewById(R.id.btnMenuOpen).setOnClickListener(v -> drawer.openDrawer(GravityCompat.START));
         
         findViewById(R.id.btnLive).setOnClickListener(v -> { 
             Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "live"); startActivity(i); 
@@ -491,7 +588,18 @@ public class DashboardActivity extends AppCompatActivity {
         findViewById(R.id.btnMovies).setOnClickListener(v -> { 
             Intent i = new Intent(this, CommonListActivity.class); i.putExtra("type", "vod"); startActivity(i); 
         });
-        findViewById(R.id.btnLogout).setOnClickListener(v -> { PrefUtils.logout(this); startActivity(new Intent(this, SelectionActivity.class)); finish(); });
+    }
+
+    @Override
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.nav_logout || id == R.id.nav_switch) {
+            PrefUtils.logout(this);
+            startActivity(new Intent(this, SelectionActivity.class));
+            finish();
+        }
+        drawer.closeDrawer(GravityCompat.START);
+        return true;
     }
 }
 EOF
@@ -604,6 +712,9 @@ public class CommonListActivity extends AppCompatActivity {
                 url = p.url + "/" + (type.equals("live") ? "live" : "movie") + "/" + p.user + "/" + p.pass + "/" + i.streamId + "." + (i.ext!=null?i.ext:"ts");
             } else {
                 url = i.directUrl;
+                // Pass headers if exist
+                if(i.userAgent != null) in.putExtra("agent", i.userAgent);
+                if(i.referer != null) in.putExtra("referer", i.referer);
             }
             in.putExtra("url", url); startActivity(in);
         });
@@ -639,6 +750,7 @@ public class CommonListActivity extends AppCompatActivity {
 }
 EOF
 
+# Player updated to handle Headers
 cat << EOF > "$PKG_DIR/ui/PlayerActivity.java"
 package com.merdolda.player.ui;
 import android.net.Uri;
@@ -648,31 +760,56 @@ import android.view.*;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.exoplayer2.*;
+import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
+import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.merdolda.player.R;
+import java.util.HashMap;
+import java.util.Map;
+
 public class PlayerActivity extends AppCompatActivity {
     ExoPlayer p; StyledPlayerView pv;
-    int resizeMode = 0; // 0:Fit, 1:Fill, 2:Zoom
+    int resizeMode = 0; 
     
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // FULL SCREEN NO LIMITS
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-            getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+        
+        // HIDE SYSTEM BARS (FULLSCREEN)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if(controller != null) {
+                controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+        } else {
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         
         setContentView(R.layout.activity_player);
         pv = findViewById(R.id.player_view);
-        
         findViewById(R.id.btnZoom).setOnClickListener(v -> toggleZoom());
         
-        p = new ExoPlayer.Builder(this).build();
+        String url = getIntent().getStringExtra("url");
+        String agent = getIntent().getStringExtra("agent");
+        String referer = getIntent().getStringExtra("referer");
+
+        // Prepare DataSource with Headers if needed
+        DefaultHttpDataSource.Factory httpFactory = new DefaultHttpDataSource.Factory();
+        if(agent != null) httpFactory.setUserAgent(agent);
+        
+        Map<String, String> headers = new HashMap<>();
+        if(referer != null) headers.put("Referer", referer);
+        if(!headers.isEmpty()) httpFactory.setDefaultRequestProperties(headers);
+
+        p = new ExoPlayer.Builder(this)
+            .setMediaSourceFactory(new DefaultMediaSourceFactory(httpFactory))
+            .build();
+            
         pv.setPlayer(p);
         
-        String url = getIntent().getStringExtra("url");
         if(url != null) { 
             p.setMediaItem(MediaItem.fromUri(Uri.parse(url))); 
             p.prepare(); 
@@ -683,17 +820,9 @@ public class PlayerActivity extends AppCompatActivity {
     void toggleZoom() {
         resizeMode++;
         if(resizeMode > 2) resizeMode = 0;
-        
-        if(resizeMode == 0) {
-            pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
-            Toast.makeText(this, "MODE: FIT", Toast.LENGTH_SHORT).show();
-        } else if(resizeMode == 1) {
-            pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
-            Toast.makeText(this, "MODE: STRETCH FILL", Toast.LENGTH_SHORT).show();
-        } else {
-            pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
-            Toast.makeText(this, "MODE: ZOOM CROP", Toast.LENGTH_SHORT).show();
-        }
+        if(resizeMode == 0) { pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT); Toast.makeText(this, "FIT", 0).show(); }
+        else if(resizeMode == 1) { pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL); Toast.makeText(this, "FILL", 0).show(); }
+        else { pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM); Toast.makeText(this, "ZOOM", 0).show(); }
     }
 
     @Override protected void onDestroy() { super.onDestroy(); if(p != null) p.release(); }
@@ -722,5 +851,5 @@ gradle wrapper --gradle-version 8.4
 chmod +x gradlew
 cd ..
 
-echo "✅ ERDINPLAYER v13.0: M3U PARSER & PRO DESIGN READY."
+echo "✅ ERDINPLAYER v14.0: SIDE MENU, M3U HEADERS & FULLSCREEN READY."
 echo "👉 NOW RUN: cd $PROJECT_NAME && ./gradlew assembleRelease --no-daemon"
