@@ -1,25 +1,32 @@
 #!/bin/bash
 
-# --- AYARLAR ---
-PROJECT_ROOT="ErdinPlayerV10"
+# --- SETTINGS ---
+PROJECT_NAME="ErdinPlayer"
+PROJECT_ROOT="./$PROJECT_NAME"  # Explicit relative path
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER v10.0: MODERN UI & ADVANCED M3U PARSING..."
+echo "💎 ERDINPLAYER v10.1: REGENERATING PROJECT STRUCTURE..."
 
-# 1. TEMİZLİK & KLASÖRLER
-rm -rf $PROJECT_ROOT
-mkdir -p $PKG_DIR/{model,adapter,api,utils,ui}
-mkdir -p $RES_DIR/{layout,values,drawable,anim,menu,color}
-mkdir -p $PROJECT_ROOT/gradle/wrapper
+# 1. CLEANUP & DIRECTORIES
+# Remove existing directory to ensure a clean slate
+if [ -d "$PROJECT_ROOT" ]; then
+    echo "Cleaning up old project..."
+    rm -rf "$PROJECT_ROOT"
+fi
+
+mkdir -p "$PKG_DIR"/{model,adapter,api,utils,ui}
+mkdir -p "$RES_DIR"/{layout,values,drawable,anim,menu,color}
+mkdir -p "$PROJECT_ROOT/gradle/wrapper"
 
 # 2. KEYSTORE
-keytool -genkey -v -keystore $MODULE_DIR/release.keystore -alias erdinplayer -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Erdin, O=ErdinPlayer, C=TR" 2>/dev/null
+echo "Generating Keystore..."
+keytool -genkey -v -keystore "$MODULE_DIR/release.keystore" -alias erdinplayer -keyalg RSA -keysize 2048 -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Erdin, O=ErdinPlayer, C=TR" 2>/dev/null
 
 # 3. GRADLE SETUP
-cat << 'EOF' > $PROJECT_ROOT/gradle/wrapper/gradle-wrapper.properties
+cat << 'EOF' > "$PROJECT_ROOT/gradle/wrapper/gradle-wrapper.properties"
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
 distributionUrl=https\://services.gradle.org/distributions/gradle-8.4-bin.zip
@@ -27,32 +34,69 @@ zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists
 EOF
 
-cat << 'EOF' > $PROJECT_ROOT/build.gradle
-buildscript { repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.1.1' } }
-allprojects { repositories { google(); mavenCentral(); maven { url 'https://jitpack.io' } } }
+cat << 'EOF' > "$PROJECT_ROOT/build.gradle"
+buildscript { 
+    repositories { google(); mavenCentral() }
+    dependencies { classpath 'com.android.tools.build:gradle:8.1.1' } 
+}
+allprojects { 
+    repositories { 
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' } 
+    } 
+}
 EOF
 
-cat << 'EOF' > $PROJECT_ROOT/settings.gradle
+cat << 'EOF' > "$PROJECT_ROOT/settings.gradle"
 rootProject.name = "ErdinPlayer"
 include ':app'
 EOF
 
-cat << 'EOF' > $PROJECT_ROOT/gradle.properties
+cat << 'EOF' > "$PROJECT_ROOT/gradle.properties"
 android.useAndroidX=true
 android.enableJetifier=true
 org.gradle.jvmargs=-Xmx4048m
 EOF
 
-cat << 'EOF' > $MODULE_DIR/build.gradle
+cat << 'EOF' > "$MODULE_DIR/build.gradle"
 plugins { id 'com.android.application' }
+
 android {
     namespace 'com.merdolda.player'
     compileSdk 34
-    defaultConfig { applicationId "com.merdolda.player"; minSdk 21; targetSdk 34; versionCode 1; versionName "1.0"; multiDexEnabled true }
-    signingConfigs { release { storeFile file("release.keystore"); storePassword "123456"; keyAlias "erdinplayer"; keyPassword "123456" } }
-    buildTypes { release { minifyEnabled false; signingConfig signingConfigs.release; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' } }
-    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+
+    defaultConfig {
+        applicationId "com.merdolda.player"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+        multiDexEnabled true
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("release.keystore")
+            storePassword "123456"
+            keyAlias "erdinplayer"
+            keyPassword "123456"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
 }
+
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
@@ -60,6 +104,8 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.recyclerview:recyclerview:1.3.1'
     implementation 'androidx.cardview:cardview:1.0.0'
+    
+    // Media & Network
     implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
     implementation 'com.github.bumptech.glide:glide:4.16.0'
@@ -70,16 +116,15 @@ dependencies {
 }
 EOF
 
-# 4. KAYNAKLAR (MODERN UI COLORS & DRAWABLES)
-cat << 'EOF' > $RES_DIR/values/colors.xml
+# 4. RESOURCES (MODERN UI)
+cat << 'EOF' > "$RES_DIR/values/colors.xml"
 <resources>
     <color name="bg_main">#0F172A</color>
     <color name="bg_gradient_start">#1E293B</color>
     <color name="bg_gradient_end">#0F172A</color>
     <color name="card_bg">#25334D</color>
-    <color name="card_bg_transparent">#CC1E293B</color>
-    <color name="primary_accent">#38BDF8</color> <!-- Light Blue -->
-    <color name="secondary_accent">#818CF8</color> <!-- Indigo -->
+    <color name="primary_accent">#38BDF8</color>
+    <color name="secondary_accent">#818CF8</color>
     <color name="danger">#EF4444</color>
     <color name="white">#FFFFFF</color>
     <color name="gray_text">#94A3B8</color>
@@ -87,7 +132,7 @@ cat << 'EOF' > $RES_DIR/values/colors.xml
 </resources>
 EOF
 
-cat << 'EOF' > $RES_DIR/values/styles.xml
+cat << 'EOF' > "$RES_DIR/values/styles.xml"
 <resources>
     <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
         <item name="android:windowBackground">@drawable/bg_main_gradient</item>
@@ -95,15 +140,12 @@ cat << 'EOF' > $RES_DIR/values/styles.xml
         <item name="colorAccent">@color/primary_accent</item>
         <item name="android:statusBarColor">@color/bg_main</item>
     </style>
-    
     <style name="ModernButton" parent="Widget.MaterialComponents.Button">
         <item name="backgroundTint">@null</item>
         <item name="android:background">@drawable/btn_gradient</item>
         <item name="android:textColor">@color/white</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
         <item name="cornerRadius">12dp</item>
     </style>
-
     <style name="ModernInput">
         <item name="android:background">@drawable/bg_input</item>
         <item name="android:textColor">@color/white</item>
@@ -113,21 +155,20 @@ cat << 'EOF' > $RES_DIR/values/styles.xml
 </resources>
 EOF
 
-# Custom Drawables for Modern Look
-cat << 'EOF' > $RES_DIR/drawable/bg_main_gradient.xml
+cat << 'EOF' > "$RES_DIR/drawable/bg_main_gradient.xml"
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <gradient android:startColor="#1E293B" android:endColor="#020617" android:angle="270"/>
 </shape>
 EOF
 
-cat << 'EOF' > $RES_DIR/drawable/btn_gradient.xml
+cat << 'EOF' > "$RES_DIR/drawable/btn_gradient.xml"
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <gradient android:startColor="#38BDF8" android:endColor="#2563EB" android:angle="45"/>
     <corners android:radius="12dp"/>
 </shape>
 EOF
 
-cat << 'EOF' > $RES_DIR/drawable/bg_card.xml
+cat << 'EOF' > "$RES_DIR/drawable/bg_card.xml"
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <solid android:color="#1E293B"/>
     <corners android:radius="16dp"/>
@@ -135,7 +176,7 @@ cat << 'EOF' > $RES_DIR/drawable/bg_card.xml
 </shape>
 EOF
 
-cat << 'EOF' > $RES_DIR/drawable/bg_input.xml
+cat << 'EOF' > "$RES_DIR/drawable/bg_input.xml"
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <solid android:color="#0F172A"/>
     <corners android:radius="10dp"/>
@@ -143,12 +184,12 @@ cat << 'EOF' > $RES_DIR/drawable/bg_input.xml
 </shape>
 EOF
 
-cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
+cat << 'EOF' > "$RES_DIR/drawable/ic_launcher_background.xml"
 <vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108"><path android:fillColor="#0F172A" android:pathData="M0,0h108v108h-108z"/></vector>
 EOF
 
-# 5. MODELLER
-cat << EOF > $PKG_DIR/model/AppModels.java
+# 5. MODELS
+cat << EOF > "$PKG_DIR/model/AppModels.java"
 package com.merdolda.player.model;
 import com.google.gson.annotations.SerializedName;
 import java.io.Serializable;
@@ -177,7 +218,7 @@ public class AppModels {
 EOF
 
 # 6. API & UTILS
-cat << EOF > $PKG_DIR/api/XtreamApi.java
+cat << EOF > "$PKG_DIR/api/XtreamApi.java"
 package com.merdolda.player.api;
 import com.merdolda.player.model.AppModels.*;
 import java.util.List;
@@ -190,7 +231,7 @@ public interface XtreamApi {
 }
 EOF
 
-cat << EOF > $PKG_DIR/utils/PrefUtils.java
+cat << EOF > "$PKG_DIR/utils/PrefUtils.java"
 package com.merdolda.player.utils;
 import android.content.*;
 import com.google.gson.Gson;
@@ -220,8 +261,8 @@ public class PrefUtils {
 }
 EOF
 
-# 7. ADAPTERLER
-cat << EOF > $PKG_DIR/adapter/PlaylistAdapter.java
+# 7. ADAPTERS
+cat << EOF > "$PKG_DIR/adapter/PlaylistAdapter.java"
 package com.merdolda.player.adapter;
 import android.view.*;
 import android.widget.*;
@@ -245,7 +286,7 @@ public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.VH> {
 }
 EOF
 
-cat << EOF > $PKG_DIR/adapter/CategoryAdapter.java
+cat << EOF > "$PKG_DIR/adapter/CategoryAdapter.java"
 package com.merdolda.player.adapter;
 import android.graphics.Color;
 import android.view.*;
@@ -270,7 +311,7 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.VH> {
 }
 EOF
 
-cat << EOF > $PKG_DIR/adapter/StreamAdapter.java
+cat << EOF > "$PKG_DIR/adapter/StreamAdapter.java"
 package com.merdolda.player.adapter;
 import android.view.*;
 import android.widget.*;
@@ -296,8 +337,8 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
 }
 EOF
 
-# 8. LAYOUTS (MODERNIZED)
-cat << 'EOF' > $RES_DIR/layout/activity_selection.xml
+# 8. LAYOUTS
+cat << 'EOF' > "$RES_DIR/layout/activity_selection.xml"
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient">
     <LinearLayout android:id="@+id/header" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:padding="30dp">
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ERDIN PLAYER" android:textColor="@color/white" android:textSize="36sp" android:textStyle="bold" android:letterSpacing="0.05"/>
@@ -311,11 +352,11 @@ cat << 'EOF' > $RES_DIR/layout/activity_selection.xml
 </RelativeLayout>
 EOF
 
-cat << 'EOF' > $RES_DIR/layout/item_playlist.xml
+cat << 'EOF' > "$RES_DIR/layout/item_playlist.xml"
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_margin="8dp" app:cardBackgroundColor="@android:color/transparent" app:cardElevation="0dp"><LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/bg_card" android:padding="16dp" android:orientation="horizontal" android:gravity="center_vertical"><LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical"><TextView android:id="@+id/tvPlayName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="18sp" android:textStyle="bold"/><TextView android:id="@+id/tvPlayInfo" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/gray_text" android:textSize="13sp"/></LinearLayout><ImageButton android:id="@+id/btnDel" android:layout_width="40dp" android:layout_height="40dp" android:background="?attr/selectableItemBackgroundBorderless" android:src="@android:drawable/ic_menu_delete" android:tint="@color/danger"/></LinearLayout></androidx.cardview.widget.CardView>
 EOF
 
-cat << 'EOF' > $RES_DIR/layout/activity_dashboard.xml
+cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:orientation="vertical" android:gravity="center" android:padding="30dp">
     <TextView android:id="@+id/tvUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFF" android:gravity="center" android:textSize="20sp" android:layout_marginBottom="50dp" android:textStyle="bold"/>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:weightSum="2" android:orientation="horizontal" android:layout_marginBottom="30dp">
@@ -326,7 +367,7 @@ cat << 'EOF' > $RES_DIR/layout/activity_dashboard.xml
 </LinearLayout>
 EOF
 
-cat << 'EOF' > $RES_DIR/layout/activity_login_xtream.xml
+cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:orientation="vertical" android:padding="30dp" android:gravity="center">
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Xtream Login" android:textColor="@color/white" android:textSize="24sp" android:textStyle="bold" android:layout_marginBottom="30dp"/>
     <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Playlist Name" style="@style/ModernInput" android:layout_marginBottom="15dp"/>
@@ -337,7 +378,7 @@ cat << 'EOF' > $RES_DIR/layout/activity_login_xtream.xml
 </LinearLayout>
 EOF
 
-cat << 'EOF' > $RES_DIR/layout/activity_login_single.xml
+cat << 'EOF' > "$RES_DIR/layout/activity_login_single.xml"
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_main_gradient" android:fillViewport="true">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="30dp" android:gravity="center">
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Single Stream / M3U" android:textColor="@color/white" android:textSize="24sp" android:textStyle="bold" android:layout_marginBottom="30dp"/>
@@ -349,32 +390,32 @@ cat << 'EOF' > $RES_DIR/layout/activity_login_single.xml
 </ScrollView>
 EOF
 
-cat << 'EOF' > $RES_DIR/layout/activity_list.xml
+cat << 'EOF' > "$RES_DIR/layout/activity_list.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@drawable/bg_main_gradient">
     <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvCats" android:layout_width="match_parent" android:layout_height="60dp" android:padding="5dp" android:clipToPadding="false"/>
     <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvStreams" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="8dp"/>
 </LinearLayout>
 EOF
 
-cat << 'EOF' > $RES_DIR/layout/item_channel.xml
+cat << 'EOF' > "$RES_DIR/layout/item_channel.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="10dp" android:background="@drawable/bg_card" android:layout_marginBottom="8dp" android:orientation="horizontal" android:gravity="center_vertical">
     <ImageView android:id="@+id/ivIcon" android:layout_width="50dp" android:layout_height="50dp" android:src="@drawable/ic_launcher_background"/>
     <TextView android:id="@+id/tvName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFF" android:textSize="16sp" android:layout_marginLeft="15dp" android:textStyle="bold"/>
 </LinearLayout>
 EOF
 
-cat << 'EOF' > $RES_DIR/layout/item_category.xml
+cat << 'EOF' > "$RES_DIR/layout/item_category.xml"
 <TextView xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/tvCatName" android:layout_width="wrap_content" android:layout_height="40dp" android:gravity="center" android:paddingLeft="20dp" android:paddingRight="20dp" android:textColor="#FFF" android:textSize="14sp" android:textStyle="bold" android:layout_margin="5dp"/>
 EOF
 
-cat << 'EOF' > $RES_DIR/layout/activity_player.xml
+cat << 'EOF' > "$RES_DIR/layout/activity_player.xml"
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000"><com.google.android.exoplayer2.ui.StyledPlayerView android:id="@+id/player_view" android:layout_width="match_parent" android:layout_height="match_parent"/></FrameLayout>
 EOF
 
-# 9. JAVA SINIFLARI (GÜNCELLENMİŞ M3U PARSING)
+# 9. JAVA CLASSES (With M3U Parsing Logic)
 
 # PlayerActivity
-cat << EOF > $PKG_DIR/ui/PlayerActivity.java
+cat << EOF > "$PKG_DIR/ui/PlayerActivity.java"
 package com.merdolda.player.ui;
 import android.net.Uri;
 import android.os.Bundle;
@@ -398,7 +439,6 @@ public class PlayerActivity extends AppCompatActivity {
         String ref = getIntent().getStringExtra("referer");
         String ori = getIntent().getStringExtra("origin");
         
-        // Headers Setup
         DefaultHttpDataSource.Factory f = new DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true);
         f.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
         Map<String, String> h = new HashMap<>();
@@ -422,7 +462,7 @@ public class PlayerActivity extends AppCompatActivity {
 EOF
 
 # DashboardActivity
-cat << EOF > $PKG_DIR/ui/DashboardActivity.java
+cat << EOF > "$PKG_DIR/ui/DashboardActivity.java"
 package com.merdolda.player.ui;
 import android.content.Intent;
 import android.os.Bundle;
@@ -445,7 +485,7 @@ public class DashboardActivity extends AppCompatActivity {
 EOF
 
 # CommonListActivity
-cat << EOF > $PKG_DIR/ui/CommonListActivity.java
+cat << EOF > "$PKG_DIR/ui/CommonListActivity.java"
 package com.merdolda.player.ui;
 import android.content.Intent;
 import android.os.Bundle;
@@ -495,7 +535,7 @@ public class CommonListActivity extends AppCompatActivity {
 EOF
 
 # LoginXtreamActivity
-cat << EOF > $PKG_DIR/ui/LoginXtreamActivity.java
+cat << EOF > "$PKG_DIR/ui/LoginXtreamActivity.java"
 package com.merdolda.player.ui;
 import android.content.Intent;
 import android.os.Bundle;
@@ -533,7 +573,7 @@ public class LoginXtreamActivity extends AppCompatActivity {
 EOF
 
 # LoginSingleActivity (M3U PARSING LOGIC HERE)
-cat << EOF > $PKG_DIR/ui/LoginSingleActivity.java
+cat << EOF > "$PKG_DIR/ui/LoginSingleActivity.java"
 package com.merdolda.player.ui;
 import android.content.Intent;
 import android.os.Bundle;
@@ -600,7 +640,7 @@ public class LoginSingleActivity extends AppCompatActivity {
 EOF
 
 # SelectionActivity
-cat << EOF > $PKG_DIR/ui/SelectionActivity.java
+cat << EOF > "$PKG_DIR/ui/SelectionActivity.java"
 package com.merdolda.player.ui;
 import android.content.Intent;
 import android.os.Bundle;
@@ -641,8 +681,8 @@ public class SelectionActivity extends AppCompatActivity {
 }
 EOF
 
-# 10. MANIFEST (EKSİKSİZ)
-cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
+# 10. MANIFEST
+cat << 'EOF' > "$MODULE_DIR/src/main/AndroidManifest.xml"
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <application android:name="androidx.multidex.MultiDexApplication" android:label="ErdinPlayer" android:theme="@style/AppTheme" android:usesCleartextTraffic="true" android:icon="@drawable/ic_launcher_background">
@@ -656,7 +696,12 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 </manifest>
 EOF
 
-# 11. WRAPPER
-cd $PROJECT_ROOT; gradle wrapper --gradle-version 8.4; chmod +x gradlew; cd ..
+# 11. WRAPPER GENERATION
+echo "Generating Gradle Wrapper..."
+cd "$PROJECT_ROOT"
+gradle wrapper --gradle-version 8.4
+chmod +x gradlew
+cd ..
 
-echo "✅ v10.0 GENERATION COMPLETE. READY TO BUILD!"
+echo "✅ ERDINPLAYER v10.1: PROJECT REGENERATED SUCCESSFULLY."
+echo "👉 NOW RUN: cd $PROJECT_NAME && ./gradlew assembleRelease --no-daemon"
