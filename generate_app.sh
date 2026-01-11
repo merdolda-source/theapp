@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # --- AYARLAR ---
-# Backend URL'ini buraya yaz (Sonunda / olmasın)
 BACKEND_URL="http://senin-site-adresin.com/backend"
 
 PROJECT_ROOT="theapp"
@@ -9,7 +8,7 @@ MODULE_DIR="$PROJECT_ROOT/app"
 PKG_DIR="$MODULE_DIR/src/main/java/com/merdolda/player"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "🚀 ERDINPLAYER OLUŞTURULUYOR..."
+echo "🚀 ERDINPLAYER (FIXED) OLUŞTURULUYOR..."
 
 # 1. Temizlik ve Klasörler
 rm -rf $PROJECT_ROOT
@@ -19,8 +18,13 @@ mkdir -p $RES_DIR/values
 mkdir -p $RES_DIR/drawable
 mkdir -p $RES_DIR/mipmap-anydpi-v26
 
-# 2. PROGUARD OLUŞTUR
-touch $MODULE_DIR/proguard-rules.pro
+# 2. PROGUARD (Çakışmaları önlemek için kurallar)
+cat << 'EOF' > $MODULE_DIR/proguard-rules.pro
+-dontwarn com.bumptech.glide.**
+-keep class com.bumptech.glide.** { *; }
+-dontwarn androidx.**
+-keep class androidx.** { *; }
+EOF
 
 # 3. SETTINGS.GRADLE
 cat << 'EOF' > $PROJECT_ROOT/settings.gradle
@@ -50,7 +54,7 @@ plugins {
 }
 EOF
 
-# 5. BUILD.GRADLE (APP LEVEL - EĞER JAR VARSA ONU DA GÖRÜR)
+# 5. BUILD.GRADLE (APP LEVEL - Java 17 & MultiDex Eklendi)
 cat << 'EOF' > $MODULE_DIR/build.gradle
 plugins {
     id 'com.android.application'
@@ -66,6 +70,9 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
+        
+        // KRİTİK AYAR: Büyük kütüphaneler için gerekli
+        multiDexEnabled true
     }
 
     buildTypes {
@@ -74,12 +81,20 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    
+    // JAVA 17 AYARI (GitHub Runner ile uyumlu olması için)
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     
-    // HATA VERMESİNİ ENGELLEYEN KOD
+    // ÇAKIŞMALARI ENGELLEYEN AYARLAR
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/license.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt', 'META-INF/notice.txt', 'META-INF/ASL2.0', 'META-INF/*.kotlin_module']
+        }
+    }
+
     lintOptions {
         checkReleaseBuilds false
         abortOnError false
@@ -87,6 +102,7 @@ android {
 }
 
 dependencies {
+    implementation 'androidx.multidex:multidex:2.0.1' // MultiDex Kütüphanesi
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
@@ -94,8 +110,8 @@ dependencies {
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.github.bumptech.glide:glide:4.16.0'
-    
-    // Eğer libs klasörüne jar attıysan onu okur
+
+    // Eklediğin JAR dosyalarını dahil et
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 }
 EOF
@@ -145,6 +161,7 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
+        android:name="androidx.multidex.MultiDexApplication"
         android:allowBackup="true"
         android:label="@string/app_name"
         android:theme="@style/Theme.ErdinPlayer"
@@ -318,4 +335,4 @@ cat << 'EOF' > $RES_DIR/layout/activity_player.xml
 </FrameLayout>
 EOF
 
-echo "✅ ERDINPLAYER HAZIR."
+echo "✅ ERDINPLAYER DOSYALARI (FIXED) HAZIRLANDI."
