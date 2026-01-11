@@ -8,7 +8,7 @@ MODULE_DIR="$PROJECT_ROOT/app"
 PKG_DIR="$MODULE_DIR/src/main/java/com/merdolda/player"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "🚀 ERDINPLAYER OLUŞTURULUYOR..."
+echo "🚀 ERDINPLAYER (LAYOUT FIX) OLUŞTURULUYOR..."
 
 # 1. Temizlik
 rm -rf $PROJECT_ROOT
@@ -17,8 +17,18 @@ mkdir -p $RES_DIR/layout
 mkdir -p $RES_DIR/values
 mkdir -p $RES_DIR/drawable
 mkdir -p $RES_DIR/mipmap-anydpi-v26
+mkdir -p $PROJECT_ROOT/gradle/wrapper
 
-# 2. SETTINGS.GRADLE
+# 2. GRADLE WRAPPER PROPERTIES
+cat << 'EOF' > $PROJECT_ROOT/gradle/wrapper/gradle-wrapper.properties
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.2-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+EOF
+
+# 3. SETTINGS.GRADLE
 cat << 'EOF' > $PROJECT_ROOT/settings.gradle
 pluginManagement {
     repositories {
@@ -39,21 +49,21 @@ rootProject.name = "ErdinPlayer"
 include ':app'
 EOF
 
-# 3. GRADLE.PROPERTIES
+# 4. GRADLE.PROPERTIES
 cat << 'EOF' > $PROJECT_ROOT/gradle.properties
 android.useAndroidX=true
 android.enableJetifier=true
 org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
 EOF
 
-# 4. BUILD.GRADLE (PROJECT)
+# 5. BUILD.GRADLE (PROJECT)
 cat << 'EOF' > $PROJECT_ROOT/build.gradle
 plugins {
     id 'com.android.application' version '8.2.0' apply false
 }
 EOF
 
-# 5. BUILD.GRADLE (APP)
+# 6. BUILD.GRADLE (APP)
 cat << 'EOF' > $MODULE_DIR/build.gradle
 plugins {
     id 'com.android.application'
@@ -89,6 +99,12 @@ android {
         checkReleaseBuilds = false
         abortOnError = false
     }
+    
+    packaging {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
 }
 
 dependencies {
@@ -103,7 +119,7 @@ dependencies {
 }
 EOF
 
-# 6. XML DOSYALARI
+# 7. XML DOSYALARI (VALUES)
 cat << 'EOF' > $RES_DIR/values/strings.xml
 <resources>
     <string name="app_name">ErdinPlayer</string>
@@ -134,7 +150,59 @@ cat << 'EOF' > $RES_DIR/drawable/ic_launcher_background.xml
 </vector>
 EOF
 
-# 7. MANIFEST
+# --- EKSİK OLAN KISIM BURASIYDI: LAYOUT DOSYALARI ---
+
+# activity_splash.xml
+cat << 'EOF' > $RES_DIR/layout/activity_splash.xml
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000000">
+    <ImageView
+        android:id="@+id/splashImg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop" />
+</RelativeLayout>
+EOF
+
+# activity_login.xml
+cat << 'EOF' > $RES_DIR/layout/activity_login.xml
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:gravity="center" android:padding="50dp" android:background="#121212">
+    
+    <EditText android:id="@+id/etDns" android:hint="DNS (http://site.com:80)" 
+        android:layout_width="match_parent" android:layout_height="wrap_content" 
+        android:textColor="#FFF" android:layout_marginBottom="10dp"/>
+        
+    <EditText android:id="@+id/etUser" android:hint="Kullanıcı Adı" 
+        android:layout_width="match_parent" android:layout_height="wrap_content" 
+        android:textColor="#FFF" android:layout_marginBottom="10dp"/>
+        
+    <EditText android:id="@+id/etPass" android:hint="Şifre" 
+        android:inputType="textPassword"
+        android:layout_width="match_parent" android:layout_height="wrap_content" 
+        android:textColor="#FFF" android:layout_marginBottom="20dp"/>
+        
+    <Button android:id="@+id/btnLogin" android:text="GİRİŞ YAP" 
+        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</LinearLayout>
+EOF
+
+# activity_player.xml
+cat << 'EOF' > $RES_DIR/layout/activity_player.xml
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000">
+    
+    <com.google.android.exoplayer2.ui.StyledPlayerView
+        android:id="@+id/video_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:resize_mode="fit" />
+</FrameLayout>
+EOF
+
+# 8. MANIFEST
 cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
@@ -165,7 +233,7 @@ cat << 'EOF' > $MODULE_DIR/src/main/AndroidManifest.xml
 </manifest>
 EOF
 
-# 8. JAVA DOSYALARI
+# 9. JAVA DOSYALARI
 cat << EOF > $PKG_DIR/ApiService.java
 package com.merdolda.player;
 import retrofit2.Call;
@@ -202,6 +270,7 @@ public class SplashActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Bu satir icin layout dosyasi artik var
         setContentView(R.layout.activity_splash);
         ImageView img = findViewById(R.id.splashImg);
         
@@ -240,6 +309,7 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Layout artik var
         setContentView(R.layout.activity_login);
         EditText dns = findViewById(R.id.etDns), user = findViewById(R.id.etUser), pass = findViewById(R.id.etPass);
         findViewById(R.id.btnLogin).setOnClickListener(v -> {
@@ -275,6 +345,7 @@ public class PlayerActivity extends AppCompatActivity {
 
     protected void onCreate(Bundle s) {
         super.onCreate(s);
+        // Layout artik var
         setContentView(R.layout.activity_player);
         view = findViewById(R.id.video_view);
         player = new ExoPlayer.Builder(this).build();
@@ -292,8 +363,7 @@ public class PlayerActivity extends AppCompatActivity {
 }
 EOF
 
-# --- BURASI ÇOK ÖNEMLİ: GRADLE WRAPPER OLUŞTURMA ---
-# Sunucudaki gradle'ı kullanarak 'gradlew' dosyasını oluşturuyoruz.
+# --- GRADLE WRAPPER OLUŞTURMA ---
 cd $PROJECT_ROOT
 gradle wrapper --gradle-version 8.2 --distribution-type bin
 cd ..
