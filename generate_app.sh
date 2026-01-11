@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- AYARLAR ---
-BACKEND_URL="http://senin-site-adresin.com/backend"
+BACKEND_URL="https://creatorapp24.com/backend"
 
 PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
