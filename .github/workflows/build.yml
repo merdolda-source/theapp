@@ -10,18 +10,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      # JAVA 17 VE CACHE ÖZELLİĞİ
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'gradle' # <-- Cache Özelliği Burada
       
+      # Uygulama Kodlarını Oluştur
       - name: Generate App
         run: chmod +x generate_app.sh && ./generate_app.sh
         
+      # APK Derle (Clean ve Stacktrace ile)
       - name: Build APK
         working-directory: ./theapp
-        run: gradle assembleRelease --info --no-daemon
+        run: gradle clean assembleRelease --stacktrace --no-daemon
         
+      # APK'yı Yükle
       - uses: actions/upload-artifact@v4
         with:
           name: ErdinPlayer-APK
