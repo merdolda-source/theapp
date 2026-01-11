@@ -15,19 +15,23 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+
+      # Gradle 8.4 sürümünü sunucuya kuruyoruz (gradlew hatasını çözer)
+      - name: Setup Gradle 8.4
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 8.4
           
-      - name: Generate App Files
+      - name: Generate Mega Project
         run: chmod +x generate_app.sh && ./generate_app.sh
         
-      - name: Build APK with Wrapper
+      - name: Build APK
+        # Direkt 'gradle' komutunu kullanıyoruz, './gradlew' değil!
         working-directory: ./theapp
-        run: |
-          # generate_app.sh içinde oluşturduğumuz gradlew'i kullanıyoruz
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+        run: gradle assembleRelease --no-daemon
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ErdinPlayer-Final
+          name: ErdinPlayer-Pro
           path: theapp/app/build/outputs/apk/release/app-release.apk
