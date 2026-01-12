@@ -159,16 +159,14 @@ android.enableJetifier=true
 org.gradle.jvmargs=-Xmx4048m
 EOF
 
-# -------------------------------
-# 5. APP build.gradle (DİNAMİK)
-# -------------------------------
-cat > "$MODULE_DIR/build.gradle" << EOF
+# 5. APP MODÜLÜ GRADLE (REKLAM CONFIGLERİ DAHİL)
+cat > "$MODULE_DIR/build.gradle" <<EOF
 plugins {
     id 'com.android.application'
 }
 
 android {
-    namespace '$PACKAGE_NAME'
+    namespace 'com.merdolda.player'
     compileSdk 34
 
     defaultConfig {
@@ -195,10 +193,21 @@ android {
             signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
 
+            // Panelden gelen değerler BuildConfig'e yazılıyor
             buildConfigField "String", "PRIMARY_AD_MODE", "\"$AD_MODE\""
-            buildConfigField "int", "BANNER_INTERVAL", $BANNER_INTERVAL
-            buildConfigField "int", "INTER_INTERVAL", $INTER_INTERVAL
-            buildConfigField "int", "REWARD_ON_START", $REWARD_ON_START
+            buildConfigField "int", "BANNER_INTERVAL", "$BANNER_INTERVAL"
+            buildConfigField "int", "INTER_INTERVAL", "$INTER_INTERVAL"
+            buildConfigField "int", "REWARD_ON_START", "$REWARD_ON_START"
+        }
+
+        debug {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+
+            buildConfigField "String", "PRIMARY_AD_MODE", "\"$AD_MODE\""
+            buildConfigField "int", "BANNER_INTERVAL", "$BANNER_INTERVAL"
+            buildConfigField "int", "INTER_INTERVAL", "$INTER_INTERVAL"
+            buildConfigField "int", "REWARD_ON_START", "$REWARD_ON_START"
         }
     }
 
@@ -224,9 +233,12 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 
+    // Reklamlar
     implementation 'com.google.android.gms:play-services-ads:22.6.0'
+    implementation 'com.unity3d.ads:unity-ads:4.9.3'
 }
 EOF
+
 
 # -------------------------------
 # 6. RESOURCES (RENKLER, STİLLER)
