@@ -29,7 +29,7 @@ if [ -f "app_config.json" ]; then
   echo "📄 app_config.json bulundu, panel ayarları okunuyor..."
   eval "$(
     python - << 'PY'
-import json, sys, os
+import json, sys
 
 p = "app_config.json"
 try:
@@ -77,7 +77,6 @@ PY
   )"
 fi
 
-# Fallback
 [ -z "$APP_NAME" ] && APP_NAME="ErdinPlayer"
 [ -z "$APP_PKG" ] && APP_PKG="com.merdolda.player"
 
@@ -98,7 +97,6 @@ RES_DIR="$MODULE_DIR/src/main/res"
 
 echo "Klasör: $PROJECT_ROOT  Paket yolu: $PKG_PATH"
 
-# Temizlik
 if [ -d "$PROJECT_ROOT" ]; then
   rm -rf "$PROJECT_ROOT"
 fi
@@ -111,6 +109,7 @@ mkdir -p "$PROJECT_ROOT/gradle/wrapper"
 # 3) KEYSTORE
 # -----------------------------
 echo "🔐 Keystore üretiliyor..."
+mkdir -p "$MODULE_DIR"
 keytool -genkey -v -keystore "$MODULE_DIR/release.keystore" \
   -alias erdinplayer \
   -keyalg RSA -keysize 2048 -validity 10000 \
@@ -158,6 +157,8 @@ android.useAndroidX=true
 android.enableJetifier=true
 org.gradle.jvmargs=-Xmx4048m
 EOF
+
+mkdir -p "$MODULE_DIR"
 
 cat > "$MODULE_DIR/build.gradle" << EOF
 plugins {
@@ -218,12 +219,10 @@ dependencies {
 }
 EOF
 
-# Boş proguard
-echo -e "# Proguard\n" > "$MODULE_DIR/proguard-rules.pro"
+echo "# Proguard" > "$MODULE_DIR/proguard-rules.pro"
 
 # -----------------------------
 # 5) COLORS / STYLES / DRAWABLE
-# (koyu spor yeşili tema)
 # -----------------------------
 cat > "$RES_DIR/values/colors.xml" << 'EOF'
 <resources>
@@ -242,8 +241,8 @@ cat > "$RES_DIR/values/styles.xml" << 'EOF'
 <resources>
     <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
         <item name="android:windowBackground">@color/bg_dark</item>
-        <item name="colorPrimary">@color/bg_dark</item>
-        <item name="colorAccent">@color/accent</item>
+        <item name="colorPrimary">@color:bg_dark</item>
+        <item name="colorAccent">@color:accent</item>
         <item name="android:statusBarColor">@color/bg_dark</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
     </style>
@@ -322,7 +321,6 @@ cat > "$RES_DIR/drawable/ic_zoom.xml" << 'EOF'
 </vector>
 EOF
 
-# Basit arkaplan (ikon yoksa bile çökmesin)
 cat > "$RES_DIR/drawable/ic_launcher_background.xml" << 'EOF'
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
@@ -355,7 +353,7 @@ public class AppModels {
     public static class Playlist implements Serializable {
         public String id, name, type, url, user, pass;
         public String m3uContent;
-        public String expDate; // Xtream süresi
+        public String expDate;
     }
 
     public static class LoginResponse implements Serializable {
@@ -392,7 +390,6 @@ public class AppModels {
         public String directUrl;
         public String group;
 
-        // M3U özel header'ları
         public String ref;
         public String origin;
     }
@@ -528,10 +525,9 @@ public class PrefUtils {
 
     public static void savePlaylist(Context c, Playlist p) {
         List<Playlist> l = getPlaylists(c);
-        // aynı ID varsa önce temizle
         List<Playlist> newList = new ArrayList<>();
         for (Playlist pl : l) {
-            if (!pl.id.equals(p.id)) newList.add(pl);
+            if (pl.id == null || !pl.id.equals(p.id)) newList.add(pl);
         }
         newList.add(p);
 
@@ -561,7 +557,7 @@ public class PrefUtils {
         List<Playlist> l = getPlaylists(c);
         List<Playlist> n = new ArrayList<>();
         for (Playlist p : l) {
-            if (!p.id.equals(id)) n.add(p);
+            if (p.id == null || !p.id.equals(id)) n.add(p);
         }
         get(c).edit().putString("L", new Gson().toJson(n)).apply();
     }
@@ -1081,7 +1077,7 @@ cat > "$RES_DIR/layout/activity_login_m3u.xml" << 'EOF'
         android:id="@+id/btnSave"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:text="DOWNLOAD & SAVE"
+        android:text="DOWNLOAD &amp; SAVE"
         style="@style/NeonButton"/>
 </LinearLayout>
 EOF
@@ -1553,7 +1549,6 @@ public class CommonListActivity extends AppCompatActivity {
         });
         rvC.setAdapter(catAdp);
 
-        // İlk kategori otomatik yüklensin
         if (!cats.isEmpty()) {
             List<StreamItem> firstList = m3uMap.get(cats.get(0).id);
             adp.update(firstList);
@@ -1584,7 +1579,7 @@ public class CommonListActivity extends AppCompatActivity {
                         rvC.setAdapter(catAdp);
 
                         if (!cats.isEmpty()) {
-                            loadItems(cats.get(0).id); // ilk kategori içerikleri yüklensin
+                            loadItems(cats.get(0).id);
                         }
                     }
 
@@ -1618,7 +1613,6 @@ public class CommonListActivity extends AppCompatActivity {
 }
 EOF
 
-# --- YENİ PLAYER (HEADER DESTEKLİ) ---
 cat > "$PKG_DIR/ui/PlayerActivity.java" << EOF
 package $APP_PKG.ui;
 
@@ -1647,13 +1641,12 @@ public class PlayerActivity extends AppCompatActivity {
 
     private ExoPlayer player;
     private StyledPlayerView playerView;
-    private int resizeMode = 0; // 0:FIT, 1:FILL, 2:ZOOM
+    private int resizeMode = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Tam ekran + çentik alanlarını kullan
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             getWindow().setFlags(
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -1662,16 +1655,13 @@ public class PlayerActivity extends AppCompatActivity {
             getWindow().getAttributes().layoutInDisplayCutoutMode =
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
-        // Ekran açık kalsın
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        // Sistem barlarını gizle
         hideSystemUi();
 
         setContentView(R.layout.activity_player);
         playerView = findViewById(R.id.player_view);
 
-        // Controller 3 saniye sonra kaybolsun
         playerView.setControllerShowTimeoutMs(3000);
 
         ImageButton btnZoom = findViewById(R.id.btnZoom);
@@ -1782,7 +1772,7 @@ cat > "$MODULE_DIR/src/main/AndroidManifest.xml" << EOF
         android:icon="@drawable/ic_play">
 
         <activity
-            android:name=".$PKG_PATH.ui.SelectionActivity"
+            android:name="$APP_PKG.ui.SelectionActivity"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -1791,20 +1781,24 @@ cat > "$MODULE_DIR/src/main/AndroidManifest.xml" << EOF
             </intent-filter>
         </activity>
 
-        <activity android:name=".$PKG_PATH.ui.LoginXtreamActivity"
-            android:screenOrientation="portrait" />
-
-        <activity android:name=".$PKG_PATH.ui.LoginM3uActivity"
-            android:screenOrientation="portrait" />
-
-        <activity android:name=".$PKG_PATH.ui.DashboardActivity"
-            android:screenOrientation="portrait" />
-
-        <activity android:name=".$PKG_PATH.ui.CommonListActivity"
+        <activity
+            android:name="$APP_PKG.ui.LoginXtreamActivity"
             android:screenOrientation="portrait" />
 
         <activity
-            android:name=".$PKG_PATH.ui.PlayerActivity"
+            android:name="$APP_PKG.ui.LoginM3uActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name="$APP_PKG.ui.DashboardActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name="$APP_PKG.ui.CommonListActivity"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name="$APP_PKG.ui.PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:screenOrientation="sensor" />
     </application>
@@ -1813,4 +1807,3 @@ EOF
 
 echo "✅ Proje oluşturuldu: $PROJECT_ROOT"
 echo "⚙️  Şimdi workflow içinde: cd theapp && gradle assembleRelease --no-daemon çalışacak."
-::contentReference[oaicite:0]{index=0}
