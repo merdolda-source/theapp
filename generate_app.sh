@@ -1,26 +1,28 @@
 #!/bin/bash
-
-# ============================================
-# ERDINPLAYER v14 - STABLE BUILD
-# - M3U #EXTVLCOPT:http-referrer / http-origin desteği
-# - Uzantısız ve yönlendirmeli linkler (ExoPlayer + HttpDataSource)
-# - Xtream abonelik bitiş tarihi gösterimi
-# - Koyu spor yeşili tema
-# - Kategoride ilk seçim otomatik doldurulur (boş liste yok)
-# - Tek tıklamada çalışır, double-click ihtiyacı yok
-# - Player zoom butonu 3 saniye sonra gizlenir, dokununca geri gelir
-# ============================================
-
 set -e
 
+# ============================================
+# ERDINPLAYER v14.1 - FULL BUILD SCRIPT
+# ============================================
+# - Domain bağlı util: PanelConfig (creatorapp24.com/erdin)
+# - Xtream + M3U
+# - #EXTVLCOPT:http-referrer & http-origin desteği
+# - Uzantısız / redirect'li URL uyumlu ExoPlayer
+# - Player overlay / zoom butonu 3 sn sonra gizlenir
+# - Xtream abonelik bitiş gün sayısı
+# - Koyu spor yeşili tema
+# - Playlist & kanal listelerinde arama
+# - İlk kategori otomatik seçili
+# ============================================
+
 PROJECT_NAME="ErdinPlayer"
-PROJECT_ROOT="theapp"     # GitHub Actions bu klasörü baz alıyor
+PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "💎 ERDINPLAYER v14: PROJE OLUŞTURULUYOR..."
+echo "💎 ERDINPLAYER v14.1 FULL: PROJE TEMİZLENİYOR..."
 
 # 1) TEMİZLİK
 if [ -d "$PROJECT_ROOT" ]; then
@@ -94,7 +96,7 @@ android {
         minSdk 21
         targetSdk 34
         versionCode 14
-        versionName "14.0"
+        versionName "14.1"
     }
 
     buildTypes {
@@ -141,7 +143,7 @@ dependencies {
 }
 EOF
 
-# 4) RENKLER & STYLES (KOYU SPOR YEŞİL TEMA)
+# 4) RENKLER & STYLES (KOYU SPOR YEŞİL)
 cat << 'EOF' > "$RES_DIR/values/colors.xml"
 <resources>
     <color name="bg_dark">#020B09</color>
@@ -246,7 +248,443 @@ cat << 'EOF' > "$RES_DIR/drawable/ic_launcher_background.xml"
 </vector>
 EOF
 
-# 5) MODELLER
+# 5) LAYOUTLAR
+
+# Playlist seçim ekranı (arama + liste + alt butonlar)
+cat << 'EOF' > "$RES_DIR/layout/activity_selection.xml"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:background="@color/bg_dark"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MY PLAYLISTS"
+        android:textColor="@color/text_primary"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <EditText
+        android:id="@+id/etSearchPlaylists"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Playlist ara..."
+        style="@style/GlassInput"
+        android:layout_marginBottom="10dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvPlaylists"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingTop="4dp"
+        android:clipToPadding="false"/>
+
+    <LinearLayout
+        android:id="@+id/btnGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="10dp">
+
+        <Button
+            android:id="@+id/btnXtream"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="ADD XTREAM API"
+            style="@style/NeonButton"
+            android:layout_marginBottom="8dp"/>
+
+        <Button
+            android:id="@+id/btnM3u"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="ADD M3U LINK"
+            style="@style/GlassInput"
+            android:textColor="@color/text_primary"/>
+    </LinearLayout>
+
+</LinearLayout>
+EOF
+
+cat << 'EOF' > "$RES_DIR/layout/item_playlist.xml"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    style="@style/GlassCard"
+    android:layout_marginBottom="8dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:foreground="?android:attr/selectableItemBackground">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvPlayName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvPlayInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"/>
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/btnDel"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:src="@drawable/ic_delete"
+        android:padding="4dp"/>
+
+</LinearLayout>
+EOF
+
+# Dashboard (abonelik süresi + 2 kart + logout)
+cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:id="@+id/tvUser"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_primary"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginTop="20dp"/>
+
+    <TextView
+        android:id="@+id/tvExpiry"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"
+        android:gravity="center"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="30dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="2"
+        android:layout_marginBottom="24dp">
+
+        <LinearLayout
+            android:id="@+id/btnLive"
+            android:layout_width="0dp"
+            android:layout_height="140dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            style="@style/GlassCard"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LIVE TV"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btnMovies"
+            android:layout_width="0dp"
+            android:layout_height="140dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            style="@style/GlassCard"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:foreground="?android:attr/selectableItemBackground">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="VOD"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnLogout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="SWITCH PLAYLIST"
+        style="@style/NeonButton"
+        android:paddingLeft="32dp"
+        android:paddingRight="32dp"/>
+
+</LinearLayout>
+EOF
+
+# Xtream login
+cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="XTREAM LOGIN"
+        android:textColor="@color/text_primary"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp"/>
+
+    <EditText
+        android:id="@+id/etName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Playlist Name"
+        style="@style/GlassInput"
+        android:layout_marginBottom="10dp"/>
+
+    <EditText
+        android:id="@+id/etUser"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Username"
+        style="@style/GlassInput"
+        android:layout_marginBottom="10dp"/>
+
+    <EditText
+        android:id="@+id/etPass"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Password"
+        android:inputType="textPassword"
+        style="@style/GlassInput"
+        android:layout_marginBottom="10dp"/>
+
+    <EditText
+        android:id="@+id/etDns"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="http://url:port"
+        style="@style/GlassInput"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btnLogin"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="CONNECT"
+        style="@style/NeonButton"/>
+
+</LinearLayout>
+EOF
+
+# M3U login
+cat << 'EOF' > "$RES_DIR/layout/activity_login_m3u.xml"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="M3U LINK"
+        android:textColor="@color/text_primary"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp"/>
+
+    <EditText
+        android:id="@+id/etName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Playlist Name"
+        style="@style/GlassInput"
+        android:layout_marginBottom="10dp"/>
+
+    <EditText
+        android:id="@+id/etUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="http://example.com/playlist.m3u"
+        style="@style/GlassInput"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btnSave"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="DOWNLOAD &amp; SAVE"
+        style="@style/NeonButton"/>
+
+</LinearLayout>
+EOF
+
+# Liste ekranı (Drawer + kategori ve arama + kanal listesi)
+cat << 'EOF' > "$RES_DIR/layout/activity_list.xml"
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark">
+
+    <!-- ANA İÇERİK -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <EditText
+            android:id="@+id/etSearchStreams"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Kanal ara..."
+            style="@style/GlassInput"
+            android:layout_marginBottom="6dp"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvStreams"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingTop="4dp"/>
+    </LinearLayout>
+
+    <!-- SOL ÇEKMECE (KATEGORİLER) -->
+    <LinearLayout
+        android:layout_width="260dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:orientation="vertical"
+        android:background="@color/bg_dark"
+        android:padding="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kategoriler"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvCats"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"/>
+    </LinearLayout>
+
+</androidx.drawerlayout.widget.DrawerLayout>
+EOF
+
+cat << 'EOF' > "$RES_DIR/layout/item_channel.xml"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    style="@style/GlassCard"
+    android:layout_marginBottom="6dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:foreground="?android:attr/selectableItemBackground">
+
+    <ImageView
+        android:id="@+id/ivIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_play"/>
+
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp"
+        android:textStyle="bold"/>
+</LinearLayout>
+EOF
+
+cat << 'EOF' > "$RES_DIR/layout/item_category.xml"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp"
+    android:layout_marginBottom="4dp"
+    android:gravity="center_vertical"
+    android:foreground="?android:attr/selectableItemBackground">
+
+    <TextView
+        android:id="@+id/tvCatName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_primary"
+        android:textSize="14sp"
+        android:textStyle="bold"/>
+</LinearLayout>
+EOF
+
+# Player ekranı
+cat << 'EOF' > "$RES_DIR/layout/activity_player.xml"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <com.google.android.exoplayer2.ui.StyledPlayerView
+        android:id="@+id/player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center" />
+
+    <ImageButton
+        android:id="@+id/btnZoom"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="20dp"
+        android:background="@drawable/bg_glass"
+        android:src="@drawable/ic_zoom"
+        android:padding="10dp" />
+
+</FrameLayout>
+EOF
+
+# 6) MODELLER
 
 cat << 'EOF' > "$PKG_DIR/model/AppModels.java"
 package com.merdolda.player.model;
@@ -316,14 +754,13 @@ public class AppModels {
         public String directUrl;
         public String group;
 
-        // M3U #EXTVLCOPT header desteği
         public String headerReferrer;
         public String headerOrigin;
     }
 }
 EOF
 
-# 6) API & UTILS
+# 7) API & UTILS
 
 cat << 'EOF' > "$PKG_DIR/api/XtreamApi.java"
 package com.merdolda.player.api;
@@ -379,12 +816,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * M3U PARSER
- * - #EXTINF'den isim / logo / grup alır
- * - #EXTVLCOPT:http-referrer / http-origin satırlarını okur
- * - Altındaki URL'yi directUrl yapar
- */
 public class M3UParser {
 
     public static Map<String, List<StreamItem>> parse(String content) {
@@ -428,8 +859,6 @@ public class M3UParser {
                 currentItem.headerOrigin = null;
 
             } else if (line.startsWith("#EXTVLCOPT") && currentItem != null) {
-                // #EXTVLCOPT:http-referrer=http://...
-                // #EXTVLCOPT:http-origin=http://...
                 String lower = line.toLowerCase();
                 int eqIndex = line.indexOf('=');
                 if (eqIndex > 0 && eqIndex < line.length() - 1) {
@@ -442,7 +871,6 @@ public class M3UParser {
                 }
 
             } else if (!line.startsWith("#") && currentItem != null) {
-                // URL satırı
                 currentItem.directUrl = line;
 
                 if (!map.containsKey(currentGroup)) {
@@ -474,12 +902,11 @@ import java.util.List;
 public class PrefUtils {
 
     private static SharedPreferences get(Context c) {
-        return c.getSharedPreferences("ERD_V14", Context.MODE_PRIVATE);
+        return c.getSharedPreferences("ERD_V14_1", Context.MODE_PRIVATE);
     }
 
     public static void savePlaylist(Context c, Playlist p) {
         List<Playlist> list = getPlaylists(c);
-        // Aynı ID varsa sil ve sona ekle (çakışmayı önlemek için)
         List<Playlist> newList = new ArrayList<>();
         for (Playlist old : list) {
             if (!old.id.equals(p.id)) {
@@ -524,7 +951,22 @@ public class PrefUtils {
 }
 EOF
 
-# 7) ADAPTERLER
+# Domain sabitleme: creatorapp24.com/erdin
+cat << 'EOF' > "$PKG_DIR/utils/PanelConfig.java"
+package com.merdolda.player.utils;
+
+public class PanelConfig {
+
+    // Domain bağlı çalışma
+    public static final String PANEL_BASE = "https://creatorapp24.com/erdin";
+
+    public static String getConfigUrl(String packageName) {
+        return PANEL_BASE + "/panel.php?api=config&pkg=" + packageName;
+    }
+}
+EOF
+
+# 8) ADAPTERLER
 
 cat << 'EOF' > "$PKG_DIR/adapter/PlaylistAdapter.java"
 package com.merdolda.player.adapter;
@@ -750,429 +1192,7 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
 }
 EOF
 
-# 8) LAYOUTLAR
-
-cat << 'EOF' > "$RES_DIR/layout/activity_selection.xml"
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/bg_dark">
-
-    <ImageView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:alpha="0.25"
-        android:scaleType="centerCrop"
-        android:src="@android:drawable/ic_menu_gallery" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/black_overlay" />
-
-    <TextView
-        android:id="@+id/header"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="MY PLAYLISTS"
-        android:textColor="@color/text_primary"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="40dp" />
-
-    <EditText
-        android:id="@+id/etSearchPlaylists"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:layout_below="@id/header"
-        android:layout_marginTop="12dp"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp"
-        android:hint="Ara..."
-        android:paddingLeft="12dp"
-        android:paddingRight="12dp"
-        android:textColor="@color/text_primary"
-        android:textColorHint="@color/text_secondary"
-        android:background="@drawable/bg_glass_input" />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvPlaylists"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_below="@id/etSearchPlaylists"
-        android:layout_above="@+id/btnGroup"
-        android:layout_margin="20dp"
-        android:clipToPadding="false" />
-
-    <LinearLayout
-        android:id="@+id/btnGroup"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:padding="20dp"
-        android:orientation="vertical">
-
-        <Button
-            android:id="@+id/btnXtream"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:text="ADD XTREAM API"
-            style="@style/NeonButton"
-            android:layout_marginBottom="10dp" />
-
-        <Button
-            android:id="@+id/btnM3u"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:text="ADD M3U LINK"
-            style="@style/GlassInput"
-            android:textColor="@color/text_primary" />
-    </LinearLayout>
-
-</RelativeLayout>
-EOF
-
-cat << 'EOF' > "$RES_DIR/layout/item_playlist.xml"
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    style="@style/GlassCard"
-    android:layout_marginBottom="10dp"
-    android:orientation="horizontal"
-    android:gravity="center_vertical">
-
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/tvPlayName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvPlayInfo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp" />
-    </LinearLayout>
-
-    <ImageView
-        android:id="@+id/btnDel"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
-        android:src="@drawable/ic_delete"
-        android:padding="4dp" />
-
-</LinearLayout>
-EOF
-
-cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/bg_dark"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="30dp">
-
-    <TextView
-        android:id="@+id/tvUser"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@color/text_primary"
-        android:gravity="center"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="4dp" />
-
-    <TextView
-        android:id="@+id/tvExpiry"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@color/text_secondary"
-        android:gravity="center"
-        android:textSize="12sp"
-        android:layout_marginBottom="30dp" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:weightSum="2"
-        android:layout_marginBottom="40dp">
-
-        <LinearLayout
-            android:id="@+id/btnLive"
-            android:layout_width="0dp"
-            android:layout_height="140dp"
-            android:layout_weight="1"
-            android:layout_marginRight="10dp"
-            style="@style/GlassCard"
-            android:gravity="center"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="LIVE TV"
-                android:textColor="@color/text_primary"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/btnMovies"
-            android:layout_width="0dp"
-            android:layout_height="140dp"
-            android:layout_weight="1"
-            android:layout_marginLeft="10dp"
-            style="@style/GlassCard"
-            android:gravity="center"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="VOD"
-                android:textColor="@color/text_primary"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <Button
-        android:id="@+id/btnLogout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="SWITCH PLAYLIST"
-        style="@style/NeonButton"
-        android:paddingLeft="40dp"
-        android:paddingRight="40dp" />
-
-</LinearLayout>
-EOF
-
-cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/bg_dark"
-    android:orientation="vertical"
-    android:padding="30dp"
-    android:gravity="center">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="XTREAM LOGIN"
-        android:textColor="@color/text_primary"
-        android:textSize="26sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="30dp" />
-
-    <EditText
-        android:id="@+id/etName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Playlist Name"
-        style="@style/GlassInput"
-        android:layout_marginBottom="12dp" />
-
-    <EditText
-        android:id="@+id/etUser"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Username"
-        style="@style/GlassInput"
-        android:layout_marginBottom="12dp" />
-
-    <EditText
-        android:id="@+id/etPass"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Password"
-        android:inputType="textPassword"
-        style="@style/GlassInput"
-        android:layout_marginBottom="12dp" />
-
-    <EditText
-        android:id="@+id/etDns"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="http://url:port"
-        style="@style/GlassInput"
-        android:layout_marginBottom="25dp" />
-
-    <Button
-        android:id="@+id/btnLogin"
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:text="CONNECT"
-        style="@style/NeonButton" />
-
-</LinearLayout>
-EOF
-
-cat << 'EOF' > "$RES_DIR/layout/activity_login_m3u.xml"
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/bg_dark"
-    android:orientation="vertical"
-    android:padding="30dp"
-    android:gravity="center">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="M3U LINK"
-        android:textColor="@color/text_primary"
-        android:textSize="26sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="30dp" />
-
-    <EditText
-        android:id="@+id/etName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Playlist Name"
-        style="@style/GlassInput"
-        android:layout_marginBottom="12dp" />
-
-    <EditText
-        android:id="@+id/etUrl"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="http://example.com/playlist.m3u"
-        style="@style/GlassInput"
-        android:layout_marginBottom="25dp" />
-
-    <Button
-        android:id="@+id/btnSave"
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:text="DOWNLOAD &amp; SAVE"
-        style="@style/NeonButton" />
-
-</LinearLayout>
-EOF
-
-cat << 'EOF' > "$RES_DIR/layout/activity_list.xml"
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/bg_dark">
-
-    <EditText
-        android:id="@+id/etSearch"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:layout_margin="8dp"
-        android:hint="Ara..."
-        android:textColor="@color/text_primary"
-        android:textColorHint="@color/text_secondary"
-        android:background="@drawable/bg_glass_input"
-        android:paddingLeft="10dp"
-        android:paddingRight="10dp" />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvCats"
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:padding="6dp"
-        android:clipToPadding="false" />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvStreams"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="8dp" />
-
-</LinearLayout>
-EOF
-
-cat << 'EOF' > "$RES_DIR/layout/item_channel.xml"
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="10dp"
-    style="@style/GlassCard"
-    android:layout_marginBottom="8dp"
-    android:orientation="horizontal"
-    android:gravity="center_vertical">
-
-    <ImageView
-        android:id="@+id/ivIcon"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:src="@drawable/ic_play" />
-
-    <TextView
-        android:id="@+id/tvName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@color/text_primary"
-        android:textSize="16sp"
-        android:layout_marginLeft="12dp"
-        android:textStyle="bold" />
-
-</LinearLayout>
-EOF
-
-cat << 'EOF' > "$RES_DIR/layout/item_category.xml"
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:padding="8dp"
-    android:layout_marginRight="6dp"
-    android:gravity="center">
-
-    <TextView
-        android:id="@+id/tvCatName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@color/text_primary"
-        android:textSize="13sp"
-        android:textStyle="bold" />
-</LinearLayout>
-EOF
-
-cat << 'EOF' > "$RES_DIR/layout/activity_player.xml"
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#000000">
-
-    <com.google.android.exoplayer2.ui.StyledPlayerView
-        android:id="@+id/player_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center" />
-
-    <ImageButton
-        android:id="@+id/btnZoom"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:src="@drawable/ic_zoom"
-        android:background="@drawable/bg_glass"
-        android:layout_gravity="top|right"
-        android:layout_margin="20dp"
-        android:padding="10dp" />
-
-</FrameLayout>
-EOF
-
-# 9) JAVA UI SINIFLARI
+# 9) UI SINIFLARI
 
 cat << 'EOF' > "$PKG_DIR/ui/SelectionActivity.java"
 package com.merdolda.player.ui;
@@ -1241,7 +1261,6 @@ public class SelectionActivity extends AppCompatActivity {
         adapter = new PlaylistAdapter(filteredList, new PlaylistAdapter.OnClick() {
             @Override
             public void onClick(Playlist p) {
-                // Sadece aktif playlist olarak kaydet, sonra Dashboard'a git
                 PrefUtils.savePlaylist(SelectionActivity.this, p);
                 startActivity(new Intent(SelectionActivity.this, DashboardActivity.class));
             }
@@ -1287,6 +1306,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.merdolda.player.R;
 import com.merdolda.player.model.AppModels.Playlist;
+import com.merdolda.player.utils.PanelConfig;
 import com.merdolda.player.utils.PrefUtils;
 
 public class DashboardActivity extends AppCompatActivity {
@@ -1342,6 +1362,10 @@ public class DashboardActivity extends AppCompatActivity {
             startActivity(new Intent(this, SelectionActivity.class));
             finish();
         });
+
+        // Domain bağlı config URL (ileride reklam / ayar çekmek için hazır)
+        String cfgUrl = PanelConfig.getConfigUrl(getPackageName());
+        // İstersen textview'e yazabilirsin, şimdilik kullanılmıyor.
     }
 }
 EOF
@@ -1383,22 +1407,24 @@ public class LoginXtreamActivity extends AppCompatActivity {
         EditText d = findViewById(R.id.etDns);
 
         findViewById(R.id.btnLogin).setOnClickListener(v -> {
-            String url = d.getText().toString().trim();
-            if (!url.startsWith("http")) {
-                url = "http://" + url;
-            }
+            String input = d.getText().toString().trim();
+            String finalUrl = input.startsWith("http") ? input : "http://" + input;
+            String base = finalUrl.endsWith("/") ? finalUrl : finalUrl + "/";
 
-            String base = url.endsWith("/") ? url : url + "/";
+            final String fBase = base;
+            final String fUrl = finalUrl;
+            final String userStr = u.getText().toString().trim();
+            final String passStr = p.getText().toString().trim();
+            final String nameStr = name.getText().toString().trim();
+
             Retrofit r = new Retrofit.Builder()
-                    .baseUrl(base)
+                    .baseUrl(fBase)
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();
 
             XtreamApi api = r.create(XtreamApi.class);
 
-            api.login(base + "player_api.php",
-                    u.getText().toString().trim(),
-                    p.getText().toString().trim())
+            api.login(fBase + "player_api.php", userStr, passStr)
                     .enqueue(new Callback<LoginResponse>() {
                         @Override
                         public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
@@ -1407,10 +1433,10 @@ public class LoginXtreamActivity extends AppCompatActivity {
                                 Playlist pl = new Playlist();
                                 pl.id = UUID.randomUUID().toString();
                                 pl.type = "Xtream";
-                                pl.url = url;
-                                pl.user = u.getText().toString().trim();
-                                pl.pass = p.getText().toString().trim();
-                                pl.name = name.getText().toString().trim();
+                                pl.url = fUrl;
+                                pl.user = userStr;
+                                pl.pass = passStr;
+                                pl.name = nameStr;
                                 if (body.userInfo != null) {
                                     pl.expDate = body.userInfo.expDate;
                                 }
@@ -1463,17 +1489,25 @@ public class LoginM3uActivity extends AppCompatActivity {
         EditText u = findViewById(R.id.etUrl);
 
         findViewById(R.id.btnSave).setOnClickListener(v -> {
+            String nameStr = n.getText().toString().trim();
             String url = u.getText().toString().trim();
-            if (url.isEmpty()) {
-                Toast.makeText(LoginM3uActivity.this, "URL boş olamaz", Toast.LENGTH_SHORT).show();
+
+            if (nameStr.isEmpty() || url.isEmpty()) {
+                Toast.makeText(this, "İsim ve URL zorunlu", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            OkHttpClient client = new OkHttpClient();
+            OkHttpClient client = new OkHttpClient.Builder()
+                    .followRedirects(true)
+                    .followSslRedirects(true)
+                    .build();
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .build();
 
             new Thread(() -> {
                 try {
-                    Request request = new Request.Builder().url(url).build();
                     Response response = client.newCall(request).execute();
                     if (response.isSuccessful() && response.body() != null) {
                         String content = response.body().string();
@@ -1481,20 +1515,22 @@ public class LoginM3uActivity extends AppCompatActivity {
                             Playlist pl = new Playlist();
                             pl.id = UUID.randomUUID().toString();
                             pl.type = "M3U";
-                            pl.name = n.getText().toString().trim();
+                            pl.name = nameStr;
                             pl.url = url;
                             pl.m3uContent = content;
-                            PrefUtils.savePlaylist(LoginM3uActivity.this, pl);
-                            startActivity(new Intent(LoginM3uActivity.this, DashboardActivity.class));
+                            PrefUtils.savePlaylist(this, pl);
+                            startActivity(new Intent(this, DashboardActivity.class));
                             finish();
                         });
                     } else {
                         runOnUiThread(() ->
-                                Toast.makeText(LoginM3uActivity.this, "M3U indirilemedi", Toast.LENGTH_SHORT).show());
+                                Toast.makeText(this, "M3U indirilemedi", Toast.LENGTH_SHORT).show()
+                        );
                     }
                 } catch (Exception e) {
                     runOnUiThread(() ->
-                            Toast.makeText(LoginM3uActivity.this, "Hata: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                            Toast.makeText(this, "Bağlantı hatası", Toast.LENGTH_SHORT).show()
+                    );
                 }
             }).start();
         });
@@ -1539,14 +1575,14 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class CommonListActivity extends AppCompatActivity {
 
     private XtreamApi api;
-    private RecyclerView rvC, rvS;
+    private RecyclerView rvCats, rvStreams;
     private StreamAdapter streamAdapter;
     private String type;
     private Playlist p;
 
     private Map<String, List<StreamItem>> m3uMap = new LinkedHashMap<>();
-    private List<StreamItem> currentList = new ArrayList<>();
-    private List<StreamItem> filteredList = new ArrayList<>();
+    private List<Category> m3uCats = new ArrayList<>();
+    private List<StreamItem> fullStreamList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -1555,39 +1591,35 @@ public class CommonListActivity extends AppCompatActivity {
 
         type = getIntent().getStringExtra("type");
         p = PrefUtils.getActive(this);
+        if (p == null) {
+            finish();
+            return;
+        }
 
-        rvC = findViewById(R.id.rvCats);
-        rvS = findViewById(R.id.rvStreams);
-        EditText etSearch = findViewById(R.id.etSearch);
-
-        rvC.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
-        rvS.setLayoutManager(new LinearLayoutManager(this));
+        rvCats = findViewById(R.id.rvCats);
+        rvStreams = findViewById(R.id.rvStreams);
+        rvCats.setLayoutManager(new LinearLayoutManager(this));
+        rvStreams.setLayoutManager(new LinearLayoutManager(this));
 
         streamAdapter = new StreamAdapter(item -> {
+            Intent in = new Intent(this, PlayerActivity.class);
             String url;
-            String ref = item.headerReferrer;
-            String org = item.headerOrigin;
-
             if ("Xtream".equals(p.type)) {
-                String path = "live";
-                if ("vod".equals(type)) path = "movie";
-                String ext = item.ext != null && !item.ext.isEmpty() ? item.ext : "ts";
-                url = p.url + "/" + path + "/" + p.user + "/" + p.pass + "/" + item.streamId + "." + ext;
-                ref = null;
-                org = null;
+                String pathType = "live".equals(type) ? "live" : "movie";
+                String ext = (item.ext != null && !item.ext.isEmpty()) ? item.ext : "ts";
+                url = p.url + "/" + pathType + "/" + p.user + "/" + p.pass + "/" + item.streamId + "." + ext;
             } else {
                 url = item.directUrl;
             }
-
-            Intent in = new Intent(this, PlayerActivity.class);
             in.putExtra("url", url);
-            if (ref != null) in.putExtra("ref", ref);
-            if (org != null) in.putExtra("org", org);
+            if (item.headerReferrer != null) in.putExtra("ref", item.headerReferrer);
+            if (item.headerOrigin != null) in.putExtra("origin", item.headerOrigin);
             startActivity(in);
         });
 
-        rvS.setAdapter(streamAdapter);
+        rvStreams.setAdapter(streamAdapter);
 
+        EditText etSearch = findViewById(R.id.etSearchStreams);
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -1596,111 +1628,98 @@ public class CommonListActivity extends AppCompatActivity {
             @Override public void afterTextChanged(Editable s) {}
         });
 
-        if (p != null && "Xtream".equals(p.type)) {
-            loadXtream();
-        } else if (p != null && "M3U".equals(p.type)) {
+        if ("Xtream".equals(p.type)) {
+            loadXtreamCategories();
+        } else {
             loadM3u();
         }
     }
 
     private void filterStreams(String query) {
-        filteredList.clear();
+        if (streamAdapter == null) return;
+        if (fullStreamList == null) fullStreamList = new ArrayList<>();
+
         if (query == null || query.trim().isEmpty()) {
-            filteredList.addAll(currentList);
-        } else {
-            String lower = query.toLowerCase();
-            for (StreamItem item : currentList) {
-                if (item.name != null && item.name.toLowerCase().contains(lower)) {
-                    filteredList.add(item);
-                }
+            streamAdapter.update(fullStreamList);
+            return;
+        }
+        String lower = query.toLowerCase();
+        List<StreamItem> filtered = new ArrayList<>();
+        for (StreamItem item : fullStreamList) {
+            if (item.name != null && item.name.toLowerCase().contains(lower)) {
+                filtered.add(item);
             }
         }
-        streamAdapter.update(filteredList);
+        streamAdapter.update(filtered);
     }
 
     private void loadM3u() {
         m3uMap = M3UParser.parse(p.m3uContent);
-        List<Category> cats = new ArrayList<>();
+        m3uCats.clear();
         for (String key : m3uMap.keySet()) {
-            cats.add(new Category(key, key));
+            m3uCats.add(new Category(key, key));
         }
 
-        if (cats.isEmpty()) {
-            rvC.setAdapter(null);
-            currentList.clear();
-            filteredList.clear();
-            streamAdapter.update(new ArrayList<>());
-            return;
+        CategoryAdapter catAdapter = new CategoryAdapter(m3uCats, (cat, pos) -> showM3uCategory(cat));
+        rvCats.setAdapter(catAdapter);
+
+        if (!m3uCats.isEmpty()) {
+            showM3uCategory(m3uCats.get(0));
         }
-
-        CategoryAdapter catAdapter = new CategoryAdapter(cats, (cat, pos) -> {
-            currentList = m3uMap.get(cat.id);
-            if (currentList == null) currentList = new ArrayList<>();
-            filterStreams(((EditText)findViewById(R.id.etSearch)).getText().toString());
-        });
-        rvC.setAdapter(catAdapter);
-
-        // İlk kategori otomatik seçilsin
-        currentList = m3uMap.get(cats.get(0).id);
-        if (currentList == null) currentList = new ArrayList<>();
-        filteredList = new ArrayList<>(currentList);
-        streamAdapter.update(filteredList);
     }
 
-    private void loadXtream() {
-        String base = p.url;
-        if (!base.startsWith("http")) base = "http://" + base;
-        if (!base.endsWith("/")) base += "/";
-        Retrofit r = new Retrofit.Builder()
-                .baseUrl(base)
+    private void showM3uCategory(Category cat) {
+        List<StreamItem> list = m3uMap.get(cat.id);
+        if (list == null) list = new ArrayList<>();
+        fullStreamList = list;
+        streamAdapter.update(list);
+    }
+
+    private void loadXtreamCategories() {
+        api = new Retrofit.Builder()
+                .baseUrl(p.url + "/")
                 .addConverterFactory(GsonConverterFactory.create())
-                .build();
-        api = r.create(XtreamApi.class);
+                .build()
+                .create(XtreamApi.class);
 
-        String action = "get_live_categories";
-        if ("vod".equals(type)) action = "get_vod_categories";
-
-        api.getCategories(base + "player_api.php", p.user, p.pass, action)
+        String action = "live".equals(type) ? "get_live_categories" : "get_vod_categories";
+        api.getCategories(p.url + "/player_api.php", p.user, p.pass, action)
                 .enqueue(new Callback<List<Category>>() {
                     @Override
                     public void onResponse(Call<List<Category>> call, Response<List<Category>> response) {
                         List<Category> cats = response.body();
                         if (cats == null) cats = new ArrayList<>();
-                        CategoryAdapter catAdapter = new CategoryAdapter(cats, (cat, pos) -> loadItems(cat.id));
-                        rvC.setAdapter(catAdapter);
+
+                        CategoryAdapter catAdapter = new CategoryAdapter(cats, (cat, pos) -> loadXtreamItems(cat.id));
+                        rvCats.setAdapter(catAdapter);
 
                         if (!cats.isEmpty()) {
-                            loadItems(cats.get(0).id);
+                            loadXtreamItems(cats.get(0).id);
                         }
                     }
 
                     @Override
                     public void onFailure(Call<List<Category>> call, Throwable t) {
+                        // Sessiz geç
                     }
                 });
     }
 
-    private void loadItems(String id) {
-        if (api == null) return;
-        String base = p.url;
-        if (!base.startsWith("http")) base = "http://" + base;
-        if (!base.endsWith("/")) base += "/";
-
-        String action = "get_live_streams";
-        if ("vod".equals(type)) action = "get_vod_streams";
-
-        api.getStreams(base + "player_api.php", p.user, p.pass, action, id)
+    private void loadXtreamItems(String catId) {
+        String action = "live".equals(type) ? "get_live_streams" : "get_vod_streams";
+        api.getStreams(p.url + "/player_api.php", p.user, p.pass, action, catId)
                 .enqueue(new Callback<List<StreamItem>>() {
                     @Override
                     public void onResponse(Call<List<StreamItem>> call, Response<List<StreamItem>> response) {
                         List<StreamItem> list = response.body();
                         if (list == null) list = new ArrayList<>();
-                        currentList = list;
-                        filterStreams(((EditText)findViewById(R.id.etSearch)).getText().toString());
+                        fullStreamList = list;
+                        streamAdapter.update(list);
                     }
 
                     @Override
                     public void onFailure(Call<List<StreamItem>> call, Throwable t) {
+                        // Sessiz geç
                     }
                 });
     }
@@ -1714,9 +1733,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -1729,26 +1748,27 @@ import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import com.merdolda.player.R;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class PlayerActivity extends AppCompatActivity {
 
     private ExoPlayer player;
     private StyledPlayerView playerView;
-    private ImageButton btnZoom;
+    private View zoomButton;
     private int resizeMode = 0;
-    private final Handler handler = new Handler();
-
-    private final Runnable hideZoomRunnable = () -> {
-        if (btnZoom != null) btnZoom.setVisibility(View.GONE);
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable hideZoomRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (zoomButton != null) {
+                zoomButton.setVisibility(View.GONE);
+            }
+        }
     };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Tam ekran, ekran açık kalsın
+        // Tam ekran ve ekran açık kalsın
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
@@ -1760,56 +1780,54 @@ public class PlayerActivity extends AppCompatActivity {
         setContentView(R.layout.activity_player);
 
         playerView = findViewById(R.id.player_view);
-        btnZoom = findViewById(R.id.btnZoom);
+        zoomButton = findViewById(R.id.btnZoom);
 
-        // 3 sn sonra Zoom butonu gizlensin
-        handler.postDelayed(hideZoomRunnable, 3000);
+        // Exo controller 3 sn sonra gizlensin
+        playerView.setControllerShowTimeoutMs(3000);
 
+        zoomButton.setOnClickListener(v -> toggleZoom());
         playerView.setOnClickListener(v -> {
-            if (btnZoom.getVisibility() == View.VISIBLE) {
-                btnZoom.setVisibility(View.GONE);
-            } else {
-                btnZoom.setVisibility(View.VISIBLE);
-                handler.removeCallbacks(hideZoomRunnable);
-                handler.postDelayed(hideZoomRunnable, 3000);
-            }
+            zoomButton.setVisibility(View.VISIBLE);
+            restartHideZoomTimer();
         });
-
-        btnZoom.setOnClickListener(v -> toggleZoom());
 
         String url = getIntent().getStringExtra("url");
         String ref = getIntent().getStringExtra("ref");
-        String org = getIntent().getStringExtra("org");
+        String origin = getIntent().getStringExtra("origin");
 
-        DefaultHttpDataSource.Factory dataSourceFactory = new DefaultHttpDataSource.Factory()
+        DefaultHttpDataSource.Factory dsFactory = new DefaultHttpDataSource.Factory()
                 .setAllowCrossProtocolRedirects(true);
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("User-Agent", "Mozilla/5.0 (Android) ErdinPlayer/14");
         if (ref != null && !ref.isEmpty()) {
-            headers.put("Referer", ref);
+            dsFactory.setDefaultRequestProperty("Referer", ref);
         }
-        if (org != null && !org.isEmpty()) {
-            headers.put("Origin", org);
+        if (origin != null && !origin.isEmpty()) {
+            dsFactory.setDefaultRequestProperty("Origin", origin);
         }
-        dataSourceFactory.setDefaultRequestProperties(headers);
+
+        DefaultMediaSourceFactory mediaSourceFactory = new DefaultMediaSourceFactory(dsFactory);
 
         player = new ExoPlayer.Builder(this)
-                .setMediaSourceFactory(new DefaultMediaSourceFactory(dataSourceFactory))
+                .setMediaSourceFactory(mediaSourceFactory)
                 .build();
 
         playerView.setPlayer(player);
 
         if (url != null && !url.isEmpty()) {
-            MediaItem mediaItem = new MediaItem.Builder()
-                    .setUri(Uri.parse(url))
-                    .build();
+            MediaItem mediaItem = MediaItem.fromUri(Uri.parse(url));
             player.setMediaItem(mediaItem);
             player.prepare();
             player.play();
         } else {
-            Toast.makeText(this, "URL bulunamadı", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "URL boş", Toast.LENGTH_SHORT).show();
         }
+
+        restartHideZoomTimer();
+    }
+
+    private void restartHideZoomTimer() {
+        handler.removeCallbacks(hideZoomRunnable);
+        handler.postDelayed(hideZoomRunnable, 3000);
     }
 
     private void toggleZoom() {
@@ -1821,10 +1839,18 @@ public class PlayerActivity extends AppCompatActivity {
             Toast.makeText(this, "MODE: FIT", Toast.LENGTH_SHORT).show();
         } else if (resizeMode == 1) {
             playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
-            Toast.makeText(this, "MODE: FILL", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "MODE: STRETCH FILL", Toast.LENGTH_SHORT).show();
         } else {
             playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
-            Toast.makeText(this, "MODE: ZOOM", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "MODE: ZOOM CROP", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (player != null) {
+            player.pause();
         }
     }
 
@@ -1885,13 +1911,11 @@ cat << 'EOF' > "$MODULE_DIR/src/main/AndroidManifest.xml"
 </manifest>
 EOF
 
-# 11) WRAPPER (İsteğe bağlı; GitHub Actions gradle komutu kullanıyor)
-
 echo "⚙️ Gradle wrapper hazırlanıyor..."
 cd "$PROJECT_ROOT"
 gradle wrapper --gradle-version 8.4 || true
 chmod +x gradlew || true
 cd ..
 
-echo "✅ ERDINPLAYER v14 HAZIR."
-echo "👉 GitHub Actions zaten: gradle assembleRelease --no-daemon çalıştırıyor."
+echo "✅ ERDINPLAYER v14.1 FULL hazir."
+echo "👉 GitHub Actions içinde: gradle assembleRelease --no-daemon çalıştırabilirsin."
