@@ -1,7 +1,8 @@
 {
-    "app_name": "Erdin",
-    "package_name": "com.tersi",
-    "icon_url": "https:\/\/www.kindpng.com\/picc\/m\/277-2771173_512x512-png-images-transparent-png.png",
+    "app_name": "ErdinPlayer",
+    "package_name": "com.merdolda.player",
+    "icon_url": "https://www.shutterstock.com/image-vector/star-icon-vector-editable-stroke-260nw-724348798.jpg",
+    "ad_mode": "unity",
     "admob_app_id": "",
     "admob_banner_id": "",
     "admob_interstitial_id": "",
@@ -11,6 +12,8 @@
     "unity_interstitial_id": "Interstitial_Android",
     "unity_rewarded_id": "",
     "banner_interval": 0,
-    "interstitial_interval": 3,
-    "reward_on_start": 0
+    "interstitial_interval": 0,
+    "reward_on_start": 0,
+    "version_code": 13,
+    "version_name": "13.0"
 }
