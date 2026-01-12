@@ -2,32 +2,42 @@
 set -e
 
 echo "======================================="
-echo "     ERDINPLAYER - MEGA GENERATE v10   "
+echo "     ERDINXTREAM - MEGA GENERATE v10   "
 echo "      (PANELSİZ TAM PROJE ÜRETİCİ)     "
-echo "   (UNITY: AÇILIŞ REKLAMI + ADMOB AKTİF)"
 echo "======================================="
 
 # ----------------------------------------------------
 # 0) SABİT AYARLAR (PANEL YOK, HER ŞEY BURADAN)
 # ----------------------------------------------------
 
-APP_NAME="ErdinPlayer"
-PACKAGE_NAME="com.merdolda.player"
+APP_NAME="ERDİNXTREAM"
+PACKAGE_NAME="com.erdin.xtream"
 
 VERSION_CODE=13
 VERSION_NAME="13.0"
 
-# Reklam modu
+# Reklam modu (hem AdMob hem Unity aktif)
 AD_MODE="hybrid"        # admob / unity / hybrid
 INTER_INTERVAL=3        # geçiş reklamı: her 3 tıklamada 1
-BANNER_INTERVAL=6       # liste: 6 kanal arası 1 banner (şimdilik alt banner sabit)
-REWARD_ON_START=0       # açılışta ödüllü (0/1) - hazır
+BANNER_INTERVAL=6       # liste: 6 kanal arası 1 banner
+REWARD_ON_START=0       # açılışta ödüllü (0/1) - istersen 1 yaparsın
 
-PROJECT_NAME="ErdinPlayer"
+PROJECT_NAME="ERDINXTREAM"
 PROJECT_ROOT="theapp"
 MODULE_DIR="$PROJECT_ROOT/app"
 RES_DIR="$MODULE_DIR/src/main/res"
 PKG_PATH="${PACKAGE_NAME//./\/}"
+
+# Reklam ID'leri (şimdilik test/örnek)
+ADMOB_APP_ID="ca-app-pub-3940256099942544~3347511713"
+ADMOB_BANNER_ID="ca-app-pub-3940256099942544/6300978111"
+ADMOB_INTER_ID="ca-app-pub-3940256099942544/1033173712"
+ADMOB_REWARD_ID="ca-app-pub-3940256099942544/5224354917"
+
+UNITY_GAME_ID="5497808"
+UNITY_BANNER_ID="Banner_Android"
+UNITY_INTER_ID="Interstitial_Android"
+UNITY_REWARD_ID="Rewarded_Android"
 
 echo "APP_NAME        = $APP_NAME"
 echo "PACKAGE_NAME    = $PACKAGE_NAME"
@@ -62,12 +72,12 @@ mkdir -p "$PROJECT_ROOT/gradle/wrapper"
 echo "🔐 Keystore üretiliyor..."
 keytool -genkey -v \
   -keystore "$MODULE_DIR/release.keystore" \
-  -alias erdinplayer \
+  -alias erdinxtream \
   -keyalg RSA -keysize 2048 \
   -validity 10000 \
   -storepass 123456 \
   -keypass 123456 \
-  -dname "CN=Erdin, O=ErdinPlayer, C=TR" \
+  -dname "CN=Erdin, O=ERDINXTREAM, C=TR" \
   2>/dev/null || true
 
 # ----------------------------------------------------
@@ -142,8 +152,7 @@ org.gradle.jvmargs=-Xmx4096m
 EOF
 
 # ----------------------------------------------------
-# 5) APP MODÜLÜ build.gradle  (REKLAM SİSTEMİ + BuildConfig)
-#    ✅ AdMob + Unity Ads AKTİF
+# 5) APP MODÜLÜ build.gradle  (BuildConfig + AdMob + Unity)
 # ----------------------------------------------------
 cat > "$MODULE_DIR/build.gradle" <<EOF
 plugins {
@@ -161,6 +170,22 @@ android {
         versionCode $VERSION_CODE
         versionName '$VERSION_NAME'
         multiDexEnabled true
+
+        // ✅ BuildConfig değerleri (tüm variantlarda var)
+        buildConfigField "String", "PRIMARY_AD_MODE", "\"$AD_MODE\""
+        buildConfigField "int", "BANNER_INTERVAL", "$BANNER_INTERVAL"
+        buildConfigField "int", "INTER_INTERVAL", "$INTER_INTERVAL"
+        buildConfigField "int", "REWARD_ON_START", "$REWARD_ON_START"
+
+        buildConfigField "String", "ADMOB_APP_ID", "\"$ADMOB_APP_ID\""
+        buildConfigField "String", "ADMOB_BANNER_ID", "\"$ADMOB_BANNER_ID\""
+        buildConfigField "String", "ADMOB_INTER_ID", "\"$ADMOB_INTER_ID\""
+        buildConfigField "String", "ADMOB_REWARD_ID", "\"$ADMOB_REWARD_ID\""
+
+        buildConfigField "String", "UNITY_GAME_ID", "\"$UNITY_GAME_ID\""
+        buildConfigField "String", "UNITY_BANNER_ID", "\"$UNITY_BANNER_ID\""
+        buildConfigField "String", "UNITY_INTER_ID", "\"$UNITY_INTER_ID\""
+        buildConfigField "String", "UNITY_REWARD_ID", "\"$UNITY_REWARD_ID\""
     }
 
     buildFeatures {
@@ -171,7 +196,7 @@ android {
         release {
             storeFile file("release.keystore")
             storePassword "123456"
-            keyAlias "erdinplayer"
+            keyAlias "erdinxtream"
             keyPassword "123456"
         }
     }
@@ -181,21 +206,10 @@ android {
             minifyEnabled false
             signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-
-            buildConfigField "String", "PRIMARY_AD_MODE", "\"$AD_MODE\""
-            buildConfigField "int", "BANNER_INTERVAL", "$BANNER_INTERVAL"
-            buildConfigField "int", "INTER_INTERVAL", "$INTER_INTERVAL"
-            buildConfigField "int", "REWARD_ON_START", "$REWARD_ON_START"
         }
-
         debug {
             minifyEnabled false
             signingConfig signingConfigs.release
-
-            buildConfigField "String", "PRIMARY_AD_MODE", "\"$AD_MODE\""
-            buildConfigField "int", "BANNER_INTERVAL", "$BANNER_INTERVAL"
-            buildConfigField "int", "INTER_INTERVAL", "$INTER_INTERVAL"
-            buildConfigField "int", "REWARD_ON_START", "$REWARD_ON_START"
         }
     }
 
@@ -221,9 +235,11 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 
-    // ================== ADS (AKTİF) ==================
-    implementation 'com.google.android.gms:play-services-ads:23.2.0'
-    implementation 'com.unity3d.ads:unity-ads:4.16.5'
+    // ✅ AdMob
+    implementation 'com.google.android.gms:play-services-ads:23.4.0'
+
+    // ✅ Unity Ads
+    implementation 'com.unity3d.ads:unity-ads:4.12.0'
 }
 EOF
 
@@ -231,23 +247,17 @@ EOF
 # 6) PROGUARD DOSYASI
 # ----------------------------------------------------
 cat > "$MODULE_DIR/proguard-rules.pro" <<EOF
-# ErdinPlayer için basit ProGuard ayarları
 -keep class $PACKAGE_NAME.** { *; }
--keepclassmembers class * {
-    @android.webkit.JavascriptInterface <methods>;
-}
+-keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
 -dontwarn com.google.android.exoplayer2.**
 -dontwarn com.google.gson.**
 -dontwarn okhttp3.**
--dontwarn com.google.android.gms.ads.**
 -dontwarn com.unity3d.ads.**
 EOF
 
 # ----------------------------------------------------
-# 7) RESOURCES: COLORS / STYLES / DRAWABLES / LAYOUTS
+# 7) RESOURCES
 # ----------------------------------------------------
-
-# colors.xml (koyu yeşil spor teması)
 cat > "$RES_DIR/values/colors.xml" <<'EOF'
 <resources>
     <color name="bg_dark">#050A08</color>
@@ -261,7 +271,6 @@ cat > "$RES_DIR/values/colors.xml" <<'EOF'
 </resources>
 EOF
 
-# styles.xml
 cat > "$RES_DIR/values/styles.xml" <<'EOF'
 <resources>
     <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
@@ -295,14 +304,11 @@ cat > "$RES_DIR/values/styles.xml" <<'EOF'
 </resources>
 EOF
 
-# drawables
 cat > "$RES_DIR/drawable/bg_glass.xml" <<'EOF'
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <solid android:color="@color/glass_bg" />
     <corners android:radius="16dp" />
-    <stroke
-        android:width="1dp"
-        android:color="@color/glass_stroke" />
+    <stroke android:width="1dp" android:color="@color/glass_stroke" />
 </shape>
 EOF
 
@@ -310,79 +316,70 @@ cat > "$RES_DIR/drawable/bg_glass_input.xml" <<'EOF'
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <solid android:color="#0DFFFFFF" />
     <corners android:radius="12dp" />
-    <stroke
-        android:width="1dp"
-        android:color="#22FFFFFF" />
+    <stroke android:width="1dp" android:color="#22FFFFFF" />
 </shape>
 EOF
 
 cat > "$RES_DIR/drawable/bg_neon_btn.xml" <<'EOF'
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <gradient
-        android:startColor="#00C853"
-        android:endColor="#1B5E20"
-        android:angle="45" />
+    <gradient android:startColor="#00C853" android:endColor="#1B5E20" android:angle="45" />
     <corners android:radius="12dp" />
 </shape>
 EOF
 
 cat > "$RES_DIR/drawable/ic_play.xml" <<'EOF'
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M8,5v14l11,-7z" />
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFF" android:pathData="M8,5v14l11,-7z" />
 </vector>
 EOF
 
 cat > "$RES_DIR/drawable/ic_delete.xml" <<'EOF'
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FF3D00"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FF3D00"
         android:pathData="M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z" />
 </vector>
 EOF
 
 cat > "$RES_DIR/drawable/ic_zoom.xml" <<'EOF'
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFF"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFF"
         android:pathData="M15,3l2.3,2.3 -2.89,2.87 1.42,1.42L18.7,6.7 21,9V3zM3,9l2.3,-2.3 2.87,2.89 1.42,-1.42L6.7,5.3 9,3H3zM9,21l-2.3,-2.3 2.89,-2.87 -1.42,-1.42L5.3,17.3 3,15v6zM21,15l-2.3,2.3 -2.87,-2.89 -1.42,1.42L17.3,18.7 15,21h6z" />
 </vector>
 EOF
 
-cat > "$RES_DIR/drawable/ic_launcher_background.xml" <<'EOF'
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="@color/bg_dark"
-        android:pathData="M0,0h108v108h-108z" />
-</vector>
-EOF
-
-# ✅ Splash layout (UNITY açılış reklamı buradan)
+# Splash layout
 cat > "$RES_DIR/layout/activity_splash.xml" <<'EOF'
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_dark" />
+    android:background="@color/bg_dark">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ERDİNXTREAM"
+        android:textColor="@color/text_primary"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:layout_centerInParent="true"/>
+
+    <ProgressBar
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tvTitle"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"/>
+</RelativeLayout>
 EOF
 
-# Layouts
+# Layouts (seninkiler)
 cat > "$RES_DIR/layout/activity_selection.xml" <<'EOF'
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -669,10 +666,8 @@ cat > "$RES_DIR/layout/activity_login_m3u.xml" <<'EOF'
 </LinearLayout>
 EOF
 
-# ✅ LISTE LAYOUT (AdMob Banner alt kısımda AKTİF)
 cat > "$RES_DIR/layout/activity_list.xml" <<'EOF'
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:ads="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -688,16 +683,8 @@ cat > "$RES_DIR/layout/activity_list.xml" <<'EOF'
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvStreams"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:padding="8dp" />
-
-    <com.google.android.gms.ads.AdView
-        android:id="@+id/adViewBanner"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        ads:adSize="BANNER"
-        ads:adUnitId="ca-app-pub-3940256099942544/6300978111" />
 </LinearLayout>
 EOF
 
@@ -772,7 +759,7 @@ cat > "$RES_DIR/layout/activity_player.xml" <<'EOF'
 EOF
 
 # ----------------------------------------------------
-# 8) JAVA MODELLER (AppModels)
+# 8) MODELLER
 # ----------------------------------------------------
 cat > "$MODULE_DIR/src/main/java/$PKG_PATH/model/AppModels.java" <<EOF
 package $PACKAGE_NAME.model;
@@ -824,7 +811,7 @@ public class AppModels {
 EOF
 
 # ----------------------------------------------------
-# 9) API (XtreamApi)
+# 9) API
 # ----------------------------------------------------
 cat > "$MODULE_DIR/src/main/java/$PKG_PATH/api/XtreamApi.java" <<EOF
 package $PACKAGE_NAME.api;
@@ -868,7 +855,7 @@ public interface XtreamApi {
 EOF
 
 # ----------------------------------------------------
-# 10) UTILS: M3UParser (EXTVLCOPT ref/origin desteği)
+# 10) UTILS: M3UParser
 # ----------------------------------------------------
 cat > "$MODULE_DIR/src/main/java/$PKG_PATH/utils/M3UParser.java" <<EOF
 package $PACKAGE_NAME.utils;
@@ -1015,183 +1002,230 @@ public class PrefUtils {
 EOF
 
 # ----------------------------------------------------
-# 12) UTILS: AdsConfig (sabit ID'ler)
+# 12) UTILS: AdsConfig
 # ----------------------------------------------------
 cat > "$MODULE_DIR/src/main/java/$PKG_PATH/utils/AdsConfig.java" <<EOF
 package $PACKAGE_NAME.utils;
 
-/**
- * Reklam ID'leri burada sabit.
- */
+import $PACKAGE_NAME.BuildConfig;
+
 public class AdsConfig {
+    public static final String ADMOB_APP_ID    = BuildConfig.ADMOB_APP_ID;
+    public static final String ADMOB_BANNER_ID = BuildConfig.ADMOB_BANNER_ID;
+    public static final String ADMOB_INTER_ID  = BuildConfig.ADMOB_INTER_ID;
+    public static final String ADMOB_REWARD_ID = BuildConfig.ADMOB_REWARD_ID;
 
-    // AdMob test ID'leri (Google resmi test)
-    public static final String ADMOB_APP_ID    = "ca-app-pub-3940256099942544~3347511713";
-    public static final String ADMOB_BANNER_ID = "ca-app-pub-3940256099942544/6300978111";
-    public static final String ADMOB_INTER_ID  = "ca-app-pub-3940256099942544/1033173712";
-    public static final String ADMOB_REWARD_ID = "ca-app-pub-3940256099942544/5224354917";
-
-    // Unity ID'leri (senin verdiğin)
-    public static final String UNITY_GAME_ID   = "5497808";
-    public static final String UNITY_BANNER_ID = "Banner_Android";
-    public static final String UNITY_INTER_ID  = "Interstitial_Android";
-    public static final String UNITY_REWARD_ID = "Rewarded_Android";
+    public static final String UNITY_GAME_ID   = BuildConfig.UNITY_GAME_ID;
+    public static final String UNITY_BANNER_ID = BuildConfig.UNITY_BANNER_ID;
+    public static final String UNITY_INTER_ID  = BuildConfig.UNITY_INTER_ID;
+    public static final String UNITY_REWARD_ID = BuildConfig.UNITY_REWARD_ID;
 }
 EOF
 
 # ----------------------------------------------------
-# 12.1) UTILS: UnityAdsManager (✅ Açılış reklamı Unity)
+# 13) UTILS: AdMobManager  ✅ BuildConfig IMPORT FIXLİ
 # ----------------------------------------------------
-cat > "$MODULE_DIR/src/main/java/$PKG_PATH/utils/UnityAdsManager.java" <<EOF
+cat > "$MODULE_DIR/src/main/java/$PKG_PATH/utils/AdMobManager.java" <<EOF
 package $PACKAGE_NAME.utils;
 
 import android.app.Activity;
+import android.util.Log;
+import android.view.ViewGroup;
 
-import com.unity3d.ads.IUnityAdsInitializationListener;
-import com.unity3d.ads.IUnityAdsLoadListener;
-import com.unity3d.ads.IUnityAdsShowListener;
-import com.unity3d.ads.UnityAds;
-import com.unity3d.ads.UnityAdsLoadOptions;
-import com.unity3d.ads.UnityAdsShowOptions;
-
-public class UnityAdsManager {
-
-    private static boolean inited = false;
-    private static boolean loaded = false;
-
-    public static void init(Activity a) {
-        if (inited) return;
-
-        UnityAds.initialize(a, AdsConfig.UNITY_GAME_ID, true, new IUnityAdsInitializationListener() {
-            @Override public void onInitializationComplete() {
-                inited = true;
-                loadInterstitial(a);
-            }
-            @Override public void onInitializationFailed(UnityAds.UnityAdsInitializationError error, String message) {
-                inited = false;
-            }
-        });
-    }
-
-    public static void loadInterstitial(Activity a) {
-        if (!inited) return;
-        loaded = false;
-        UnityAds.load(AdsConfig.UNITY_INTER_ID, new UnityAdsLoadOptions(), new IUnityAdsLoadListener() {
-            @Override public void onUnityAdsAdLoaded(String placementId) {
-                loaded = true;
-            }
-            @Override public void onUnityAdsFailedToLoad(String placementId, UnityAds.UnityAdsLoadError error, String message) {
-                loaded = false;
-            }
-        });
-    }
-
-    public static void showInterstitial(Activity a, Runnable onDone) {
-        if (!inited || !loaded) {
-            if (onDone != null) onDone.run();
-            return;
-        }
-
-        UnityAds.show(a, AdsConfig.UNITY_INTER_ID, new UnityAdsShowOptions(), new IUnityAdsShowListener() {
-            @Override public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
-                if (onDone != null) onDone.run();
-                loadInterstitial(a);
-            }
-            @Override public void onUnityAdsShowStart(String placementId) {}
-            @Override public void onUnityAdsShowClick(String placementId) {}
-            @Override public void onUnityAdsShowComplete(String placementId, UnityAds.UnityAdsShowCompletionState state) {
-                if (onDone != null) onDone.run();
-                loadInterstitial(a);
-            }
-        });
-    }
-}
-EOF
-
-# ----------------------------------------------------
-# 12.2) UTILS: AdMobManager (✅ Banner + Interstitial)
-# ----------------------------------------------------
-cat > "$MODULE_DIR/src/main/java/$PKG_PATH/utils/AdMobManager.java" <<EOF
-package com.merdolda.player.utils;
-
-import android.app.Activity;
-import android.view.View;
+import androidx.annotation.NonNull;
 
 import com.google.android.gms.ads.AdRequest;
-import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.interstitial.InterstitialAd;
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.FullScreenContentCallback;
+
+import $PACKAGE_NAME.BuildConfig;
 
 public class AdMobManager {
 
     private static boolean inited = false;
     private static InterstitialAd interstitial;
-    private static int clickCount = 0;
 
     public static void init(Activity a) {
         if (inited) return;
-        MobileAds.initialize(a, initializationStatus -> {});
         inited = true;
-        loadInterstitial(a);
+        try {
+            MobileAds.initialize(a, status -> {});
+        } catch (Throwable t) {
+            Log.e("AdMobManager", "init err: " + t);
+        }
+        preloadInterstitial(a);
     }
 
-    public static void bindBanner(AdView adView) {
-        if (adView == null) return;
+    public static void loadBanner(Activity a, AdView adView) {
         try {
+            init(a);
             AdRequest req = new AdRequest.Builder().build();
             adView.loadAd(req);
-            adView.setVisibility(View.VISIBLE);
-        } catch (Throwable t) {}
-    }
-
-    public static void loadInterstitial(Activity a) {
-        if (!inited) return;
-        interstitial = null;
-
-        AdRequest req = new AdRequest.Builder().build();
-        InterstitialAd.load(a, AdsConfig.ADMOB_INTER_ID, req, new InterstitialAdLoadCallback() {
-            @Override public void onAdLoaded(InterstitialAd ad) {
-                interstitial = ad;
-            }
-            @Override public void onAdFailedToLoad(com.google.android.gms.ads.LoadAdError loadAdError) {
-                interstitial = null;
-            }
-        });
-    }
-
-    public static void maybeShowInterstitial(Activity a, Runnable after) {
-        clickCount++;
-
-        if (clickCount % Math.max(1, BuildConfig.INTER_INTERVAL) != 0) {
-            if (after != null) after.run();
-            return;
+        } catch (Throwable t) {
+            Log.e("AdMobManager", "banner err: " + t);
         }
+    }
 
-        if (interstitial != null) {
-            InterstitialAd ad = interstitial;
+    public static void preloadInterstitial(Activity a) {
+        try {
+            init(a);
+            AdRequest req = new AdRequest.Builder().build();
+            com.google.android.gms.ads.interstitial.InterstitialAd.load(
+                    a,
+                    AdsConfig.ADMOB_INTER_ID,
+                    req,
+                    new InterstitialAdLoadCallback() {
+                        @Override
+                        public void onAdLoaded(@NonNull InterstitialAd ad) {
+                            interstitial = ad;
+                        }
+
+                        @Override
+                        public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                            interstitial = null;
+                        }
+                    }
+            );
+        } catch (Throwable t) {
             interstitial = null;
-            ad.setFullScreenContentCallback(new com.google.android.gms.ads.FullScreenContentCallback() {
+        }
+    }
+
+    // Her tıklamada çağır: interval dolduysa göster
+    public static void showInterstitialIfNeeded(Activity a, int clickCount, Runnable onDone) {
+        try {
+            if (clickCount % Math.max(1, BuildConfig.INTER_INTERVAL) != 0) {
+                if (onDone != null) onDone.run();
+                return;
+            }
+
+            if (interstitial == null) {
+                preloadInterstitial(a);
+                if (onDone != null) onDone.run();
+                return;
+            }
+
+            interstitial.setFullScreenContentCallback(new FullScreenContentCallback() {
                 @Override public void onAdDismissedFullScreenContent() {
-                    loadInterstitial(a);
-                    if (after != null) after.run();
+                    interstitial = null;
+                    preloadInterstitial(a);
+                    if (onDone != null) onDone.run();
                 }
-                @Override public void onAdFailedToShowFullScreenContent(com.google.android.gms.ads.AdError adError) {
-                    loadInterstitial(a);
-                    if (after != null) after.run();
+                @Override public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
+                    interstitial = null;
+                    preloadInterstitial(a);
+                    if (onDone != null) onDone.run();
                 }
+                @Override public void onAdShowedFullScreenContent() {}
             });
-            ad.show(a);
-        } else {
-            // AdMob yoksa Unity fallback
-            UnityAdsManager.showInterstitial(a, after);
+
+            interstitial.show(a);
+        } catch (Throwable t) {
+            if (onDone != null) onDone.run();
         }
     }
 }
 EOF
 
 # ----------------------------------------------------
-# 13) ADAPTERS
+# 14) UTILS: UnityAdsManager (Açılış reklamı Unity)
+# ----------------------------------------------------
+cat > "$MODULE_DIR/src/main/java/$PKG_PATH/utils/UnityAdsManager.java" <<EOF
+package $PACKAGE_NAME.utils;
+
+import android.app.Activity;
+import android.os.Handler;
+import android.os.Looper;
+
+import com.unity3d.ads.IUnityAdsInitializationListener;
+import com.unity3d.ads.IUnityAdsLoadListener;
+import com.unity3d.ads.IUnityAdsShowListener;
+import com.unity3d.ads.UnityAds;
+import com.unity3d.ads.UnityAdsShowOptions;
+import com.unity3d.ads.metadata.MetaData;
+
+public class UnityAdsManager {
+
+    private static boolean inited = false;
+    private static boolean loading = false;
+    private static boolean loaded = false;
+
+    public static void init(Activity a) {
+        if (inited) return;
+        inited = true;
+
+        // (opsiyonel) GDPR vb.
+        try {
+            MetaData gdpr = new MetaData(a);
+            gdpr.set("gdpr.consent", true);
+            gdpr.commit();
+        } catch (Throwable ignored) {}
+
+        UnityAds.initialize(a, AdsConfig.UNITY_GAME_ID, false, new IUnityAdsInitializationListener() {
+            @Override public void onInitializationComplete() {
+                loadInterstitial(a);
+            }
+            @Override public void onInitializationFailed(UnityAds.UnityAdsInitializationError error, String message) {
+                // ignore
+            }
+        });
+    }
+
+    public static void loadInterstitial(Activity a) {
+        if (loading) return;
+        loading = true;
+        loaded = false;
+
+        UnityAds.load(AdsConfig.UNITY_INTER_ID, new IUnityAdsLoadListener() {
+            @Override public void onUnityAdsAdLoaded(String placementId) {
+                loading = false;
+                loaded = true;
+            }
+            @Override public void onUnityAdsFailedToLoad(String placementId, UnityAds.UnityAdsLoadError error, String message) {
+                loading = false;
+                loaded = false;
+            }
+        });
+    }
+
+    // Açılış reklamı: Unity interstitial dene, olmazsa devam et
+    public static void showStartAd(Activity a, Runnable onDone) {
+        init(a);
+
+        // Hazır değilse kısa bekle, sonra devam
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (!loaded || !UnityAds.isInitialized()) {
+                if (onDone != null) onDone.run();
+                return;
+            }
+
+            UnityAds.show(a, AdsConfig.UNITY_INTER_ID, new UnityAdsShowOptions(), new IUnityAdsShowListener() {
+                @Override public void onUnityAdsShowStart(String placementId) {}
+                @Override public void onUnityAdsShowClick(String placementId) {}
+                @Override public void onUnityAdsShowComplete(String placementId, UnityAds.UnityAdsShowCompletionState state) {
+                    loaded = false;
+                    loadInterstitial(a);
+                    if (onDone != null) onDone.run();
+                }
+                @Override public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
+                    loaded = false;
+                    loadInterstitial(a);
+                    if (onDone != null) onDone.run();
+                }
+            });
+
+        }, 700);
+    }
+}
+EOF
+
+# ----------------------------------------------------
+# 15) ADAPTERS
 # ----------------------------------------------------
 cat > "$MODULE_DIR/src/main/java/$PKG_PATH/adapter/PlaylistAdapter.java" <<EOF
 package $PACKAGE_NAME.adapter;
@@ -1406,55 +1440,47 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
 EOF
 
 # ----------------------------------------------------
-# 14) UI ACTIVITIES
-#    ✅ Launcher = SplashActivity (Unity açılış reklamı)
-#    ✅ SelectionActivity normal devam
+# 16) UI: SplashActivity (Unity açılış reklamı)
 # ----------------------------------------------------
-
-# ✅ SplashActivity (Unity açılış interstitial)
 cat > "$MODULE_DIR/src/main/java/$PKG_PATH/ui/SplashActivity.java" <<EOF
 package $PACKAGE_NAME.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import $PACKAGE_NAME.R;
-import $PACKAGE_NAME.utils.AdMobManager;
 import $PACKAGE_NAME.utils.UnityAdsManager;
 
 public class SplashActivity extends AppCompatActivity {
 
-    private boolean jumped = false;
+    private boolean done = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
-        // Ads init (ikisi de aktif)
-        AdMobManager.init(this);
-        UnityAdsManager.init(this);
+        // ✅ Açılış reklamı Unity (istersen sonra AdMob app open yaparız)
+        UnityAdsManager.showStartAd(this, this::goNext);
 
-        // Unity açılış reklamı (yüklenmemişse beklemeden geçer)
-        UnityAdsManager.showInterstitial(this, this::go);
-
-        // Güvenlik: 2 saniye sonra yine geç (reklam takılırsa)
-        new Handler(Looper.getMainLooper()).postDelayed(this::go, 2000);
+        // Fail-safe: 3sn sonra ne olursa olsun geç
+        getWindow().getDecorView().postDelayed(this::goNext, 3000);
     }
 
-    private void go() {
-        if (jumped) return;
-        jumped = true;
+    private void goNext() {
+        if (done) return;
+        done = true;
         startActivity(new Intent(this, SelectionActivity.class));
         finish();
     }
 }
 EOF
 
+# ----------------------------------------------------
+# 17) UI ACTIVITIES
+# ----------------------------------------------------
 cat > "$MODULE_DIR/src/main/java/$PKG_PATH/ui/SelectionActivity.java" <<EOF
 package $PACKAGE_NAME.ui;
 
@@ -1735,8 +1761,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.gms.ads.AdView;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -1754,9 +1778,9 @@ import $PACKAGE_NAME.api.XtreamApi;
 import $PACKAGE_NAME.model.AppModels.Category;
 import $PACKAGE_NAME.model.AppModels.Playlist;
 import $PACKAGE_NAME.model.AppModels.StreamItem;
-import $PACKAGE_NAME.utils.AdMobManager;
 import $PACKAGE_NAME.utils.M3UParser;
 import $PACKAGE_NAME.utils.PrefUtils;
+import $PACKAGE_NAME.utils.AdMobManager;
 
 public class CommonListActivity extends AppCompatActivity {
 
@@ -1765,18 +1789,14 @@ public class CommonListActivity extends AppCompatActivity {
     private StreamAdapter streamAdapter;
     private String type;
     private Playlist playlist;
-
     private Map<String, List<StreamItem>> m3uMap;
+
+    private int clickCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
-
-        // ✅ AdMob banner aktif
-        AdMobManager.init(this);
-        AdView banner = findViewById(R.id.adViewBanner);
-        AdMobManager.bindBanner(banner);
 
         type = getIntent().getStringExtra("type");
         playlist = PrefUtils.getActive(this);
@@ -1788,8 +1808,9 @@ public class CommonListActivity extends AppCompatActivity {
         rvS.setLayoutManager(new LinearLayoutManager(this));
 
         streamAdapter = new StreamAdapter(new ArrayList<>(), item -> {
-            // ✅ Interstitial: AdMob (hazırsa) yoksa Unity fallback
-            AdMobManager.maybeShowInterstitial(this, () -> {
+            clickCount++;
+
+            Runnable goPlay = () -> {
                 Intent in = new Intent(this, PlayerActivity.class);
                 String url;
 
@@ -1807,10 +1828,18 @@ public class CommonListActivity extends AppCompatActivity {
 
                 in.putExtra("url", url);
                 startActivity(in);
-            });
+            };
+
+            // AdMob interstitial: interval dolduysa göster, sonra oynat
+            AdMobManager.showInterstitialIfNeeded(this, clickCount, goPlay);
         });
 
         rvS.setAdapter(streamAdapter);
+
+        if (playlist == null) {
+            finish();
+            return;
+        }
 
         if ("Xtream".equals(playlist.type)) {
             loadXtream();
@@ -1822,9 +1851,7 @@ public class CommonListActivity extends AppCompatActivity {
     private void loadM3u() {
         m3uMap = M3UParser.parse(playlist.m3uContent);
         List<Category> cats = new ArrayList<>();
-        for (String key : m3uMap.keySet()) {
-            cats.add(new Category(key, key));
-        }
+        for (String key : m3uMap.keySet()) cats.add(new Category(key, key));
 
         CategoryAdapter catAdapter = new CategoryAdapter(cats, cat -> {
             List<StreamItem> items = m3uMap.get(cat.id);
@@ -1834,8 +1861,7 @@ public class CommonListActivity extends AppCompatActivity {
         rvC.setAdapter(catAdapter);
 
         if (!cats.isEmpty()) {
-            List<StreamItem> firstItems = m3uMap.get(cats.get(0).id);
-            streamAdapter.update(firstItems);
+            streamAdapter.update(m3uMap.get(cats.get(0).id));
         }
     }
 
@@ -1857,13 +1883,9 @@ public class CommonListActivity extends AppCompatActivity {
                         CategoryAdapter catAdapter = new CategoryAdapter(body, cat -> loadItems(cat.id));
                         rvC.setAdapter(catAdapter);
 
-                        if (!body.isEmpty()) {
-                            loadItems(body.get(0).id);
-                        }
+                        if (!body.isEmpty()) loadItems(body.get(0).id);
                     }
-
-                    @Override
-                    public void onFailure(Call<List<Category>> call, Throwable t) {}
+                    @Override public void onFailure(Call<List<Category>> call, Throwable t) {}
                 });
     }
 
@@ -1874,13 +1896,9 @@ public class CommonListActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(Call<List<StreamItem>> call, Response<List<StreamItem>> response) {
                         List<StreamItem> body = response.body();
-                        if (body != null) {
-                            streamAdapter.update(body);
-                        }
+                        if (body != null) streamAdapter.update(body);
                     }
-
-                    @Override
-                    public void onFailure(Call<List<StreamItem>> call, Throwable t) {}
+                    @Override public void onFailure(Call<List<StreamItem>> call, Throwable t) {}
                 });
     }
 }
@@ -1920,7 +1938,6 @@ public class PlayerActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // FULL SCREEN
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             getWindow().setFlags(
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -1943,16 +1960,13 @@ public class PlayerActivity extends AppCompatActivity {
         String ref = getIntent().getStringExtra("ref");
         String origin = getIntent().getStringExtra("origin");
 
-        // ✅ ExoPlayer 2.19.1: default headers MAP ile verilir
         DefaultHttpDataSource.Factory dsFactory = new DefaultHttpDataSource.Factory();
 
         Map<String, String> headers = new HashMap<>();
         if (ref != null && !ref.isEmpty()) headers.put("Referer", ref);
         if (origin != null && !origin.isEmpty()) headers.put("Origin", origin);
 
-        if (!headers.isEmpty()) {
-            dsFactory.setDefaultRequestProperties(headers);
-        }
+        if (!headers.isEmpty()) dsFactory.setDefaultRequestProperties(headers);
 
         DefaultMediaSourceFactory mediaSourceFactory = new DefaultMediaSourceFactory(dsFactory);
 
@@ -1991,26 +2005,19 @@ public class PlayerActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (player != null) {
-            player.release();
-        }
+        if (player != null) player.release();
     }
 }
 EOF
 
 # ----------------------------------------------------
-# 15) ANDROIDMANIFEST
-#    ✅ Launcher SplashActivity
-#    ✅ AdMob AppId meta-data
-#    ✅ AD_ID / NETWORK_STATE izinleri
+# 18) ANDROIDMANIFEST (Launcher: SplashActivity) + AdMob APP_ID
 # ----------------------------------------------------
 cat > "$MODULE_DIR/src/main/AndroidManifest.xml" <<EOF
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="$PACKAGE_NAME">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
 
     <application
         android:name="androidx.multidex.MultiDexApplication"
@@ -2019,9 +2026,10 @@ cat > "$MODULE_DIR/src/main/AndroidManifest.xml" <<EOF
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher">
 
+        <!-- ✅ AdMob App ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="$ADMOB_APP_ID" />
 
         <activity
             android:name=".ui.SplashActivity"
@@ -2033,25 +2041,11 @@ cat > "$MODULE_DIR/src/main/AndroidManifest.xml" <<EOF
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".ui.SelectionActivity"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".ui.LoginXtreamActivity"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".ui.LoginM3uActivity"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".ui.DashboardActivity"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".ui.CommonListActivity"
-            android:screenOrientation="portrait" />
+        <activity android:name=".ui.SelectionActivity" android:screenOrientation="portrait" />
+        <activity android:name=".ui.LoginXtreamActivity" android:screenOrientation="portrait" />
+        <activity android:name=".ui.LoginM3uActivity" android:screenOrientation="portrait" />
+        <activity android:name=".ui.DashboardActivity" android:screenOrientation="portrait" />
+        <activity android:name=".ui.CommonListActivity" android:screenOrientation="portrait" />
 
         <activity
             android:name=".ui.PlayerActivity"
@@ -2062,7 +2056,7 @@ cat > "$MODULE_DIR/src/main/AndroidManifest.xml" <<EOF
 EOF
 
 # ----------------------------------------------------
-# 16) GRADLE WRAPPER
+# 19) GRADLE WRAPPER
 # ----------------------------------------------------
 echo "🔧 Gradle Wrapper oluşturuluyor..."
 cd "$PROJECT_ROOT"
@@ -2070,7 +2064,5 @@ gradle wrapper --gradle-version 8.4 || true
 chmod +x gradlew || true
 cd ..
 
-echo "✅ ERDINPLAYER - TAM PROJE OLUŞTURULDU."
-echo "✅ UNITY: Açılış reklamı (SplashActivity) AKTİF"
-echo "✅ ADMOB: Banner (listede) + Interstitial (tıklama aralığı) AKTİF"
-echo "👉 GitHub Actions: cd theapp && gradle assembleRelease --no-daemon"
+echo "✅ ERDİNXTREAM - TAM PROJE OLUŞTURULDU."
+echo "👉 GitHub Actions içinde: cd theapp && ./gradlew assembleRelease --no-daemon"
