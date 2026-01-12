@@ -6,11 +6,11 @@
     "admob_banner_id": "",
     "admob_interstitial_id": "",
     "admob_rewarded_id": "",
-    "unity_game_id": "",
+    "unity_game_id": "5497808",
     "unity_banner_id": "",
-    "unity_interstitial_id": "",
+    "unity_interstitial_id": "Interstitial_Android",
     "unity_rewarded_id": "",
     "banner_interval": 0,
-    "interstitial_interval": 0,
+    "interstitial_interval": 3,
     "reward_on_start": 0
 }
