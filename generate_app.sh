@@ -1635,18 +1635,22 @@ import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import $APP_PKG.R;
 
 public class PlayerActivity extends AppCompatActivity {
 
     private ExoPlayer player;
     private StyledPlayerView playerView;
-    private int resizeMode = 0;
+    private int resizeMode = 0; // 0: FIT, 1: FILL, 2: ZOOM
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // FULL SCREEN
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             getWindow().setFlags(
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -1662,26 +1666,33 @@ public class PlayerActivity extends AppCompatActivity {
         setContentView(R.layout.activity_player);
         playerView = findViewById(R.id.player_view);
 
+        // Kontroller 3 saniye sonra kaybolsun
         playerView.setControllerShowTimeoutMs(3000);
 
         ImageButton btnZoom = findViewById(R.id.btnZoom);
         btnZoom.setOnClickListener(v -> toggleZoom());
 
-        String url = getIntent().getStringExtra("url");
-        String ref = getIntent().getStringExtra("ref");
+        String url    = getIntent().getStringExtra("url");
+        String ref    = getIntent().getStringExtra("ref");
         String origin = getIntent().getStringExtra("origin");
 
         player = new ExoPlayer.Builder(this).build();
         playerView.setPlayer(player);
 
         if (url != null && !url.isEmpty()) {
+
+            // HTTP DataSource + Header’lar (Referer / Origin)
             DefaultHttpDataSource.Factory dsFactory = new DefaultHttpDataSource.Factory();
 
+            Map<String, String> headers = new HashMap<>();
             if (ref != null && !ref.isEmpty()) {
-                dsFactory.setDefaultRequestProperty("Referer", ref);
+                headers.put("Referer", ref);
             }
             if (origin != null && !origin.isEmpty()) {
-                dsFactory.setDefaultRequestProperty("Origin", origin);
+                headers.put("Origin", origin);
+            }
+            if (!headers.isEmpty()) {
+                dsFactory.setDefaultRequestProperties(headers);
             }
 
             MediaItem mediaItem = MediaItem.fromUri(Uri.parse(url));
@@ -1689,8 +1700,10 @@ public class PlayerActivity extends AppCompatActivity {
 
             String lower = url.toLowerCase();
             if (lower.contains("m3u8")) {
+                // HLS
                 mediaSource = new HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem);
             } else {
+                // Uzantısız ve normal linkler (mp4, ts vs. hepsini Progressive olarak dene)
                 mediaSource = new ProgressiveMediaSource.Factory(dsFactory).createMediaSource(mediaItem);
             }
 
@@ -1756,6 +1769,7 @@ public class PlayerActivity extends AppCompatActivity {
     }
 }
 EOF
+
 
 # -----------------------------
 # 12) MANIFEST
