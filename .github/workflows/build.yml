@@ -1,6 +1,8 @@
 name: Build ErdinPlayer
 
 on:
+  push:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
@@ -8,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -21,15 +24,13 @@ jobs:
         with:
           gradle-version: 8.4
 
-      - name: Generate Android Project
+      - name: Generate Android project from panel config
         run: |
-          chmod +x prep_build.sh || true
           chmod +x generate_app.sh
           ./generate_app.sh
 
-      - name: Build APK
-        working-directory: ./theapp
-        run: gradle assembleRelease --no-daemon
+      - name: Build release APK
+        run: gradle -p theapp assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
