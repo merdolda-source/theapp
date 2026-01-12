@@ -1653,7 +1653,7 @@ public class CommonListActivity extends AppCompatActivity {
 EOF
 
 cat > "$MODULE_DIR/src/main/java/$PKG_PATH/ui/PlayerActivity.java" <<EOF
-package $PACKAGE_NAME.ui;
+package com.merdolda.player.ui;
 
 import android.net.Uri;
 import android.os.Build;
@@ -1671,7 +1671,10 @@ import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 
-import $PACKAGE_NAME.R;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.merdolda.player.R;
 
 public class PlayerActivity extends AppCompatActivity {
 
@@ -1706,12 +1709,15 @@ public class PlayerActivity extends AppCompatActivity {
         String ref = getIntent().getStringExtra("ref");
         String origin = getIntent().getStringExtra("origin");
 
+        // ✅ ExoPlayer 2.19.1: default headers MAP ile verilir
         DefaultHttpDataSource.Factory dsFactory = new DefaultHttpDataSource.Factory();
-        if (ref != null && !ref.isEmpty()) {
-            dsFactory.setDefaultRequestProperty("Referer", ref);
-        }
-        if (origin != null && !origin.isEmpty()) {
-            dsFactory.setDefaultRequestProperty("Origin", origin);
+
+        Map<String, String> headers = new HashMap<>();
+        if (ref != null && !ref.isEmpty()) headers.put("Referer", ref);
+        if (origin != null && !origin.isEmpty()) headers.put("Origin", origin);
+
+        if (!headers.isEmpty()) {
+            dsFactory.setDefaultRequestProperties(headers);
         }
 
         DefaultMediaSourceFactory mediaSourceFactory = new DefaultMediaSourceFactory(dsFactory);
@@ -1756,6 +1762,7 @@ public class PlayerActivity extends AppCompatActivity {
         }
     }
 }
+
 EOF
 
 # ----------------------------------------------------
