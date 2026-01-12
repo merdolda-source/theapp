@@ -2,7 +2,7 @@
 set -e
 
 echo "======================================="
-echo "  ERDINPLAYER - MEGA GENERATE APP v3   "
+echo "  ERDINPLAYER - MEGA GENERATE APP v4   "
 echo "======================================="
 
 CONFIG_FILE="app_config.json"
@@ -16,7 +16,7 @@ BANNER_INTERVAL=0
 INTER_INTERVAL=0
 REWARD_ON_START=0
 ICON_URL=""
-AD_MODE="none"
+AD_MODE="none"   # admob / unity / hybrid / none
 
 # Panel config varsa oku
 if [ -f "$CONFIG_FILE" ] && command -v jq >/dev/null 2>&1; then
@@ -31,7 +31,7 @@ if [ -f "$CONFIG_FILE" ] && command -v jq >/dev/null 2>&1; then
   ICON_URL=$(jq -r '.icon_url // ""' "$CONFIG_FILE")
   AD_MODE=$(jq -r '.ad_mode // "none"' "$CONFIG_FILE")
 else
-  echo "⚠️  $CONFIG_FILE bulunamadı veya jq yok, varsayılan değerler kullanılacak."
+  echo "⚠️  $CONFIG_FILE yok veya jq yüklü değil, varsayılan değerler kullanılacak."
 fi
 
 echo "APP_NAME        = $APP_NAME"
@@ -51,7 +51,8 @@ PKG_PATH=$(echo "$APP_PKG" | tr '.' '/')
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$MODULE_DIR/src/main/res"
 
-echo "Klasör: $PROJECT_ROOT  Paket yolu: $PKG_PATH"
+echo "📂 Proje klasörü: $PROJECT_ROOT"
+echo "📦 Paket yolu:   $PKG_PATH"
 
 # 1. TEMİZLİK & KLASÖRLER
 if [ -d "$PROJECT_ROOT" ]; then rm -rf "$PROJECT_ROOT"; fi
@@ -61,7 +62,7 @@ mkdir -p "$RES_DIR"/{layout,values,drawable,mipmap-xxxhdpi,anim,menu,color,font}
 mkdir -p "$PROJECT_ROOT/gradle/wrapper"
 
 ################################
-# 2. KEYSTORE (SABİT)
+# 2. KEYSTORE
 ################################
 echo "🔐 Keystore üretiliyor..."
 keytool -genkey -v \
@@ -177,7 +178,7 @@ cat << 'EOF' > "$MODULE_DIR/proguard-rules.pro"
 EOF
 
 ################################
-# 4. RENKLER / STYLES (YEŞİL TEMA)
+# 4. RENKLER / STYLES (KOYU SPOR YEŞİL)
 ################################
 cat << 'EOF' > "$RES_DIR/values/colors.xml"
 <resources>
@@ -288,7 +289,7 @@ cat << 'EOF' > "$RES_DIR/drawable/ic_launcher_background.xml"
 EOF
 
 ########################################
-# 5. ICON (PANEL + CONVERT + SAFE PNG)
+# 5. ICON (PANEL + GÜVENLİ PLACEHOLDER)
 ########################################
 
 MIPMAP_DIR="$RES_DIR/mipmap-xxxhdpi"
@@ -299,7 +300,7 @@ TEMP_ICON="$(mktemp /tmp/icon_XXXX.png)"
 
 echo "🎨 Launcher icon hazırlanıyor..."
 
-# 1) Panelden icon indir (varsa)
+# Panelden icon indir (varsa)
 if [ -n "$ICON_URL" ] && [ "$ICON_URL" != "null" ]; then
     echo "  → ICON_URL: $ICON_URL"
     if command -v curl >/dev/null 2>&1; then
@@ -309,20 +310,20 @@ if [ -n "$ICON_URL" ] && [ "$ICON_URL" != "null" ]; then
     fi
 fi
 
-# 2) convert varsa 512x512 PNG'e çevir
+# convert varsa PNG'e çevir
 if [ -s "$TEMP_ICON" ]; then
     if command -v convert >/dev/null 2>&1; then
         echo "  → ImageMagick bulundu, icon dönüştürülüyor..."
         convert "$TEMP_ICON" -resize 512x512^ -gravity center -extent 512x512 PNG32:"$ICON_TARGET" || rm -f "$ICON_TARGET"
     else
-        echo "  → convert yok, dosya olduğu gibi kopyalanıyor (sonra PNG kontrolü yapılacak)..."
+        echo "  → convert yok, ham dosya kopyalanıyor..."
         cp "$TEMP_ICON" "$ICON_TARGET" || rm -f "$ICON_TARGET"
     fi
 fi
 
 rm -f "$TEMP_ICON"
 
-# 3) Icon gerçekten PNG mi? değilse sil
+# Icon gerçekten PNG mi?
 if [ -f "$ICON_TARGET" ] && command -v file >/dev/null 2>&1; then
     if ! file "$ICON_TARGET" | grep -qi "PNG image"; then
         echo "⚠️  Icon PNG değil / bozuk, varsayılan icon kullanılacak."
@@ -330,7 +331,7 @@ if [ -f "$ICON_TARGET" ] && command -v file >/dev/null 2>&1; then
     fi
 fi
 
-# 4) Hâlâ icon yoksa: güvenli placeholder PNG
+# Hâlâ icon yoksa: güvenli placeholder PNG
 if [ ! -f "$ICON_TARGET" ]; then
     echo "🧩 Güvenli placeholder icon oluşturuluyor..."
     base64 -d > "$ICON_TARGET" << 'EOF_ICON'
@@ -348,6 +349,7 @@ package __PKG__.model;
 import com.google.gson.annotations.SerializedName;
 import java.io.Serializable;
 import java.util.List;
+import java.util.ArrayList;
 
 public class AppModels {
     public static class Playlist implements Serializable {
@@ -390,7 +392,8 @@ public class AppModels {
 
         public String directUrl;
         public String group;
-        // M3U'dan gelen header'lar
+
+        // M3U'dan gelecek olan header'lar
         public String origin;
         public String referer;
     }
@@ -1494,6 +1497,10 @@ public class CommonListActivity extends AppCompatActivity {
                     public void onResponse(Call<List<Category>> c, Response<List<Category>> r) {
                         if (r.body() != null) {
                             rvC.setAdapter(new CategoryAdapter(r.body(), cat -> loadItems(cat.id)));
+                            // İlk kategoriyi otomatik yükle
+                            if (!r.body().isEmpty()) {
+                                loadItems(r.body().get(0).id);
+                            }
                         }
                     }
 
@@ -1519,7 +1526,7 @@ public class CommonListActivity extends AppCompatActivity {
 EOF
 sed -i "s#__PKG__#$APP_PKG#g" "$PKG_DIR/ui/CommonListActivity.java"
 
-# PlayerActivity: referer/origin + 3sn sonra kontrol kaybolsun
+# PlayerActivity: DefaultHttpDataSource.Factory + referer/origin + 3sn controller
 cat << 'EOF' > "$PKG_DIR/ui/PlayerActivity.java"
 package __PKG__.ui;
 
@@ -1544,81 +1551,92 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 import __PKG__.R;
 
 public class PlayerActivity extends AppCompatActivity {
-    ExoPlayer p;
-    StyledPlayerView pv;
-    int resizeMode = 0; // 0:Fit, 1:Fill, 2:Zoom
+    private ExoPlayer player;
+    private StyledPlayerView playerView;
+    private int resizeMode = 0; // 0: FIT, 1: FILL, 2: ZOOM
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // FULL SCREEN NO LIMITS
+        // Tam ekran, çentikleri de kullan
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             getWindow().setFlags(
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+            );
             getWindow().getAttributes().layoutInDisplayCutoutMode =
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.activity_player);
-        pv = findViewById(R.id.player_view);
+
+        playerView = findViewById(R.id.player_view);
         ImageButton btnZoom = findViewById(R.id.btnZoom);
 
-        // Controller 3 saniye sonra kaybolsun
-        pv.setControllerShowTimeoutMs(3000);
-        pv.setControllerHideOnTouch(true);
+        // Oynatıcı kontrolleri 3 saniye sonra otomatik saklansın
+        playerView.setControllerShowTimeoutMs(3000);
+        playerView.setControllerHideOnTouch(true);
 
         btnZoom.setOnClickListener(v -> toggleZoom());
 
-        p = new ExoPlayer.Builder(this).build();
-        pv.setPlayer(p);
+        // ExoPlayer instance
+        player = new ExoPlayer.Builder(this).build();
+        playerView.setPlayer(player);
 
+        // Intent’ten bilgiler
         String url = getIntent().getStringExtra("url");
         String ref = getIntent().getStringExtra("ref");
         String origin = getIntent().getStringExtra("origin");
 
-        if (url != null) {
-            DefaultHttpDataSource.Factory dsFactory = new DefaultHttpDataSource.Factory()
-                    .setAllowCrossProtocolRedirects(true);
-
-            if (ref != null && !ref.isEmpty()) {
-                dsFactory.setDefaultRequestProperty("Referer", ref);
-            }
-            if (origin != null && !origin.isEmpty()) {
-                dsFactory.setDefaultRequestProperty("Origin", origin);
-            }
-
-            MediaItem mediaItem = MediaItem.fromUri(Uri.parse(url));
-            MediaSource mediaSource;
-
-            if (url.contains(".m3u8")) {
-                mediaSource = new HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem);
-            } else {
-                mediaSource = new ProgressiveMediaSource.Factory(dsFactory).createMediaSource(mediaItem);
-            }
-
-            p.setMediaSource(mediaSource);
-            p.prepare();
-            p.play();
-        } else {
+        if (url == null || url.isEmpty()) {
             Toast.makeText(this, "URL bulunamadı", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        // 🔴 ÖNEMLİ: Burada TİP DefaultHttpDataSource.Factory
+        DefaultHttpDataSource.Factory dsFactory =
+                new DefaultHttpDataSource.Factory()
+                        .setAllowCrossProtocolRedirects(true);
+
+        // M3U’den gelen header’ları uygula
+        if (ref != null && !ref.isEmpty()) {
+            dsFactory.setDefaultRequestProperty("Referer", ref);
+        }
+        if (origin != null && !origin.isEmpty()) {
+            dsFactory.setDefaultRequestProperty("Origin", origin);
+        }
+
+        Uri uri = Uri.parse(url);
+        MediaItem mediaItem = MediaItem.fromUri(uri);
+
+        MediaSource mediaSource;
+        if (url.toLowerCase().contains(".m3u8")) {
+            // HLS
+            mediaSource = new HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem);
+        } else {
+            // Progressive (mp4, ts vs)
+            mediaSource = new ProgressiveMediaSource.Factory(dsFactory).createMediaSource(mediaItem);
+        }
+
+        player.setMediaSource(mediaSource);
+        player.prepare();
+        player.play();
     }
 
-    void toggleZoom() {
+    private void toggleZoom() {
         resizeMode++;
         if (resizeMode > 2) resizeMode = 0;
 
         if (resizeMode == 0) {
-            pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
+            playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
             Toast.makeText(this, "MODE: FIT", Toast.LENGTH_SHORT).show();
         } else if (resizeMode == 1) {
-            pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
+            playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
             Toast.makeText(this, "MODE: STRETCH FILL", Toast.LENGTH_SHORT).show();
         } else {
-            pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
+            playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
             Toast.makeText(this, "MODE: ZOOM CROP", Toast.LENGTH_SHORT).show();
         }
     }
@@ -1626,7 +1644,10 @@ public class PlayerActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (p != null) p.release();
+        if (player != null) {
+            player.release();
+            player = null;
+        }
     }
 }
 EOF
@@ -1674,11 +1695,11 @@ EOF
 ################################
 # 12. GRADLE WRAPPER OLUŞTUR
 ################################
-echo "Generating Gradle Wrapper..."
+echo "🔧 Gradle Wrapper oluşturuluyor..."
 cd "$PROJECT_ROOT"
 gradle wrapper --gradle-version 8.4 || true
 chmod +x gradlew || true
 cd ..
 
-echo "✅ ERDINPLAYER v3: M3U + Referer/Origin + Panel Config + Güvenli ICON hazır."
-echo "👉 Workflow içinde: gradle -p theapp assembleRelease --no-daemon"
+echo "✅ ERDINPLAYER v4: M3U + Referer/Origin + Panel Config + Güvenli ICON hazır."
+echo "👉 Şimdi workflow içinde: gradle -p theapp assembleRelease --no-daemon çalışacak."
