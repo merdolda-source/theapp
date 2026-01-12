@@ -11,7 +11,7 @@
     "unity_banner_id": "",
     "unity_interstitial_id": "Interstitial_Android",
     "unity_rewarded_id": "",
-    "banner_interval": 0,
+    "banner_interval": 1,
     "interstitial_interval": 2,
     "reward_on_start": 0,
     "version_code": 13,
