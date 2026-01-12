@@ -1112,7 +1112,7 @@ EOF
 # 12.2) UTILS: AdMobManager (✅ Banner + Interstitial)
 # ----------------------------------------------------
 cat > "$MODULE_DIR/src/main/java/$PKG_PATH/utils/AdMobManager.java" <<EOF
-package $PACKAGE_NAME.utils;
+package com.merdolda.player.utils;
 
 import android.app.Activity;
 import android.view.View;
