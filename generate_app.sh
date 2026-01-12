@@ -268,32 +268,49 @@ cat << 'EOF' > "$RES_DIR/drawable/ic_play.xml"
 </vector>
 EOF
 
-# 9) ICON (PNG) – geçersiz dosya olmasın diye fallback base64
-ICON_TARGET="$RES_DIR/mipmap-xxxhdpi/ic_launcher.png"
+# 3. İKON (ESKİ MANTIK + PNG KONTROL + FALLBACK)
+ICON_TARGET="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png"
 TEMP_ICON="icon_temp.png"
-BASE64_PNG_1x1="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+
+mkdir -p "$(dirname "$ICON_TARGET")"
 
 if [ -n "$ICON_URL" ]; then
-    echo "🌐 Icon indiriliyor: $ICON_URL"
+    echo "🎨 Launcher icon hazırlanıyor..."
+    echo "  → ICON_URL: $ICON_URL"
     curl -s -L -k -A "Mozilla/5.0" -o "$TEMP_ICON" "$ICON_URL" || true
 fi
 
+# indirilen dosya gerçekten PNG mi?
+if [ -s "$TEMP_ICON" ] && command -v file >/dev/null 2>&1; then
+    if ! file "$TEMP_ICON" | grep -qi "PNG image data"; then
+        echo "⚠️ İndirilen dosya PNG değil, varsayılan ikon kullanılacak."
+        rm -f "$TEMP_ICON"
+    fi
+fi
+
 if [ -s "$TEMP_ICON" ]; then
-    if command -v file >/dev/null 2>&1; then
-        if file "$TEMP_ICON" | grep -qi "PNG image data"; then
-            cp "$TEMP_ICON" "$ICON_TARGET"
-        else
-            echo "⚠️ Icon PNG değil, varsayılan ikon kullanılacak."
-            echo "$BASE64_PNG_1x1" | base64 -d > "$ICON_TARGET"
-        fi
+    # Eski mantığın birebir korunmuş hali
+    if command -v convert >/dev/null 2>&1; then
+        convert "$TEMP_ICON" -resize 512x512! -background none -flatten "$ICON_TARGET"
     else
+        echo "ℹ️ convert yok, ham PNG kopyalanıyor..."
         cp "$TEMP_ICON" "$ICON_TARGET"
     fi
 else
-    echo "ℹ️ Icon indirilemedi, varsayılan ikon kullanılacak."
-    echo "$BASE64_PNG_1x1" | base64 -d > "$ICON_TARGET"
+    echo "ℹ️ ICON_URL kullanılamadı, fallback ikon oluşturuluyor..."
+    if command -v convert >/dev/null 2>&1; then
+        # Basit 512x512 mavi-yeşil bir ikon
+        convert -size 512x512 xc:#2196F3 \
+            -fill white -gravity center -pointsize 150 \
+            -annotate 0 "TV" "$ICON_TARGET"
+    else
+        # convert de yoksa 1x1 valid PNG yaz (AAPT hatasız)
+        echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==" | base64 -d > "$ICON_TARGET"
+    fi
 fi
+
 rm -f "$TEMP_ICON"
+
 
 # 10) LAYOUTLAR
 
