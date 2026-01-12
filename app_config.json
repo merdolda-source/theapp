@@ -1,0 +1,16 @@
+{
+    "app_name": "ErdinPlayer",
+    "package_name": "com.merdolda.player",
+    "icon_url": "https:\/\/www.shutterstock.com\/image-vector\/star-icon-vector-editable-stroke-260nw-724348798.jpg",
+    "admob_app_id": "",
+    "admob_banner_id": "",
+    "admob_interstitial_id": "",
+    "admob_rewarded_id": "",
+    "unity_game_id": "",
+    "unity_banner_id": "",
+    "unity_interstitial_id": "",
+    "unity_rewarded_id": "",
+    "banner_interval": 0,
+    "interstitial_interval": 0,
+    "reward_on_start": 0
+}
