@@ -12,7 +12,7 @@
     "unity_interstitial_id": "Interstitial_Android",
     "unity_rewarded_id": "",
     "banner_interval": 0,
-    "interstitial_interval": 0,
+    "interstitial_interval": 2,
     "reward_on_start": 0,
     "version_code": 13,
     "version_name": "13.0"
