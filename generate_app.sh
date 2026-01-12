@@ -76,7 +76,7 @@ echo "🎨 Launcher icon hazırlanıyor..."
 ICON_TARGET="$RES_DIR/mipmap-xxxhdpi/ic_launcher.png"
 TEMP_ICON="icon_temp.png"
 
-ICON_URL="https://i.hizliresim.com/4nlbb9v.jpg"
+ICON_URL="https://i.hizliresim.com/aunp77o.png"
 
 create_fallback_icon() {
   echo "🧩 Yedek ikon üretiliyor (1x1 PNG)..."
