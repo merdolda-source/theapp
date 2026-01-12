@@ -1,8 +1,35 @@
 name: Build ErdinPlayer
 
 on:
-  # Sadece panelden API ile tetiklenecek
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: "Uygulama adı"
+        required: true
+        type: string
+      package_name:
+        description: "Paket adı"
+        required: true
+        type: string
+      banner_interval:
+        description: "Banner gösterim aralığı"
+        required: true
+        type: string
+        default: "0"
+      inter_interval:
+        description: "Geçiş reklamı aralığı"
+        required: true
+        type: string
+        default: "0"
+      reward_on_start:
+        description: "Girişte ödüllü reklam (0/1)"
+        required: true
+        type: string
+        default: "0"
+      icon_url:
+        description: "512x512 ikon URL"
+        required: false
+        type: string
 
 jobs:
   build:
@@ -25,7 +52,13 @@ jobs:
       - name: Generate Android Project
         run: |
           chmod +x generate_app.sh
-          ./generate_app.sh
+          ./generate_app.sh \
+            "${{ github.event.inputs.app_name }}" \
+            "${{ github.event.inputs.package_name }}" \
+            "${{ github.event.inputs.banner_interval }}" \
+            "${{ github.event.inputs.inter_interval }}" \
+            "${{ github.event.inputs.reward_on_start }}" \
+            "${{ github.event.inputs.icon_url }}"
 
       - name: Build APK
         working-directory: ./theapp
