@@ -1,7 +1,80 @@
 name: Build ErdinPlayer
 
 on:
-  workflow_dispatch:   # panelden veya GitHub arayüzünden tetikleme
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'Uygulama adı'
+        required: true
+        default: 'ErdinPlayer'
+      package_name:
+        description: 'Paket adı (ör: com.merdolda.player)'
+        required: true
+        default: 'com.merdolda.player'
+      version_code:
+        description: 'Version code (sayı)'
+        required: true
+        default: '13'
+      version_name:
+        description: 'Version name (metin)'
+        required: true
+        default: '13.0'
+
+      ad_mode:
+        description: 'Reklam modu (admob / unity / hybrid)'
+        required: true
+        default: 'admob'
+      banner_interval:
+        description: 'Banner gösterim aralığı (genel sayım)'
+        required: true
+        default: '0'
+      inter_interval:
+        description: 'Geçiş reklamı aralığı'
+        required: true
+        default: '0'
+      reward_on_start:
+        description: 'Uygulama açılışında ödüllü reklam (0 / 1)'
+        required: true
+        default: '0'
+
+      admob_app_id:
+        description: 'AdMob App ID'
+        required: false
+        default: ''
+      admob_banner_id:
+        description: 'AdMob Banner ID'
+        required: false
+        default: ''
+      admob_inter_id:
+        description: 'AdMob Interstitial ID'
+        required: false
+        default: ''
+      admob_reward_id:
+        description: 'AdMob Rewarded ID'
+        required: false
+        default: ''
+
+      unity_game_id:
+        description: 'Unity Game ID'
+        required: false
+        default: ''
+      unity_banner_id:
+        description: 'Unity Banner Placement ID'
+        required: false
+        default: ''
+      unity_inter_id:
+        description: 'Unity Interstitial Placement ID'
+        required: false
+        default: ''
+      unity_reward_id:
+        description: 'Unity Rewarded Placement ID'
+        required: false
+        default: ''
+
+      icon_url:
+        description: 'Launcher icon PNG URL'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -20,6 +93,44 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           gradle-version: 8.4
+
+      - name: Generate app_config.json
+        run: |
+          cat > app_config.json << 'EOF'
+          {
+            "app_name": "${{ github.event.inputs.app_name }}",
+            "package_name": "${{ github.event.inputs.package_name }}",
+            "version_code": ${{
+              github.event.inputs.version_code
+            }},
+            "version_name": "${{ github.event.inputs.version_name }}",
+
+            "ad_mode": "${{ github.event.inputs.ad_mode }}",
+            "banner_interval": ${{
+              github.event.inputs.banner_interval
+            }},
+            "inter_interval": ${{
+              github.event.inputs.inter_interval
+            }},
+            "reward_on_start": ${{
+              github.event.inputs.reward_on_start
+            }},
+
+            "admob_app_id": "${{ github.event.inputs.admob_app_id }}",
+            "admob_banner_id": "${{ github.event.inputs.admob_banner_id }}",
+            "admob_inter_id": "${{ github.event.inputs.admob_inter_id }}",
+            "admob_reward_id": "${{ github.event.inputs.admob_reward_id }}",
+
+            "unity_game_id": "${{ github.event.inputs.unity_game_id }}",
+            "unity_banner_id": "${{ github.event.inputs.unity_banner_id }}",
+            "unity_inter_id": "${{ github.event.inputs.unity_inter_id }}",
+            "unity_reward_id": "${{ github.event.inputs.unity_reward_id }}",
+
+            "icon_url": "${{ github.event.inputs.icon_url }}"
+          }
+          EOF
+          echo "app_config.json oluşturuldu:"
+          cat app_config.json
 
       - name: Generate Android Project
         run: |
