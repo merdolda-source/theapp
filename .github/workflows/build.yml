@@ -1,17 +1,15 @@
 name: Build ErdinPlayer
 
 on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
+  # Sadece panelden API ile tetiklenecek
+  workflow_dispatch: {}
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -24,13 +22,14 @@ jobs:
         with:
           gradle-version: 8.4
 
-      - name: Generate Android project from panel config
+      - name: Generate Android Project
         run: |
           chmod +x generate_app.sh
           ./generate_app.sh
 
-      - name: Build release APK
-        run: gradle -p theapp assembleRelease --no-daemon
+      - name: Build APK
+        working-directory: ./theapp
+        run: gradle assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
