@@ -141,21 +141,54 @@ keytool -genkey -v \
   -keypass 123456 \
   -dname "CN=Erdin, O=ErdinPlayer, C=TR" 2>/dev/null || true
 
-# -----------------------------
-# 5) ICON (512x512) PANELDEN
-# -----------------------------
-echo "🎨 Uygulama icon işleniyor..."
+########################################
+#  ICON (PANELDEN + GÜVENLİ PLACEHOLDER)
+########################################
+
+CONFIG_FILE="app_config.json"
+
+# Panelden gelen ICON_URL'yi okuyoruz (app_config.json içinde 'icon_url' alanı)
+if [ -f "$CONFIG_FILE" ]; then
+    ICON_URL=$(jq -r '.icon_url // ""' "$CONFIG_FILE")
+else
+    ICON_URL=""
+fi
+
 MIPMAP_DIR="$MODULE_DIR/src/main/res/mipmap-xxxhdpi"
 mkdir -p "$MIPMAP_DIR"
+ICON_TARGET="$MIPMAP_DIR/ic_launcher.png"
 
-if [ -n "$ICON_URL" ]; then
-  echo "Icon indiriliyor: $ICON_URL"
-  curl -L "$ICON_URL" -o "$MIPMAP_DIR/ic_launcher.png" 2>/dev/null || \
-  wget -O "$MIPMAP_DIR/ic_launcher.png" "$ICON_URL" 2>/dev/null || \
-  echo "Icon indirilemedi, defaultsuz devam."
-else
-  echo "ICON_URL boş, ic_launcher için default kullanılacak (ic_play)."
+echo "🎨 Launcher icon hazırlanıyor..."
+
+# 1) Panelden icon indirmeyi dene
+if [ -n "$ICON_URL" ] && [ "$ICON_URL" != "null" ]; then
+    echo "  → Panelden gelen ICON_URL: $ICON_URL"
+    if command -v curl >/dev/null 2>&1; then
+        curl -L --fail -o "$ICON_TARGET" "$ICON_URL" || rm -f "$ICON_TARGET"
+    else
+        wget -O "$ICON_TARGET" "$ICON_URL" || rm -f "$ICON_TARGET"
+    fi
 fi
+
+# 2) İndirilen dosya gerçekten PNG mi kontrol et
+if [ -f "$ICON_TARGET" ]; then
+    if command -v file >/dev/null 2>&1; then
+        if ! file "$ICON_TARGET" | grep -qi "PNG image"; then
+            echo "⚠️  Icon dosyası PNG değil / bozuk, varsayılan icon kullanılacak."
+            rm -f "$ICON_TARGET"
+        fi
+    fi
+fi
+
+# 3) Hâlâ yoksa: güvenli, derlenebilir placeholder PNG yaz
+if [ ! -f "$ICON_TARGET" ]; then
+    echo "🧩 Güvenli placeholder icon oluşturuluyor (şeffaf PNG)..."
+    base64 -d > "$ICON_TARGET" << 'EOF_ICON'
+iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAJ0lEQVR4nO3BAQ0AAADCoPdPbQ43
+oAAAAAAAAAAAAAAAAAAAAAB4GxQkAAE3dn1XAAAAAElFTkSuQmCC
+EOF_ICON
+fi
+
 
 # -----------------------------
 # 6) GRADLE WRAPPER AYARLARI
