@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       app_name:
-        description: "Uygulama adı"
+        description: "Uygulama adı (panelden gelir)"
         required: true
         type: string
       package_name:
-        description: "Paket adı"
+        description: "Paket adı (panelden gelir)"
         required: true
         type: string
       banner_interval:
@@ -27,7 +27,7 @@ on:
         type: string
         default: "0"
       icon_url:
-        description: "512x512 ikon URL"
+        description: "512x512 ikon URL (opsiyonel)"
         required: false
         type: string
 
@@ -52,13 +52,7 @@ jobs:
       - name: Generate Android Project
         run: |
           chmod +x generate_app.sh
-          ./generate_app.sh \
-            "${{ github.event.inputs.app_name }}" \
-            "${{ github.event.inputs.package_name }}" \
-            "${{ github.event.inputs.banner_interval }}" \
-            "${{ github.event.inputs.inter_interval }}" \
-            "${{ github.event.inputs.reward_on_start }}" \
-            "${{ github.event.inputs.icon_url }}"
+          ./generate_app.sh
 
       - name: Build APK
         working-directory: ./theapp
