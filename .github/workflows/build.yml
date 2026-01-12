@@ -2,47 +2,6 @@ name: Build ErdinPlayer
 
 on:
   workflow_dispatch:
-    inputs:
-      app_name:
-        description: "Uygulama adı (örn: Erdin Player Pro)"
-        required: true
-        type: string
-      package_name:
-        description: "Paket adı (örn: com.dersev.erdin)"
-        required: true
-        type: string
-      icon_url:
-        description: "512x512 ikon URL"
-        required: true
-        type: string
-      admob_app_id:
-        description: "AdMob App ID"
-        required: false
-        type: string
-      admob_banner_id:
-        description: "AdMob Banner ID"
-        required: false
-        type: string
-      admob_interstitial_id:
-        description: "AdMob Geçiş ID"
-        required: false
-        type: string
-      admob_reward_id:
-        description: "AdMob Ödüllü ID"
-        required: false
-        type: string
-      unity_game_id:
-        description: "Unity Game ID"
-        required: false
-        type: string
-      unity_interstitial_id:
-        description: "Unity Geçiş ID"
-        required: false
-        type: string
-      unity_reward_id:
-        description: "Unity Ödüllü ID"
-        required: false
-        type: string
 
 jobs:
   build:
@@ -66,16 +25,6 @@ jobs:
         run: |
           chmod +x prep_build.sh || true
           chmod +x generate_app.sh
-          APP_NAME="${{ github.event.inputs.app_name }}" \
-          PACKAGE_NAME="${{ github.event.inputs.package_name }}" \
-          ICON_URL="${{ github.event.inputs.icon_url }}" \
-          ADMOB_APP_ID="${{ github.event.inputs.admob_app_id }}" \
-          ADMOB_BANNER_ID="${{ github.event.inputs.admob_banner_id }}" \
-          ADMOB_INTERSTITIAL_ID="${{ github.event.inputs.admob_interstitial_id }}" \
-          ADMOB_REWARD_ID="${{ github.event.inputs.admob_reward_id }}" \
-          UNITY_GAME_ID="${{ github.event.inputs.unity_game_id }}" \
-          UNITY_INTERSTITIAL_ID="${{ github.event.inputs.unity_interstitial_id }}" \
-          UNITY_REWARD_ID="${{ github.event.inputs.unity_reward_id }}" \
           ./generate_app.sh
 
       - name: Build APK
