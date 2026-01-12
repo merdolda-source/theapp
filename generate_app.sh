@@ -241,8 +241,8 @@ cat > "$RES_DIR/values/styles.xml" << 'EOF'
 <resources>
     <style name="AppTheme" parent="Theme.MaterialComponents.NoActionBar">
         <item name="android:windowBackground">@color/bg_dark</item>
-        <item name="colorPrimary">@color:bg_dark</item>
-        <item name="colorAccent">@color:accent</item>
+        <item name="colorPrimary">@color/bg_dark</item>
+        <item name="colorAccent">@color/accent</item>
         <item name="android:statusBarColor">@color/bg_dark</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
     </style>
