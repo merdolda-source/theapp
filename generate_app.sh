@@ -1550,6 +1550,9 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
 
 import __PKG__.R;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class PlayerActivity extends AppCompatActivity {
     private ExoPlayer player;
     private StyledPlayerView playerView;
@@ -1559,7 +1562,7 @@ public class PlayerActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Tam ekran, çentikleri de kullan
+        // Tam ekran + çentik alanını kullan
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             getWindow().setFlags(
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -1575,7 +1578,7 @@ public class PlayerActivity extends AppCompatActivity {
         playerView = findViewById(R.id.player_view);
         ImageButton btnZoom = findViewById(R.id.btnZoom);
 
-        // Oynatıcı kontrolleri 3 saniye sonra otomatik saklansın
+        // Oynatıcı kontrolleri 3 saniye sonra otomatik kaybolsun
         playerView.setControllerShowTimeoutMs(3000);
         playerView.setControllerHideOnTouch(true);
 
@@ -1585,9 +1588,9 @@ public class PlayerActivity extends AppCompatActivity {
         player = new ExoPlayer.Builder(this).build();
         playerView.setPlayer(player);
 
-        // Intent’ten bilgiler
-        String url = getIntent().getStringExtra("url");
-        String ref = getIntent().getStringExtra("ref");
+        // Intent verileri
+        String url    = getIntent().getStringExtra("url");
+        String ref    = getIntent().getStringExtra("ref");
         String origin = getIntent().getStringExtra("origin");
 
         if (url == null || url.isEmpty()) {
@@ -1595,24 +1598,29 @@ public class PlayerActivity extends AppCompatActivity {
             return;
         }
 
-        // 🔴 ÖNEMLİ: Burada TİP DefaultHttpDataSource.Factory
+        // Factory tipi DefaultHttpDataSource.Factory
         DefaultHttpDataSource.Factory dsFactory =
                 new DefaultHttpDataSource.Factory()
                         .setAllowCrossProtocolRedirects(true);
 
-        // M3U’den gelen header’ları uygula
+        // Header’ları Map ile ver
+        Map<String, String> headers = new HashMap<>();
         if (ref != null && !ref.isEmpty()) {
-            dsFactory.setDefaultRequestProperty("Referer", ref);
+            headers.put("Referer", ref);
         }
         if (origin != null && !origin.isEmpty()) {
-            dsFactory.setDefaultRequestProperty("Origin", origin);
+            headers.put("Origin", origin);
+        }
+        if (!headers.isEmpty()) {
+            dsFactory.setDefaultRequestProperties(headers);
         }
 
         Uri uri = Uri.parse(url);
         MediaItem mediaItem = MediaItem.fromUri(uri);
 
         MediaSource mediaSource;
-        if (url.toLowerCase().contains(".m3u8")) {
+        String lower = url.toLowerCase();
+        if (lower.contains(".m3u8")) {
             // HLS
             mediaSource = new HlsMediaSource.Factory(dsFactory).createMediaSource(mediaItem);
         } else {
@@ -1702,4 +1710,4 @@ chmod +x gradlew || true
 cd ..
 
 echo "✅ ERDINPLAYER v4: M3U + Referer/Origin + Panel Config + Güvenli ICON hazır."
-echo "👉 Şimdi workflow içinde: gradle -p theapp assembleRelease --no-daemon çalışacak."
+echo "👉 Workflow: gradle -p theapp assembleRelease --no-daemon"
