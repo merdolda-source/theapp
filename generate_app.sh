@@ -1777,7 +1777,7 @@ cat > "$MODULE_DIR/src/main/AndroidManifest.xml" <<EOF
         android:icon="@mipmap/ic_launcher">
 
         <activity
-            android:name=".$PKG_PATH.ui.SelectionActivity"
+            android:name="$PACKAGE_NAME.ui.SelectionActivity"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -1787,28 +1787,29 @@ cat > "$MODULE_DIR/src/main/AndroidManifest.xml" <<EOF
         </activity>
 
         <activity
-            android:name=".$PKG_PATH.ui.LoginXtreamActivity"
+            android:name="$PACKAGE_NAME.ui.LoginXtreamActivity"
             android:screenOrientation="portrait" />
 
         <activity
-            android:name=".$PKG_PATH.ui.LoginM3uActivity"
+            android:name="$PACKAGE_NAME.ui.LoginM3uActivity"
             android:screenOrientation="portrait" />
 
         <activity
-            android:name=".$PKG_PATH.ui.DashboardActivity"
+            android:name="$PACKAGE_NAME.ui.DashboardActivity"
             android:screenOrientation="portrait" />
 
         <activity
-            android:name=".$PKG_PATH.ui.CommonListActivity"
+            android:name="$PACKAGE_NAME.ui.CommonListActivity"
             android:screenOrientation="portrait" />
 
         <activity
-            android:name=".$PKG_PATH.ui.PlayerActivity"
+            android:name="$PACKAGE_NAME.ui.PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:screenOrientation="sensor" />
     </application>
 </manifest>
 EOF
+
 
 # ----------------------------------------------------
 # 16) GRADLE WRAPPER
