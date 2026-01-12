@@ -1,12 +1,20 @@
 #!/bin/bash
 
-# ============================================================
-# ERDINPLAYER V14 - M3U + XTREAM PRO PLAYER
-# Spor Yeşili Tema, Arama, M3U Header (Referer/Origin), Ads Hazır
-# ============================================================
+# ============================================
+# ERDINPLAYER v14 - STABLE BUILD
+# - M3U #EXTVLCOPT:http-referrer / http-origin desteği
+# - Uzantısız ve yönlendirmeli linkler (ExoPlayer + HttpDataSource)
+# - Xtream abonelik bitiş tarihi gösterimi
+# - Koyu spor yeşili tema
+# - Kategoride ilk seçim otomatik doldurulur (boş liste yok)
+# - Tek tıklamada çalışır, double-click ihtiyacı yok
+# - Player zoom butonu 3 saniye sonra gizlenir, dokununca geri gelir
+# ============================================
+
+set -e
 
 PROJECT_NAME="ErdinPlayer"
-PROJECT_ROOT="theapp"       # GitHub Actions bu klasörü bekliyor
+PROJECT_ROOT="theapp"     # GitHub Actions bu klasörü baz alıyor
 MODULE_DIR="$PROJECT_ROOT/app"
 PKG_PATH="com/merdolda/player"
 PKG_DIR="$MODULE_DIR/src/main/java/$PKG_PATH"
@@ -14,24 +22,26 @@ RES_DIR="$MODULE_DIR/src/main/res"
 
 echo "💎 ERDINPLAYER v14: PROJE OLUŞTURULUYOR..."
 
-# 1. TEMİZLİK & KLASÖRLER
-if [ -d "$PROJECT_ROOT" ]; then rm -rf "$PROJECT_ROOT"; fi
+# 1) TEMİZLİK
+if [ -d "$PROJECT_ROOT" ]; then
+  rm -rf "$PROJECT_ROOT"
+fi
 
 mkdir -p "$PKG_DIR"/{model,adapter,api,utils,ui}
 mkdir -p "$RES_DIR"/{layout,values,drawable,anim,menu,color,font}
 mkdir -p "$PROJECT_ROOT/gradle/wrapper"
 
-# 2. KEYSTORE
-echo "🔑 Keystore oluşturuluyor..."
+# 2) KEYSTORE
+echo "🔐 Keystore oluşturuluyor..."
 mkdir -p "$MODULE_DIR"
 keytool -genkey -v \
   -keystore "$MODULE_DIR/release.keystore" \
   -alias erdinplayer \
   -keyalg RSA -keysize 2048 -validity 10000 \
   -storepass 123456 -keypass 123456 \
-  -dname "CN=Erdin, O=ErdinPlayer, C=TR" 2>/dev/null
+  -dname "CN=Erdin, O=ErdinPlayer, C=TR" 2>/dev/null || true
 
-# 3. GRADLE SETUP
+# 3) GRADLE & SETTINGS
 cat << 'EOF' > "$PROJECT_ROOT/gradle/wrapper/gradle-wrapper.properties"
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
@@ -42,7 +52,10 @@ EOF
 
 cat << 'EOF' > "$PROJECT_ROOT/build.gradle"
 buildscript {
-    repositories { google(); mavenCentral() }
+    repositories {
+        google()
+        mavenCentral()
+    }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.1.1'
     }
@@ -67,9 +80,10 @@ android.enableJetifier=true
 org.gradle.jvmargs=-Xmx4048m
 EOF
 
-# --- MODULE build.gradle (ADS + DRAWER + EXO) ---
 cat << 'EOF' > "$MODULE_DIR/build.gradle"
-plugins { id 'com.android.application' }
+plugins {
+    id 'com.android.application'
+}
 
 android {
     namespace 'com.merdolda.player'
@@ -81,23 +95,25 @@ android {
         targetSdk 34
         versionCode 14
         versionName "14.0"
-        multiDexEnabled true
-    }
-
-    signingConfigs {
-        release {
-            storeFile file("release.keystore")
-            storePassword "123456"
-            keyAlias "erdinplayer"
-            keyPassword "123456"
-        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file("release.keystore")
+            storePassword "123456"
+            keyAlias "erdinplayer"
+            keyPassword "123456"
         }
     }
 
@@ -108,12 +124,11 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.recyclerview:recyclerview:1.3.1'
-    implementation 'androidx.drawerlayout:drawerlayout:1.1.1'
+    implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
 
     implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
@@ -123,15 +138,10 @@ dependencies {
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.google.code.gson:gson:2.10.1'
     implementation 'com.squareup.okhttp3:okhttp:4.11.0'
-
-    // Reklam tarafı için (panelden ID/aktiflik gelecek)
-    implementation 'com.google.android.gms:play-services-ads:22.6.0'
-    implementation 'com.unity3d.ads:unity-ads:4.9.3'
 }
 EOF
 
-# 4. RESOURCES (SPOR YEŞİLİ TEMA)
-
+# 4) RENKLER & STYLES (KOYU SPOR YEŞİL TEMA)
 cat << 'EOF' > "$RES_DIR/values/colors.xml"
 <resources>
     <color name="bg_dark">#020B09</color>
@@ -157,7 +167,7 @@ cat << 'EOF' > "$RES_DIR/values/styles.xml"
 
     <style name="GlassCard">
         <item name="android:background">@drawable/bg_glass</item>
-        <item name="android:padding">16dp</item>
+        <item name="android:padding">12dp</item>
     </style>
 
     <style name="NeonButton" parent="Widget.MaterialComponents.Button">
@@ -172,7 +182,7 @@ cat << 'EOF' > "$RES_DIR/values/styles.xml"
         <item name="android:background">@drawable/bg_glass_input</item>
         <item name="android:textColor">#FFFFFF</item>
         <item name="android:textColorHint">#88FFFFFF</item>
-        <item name="android:padding">12dp</item>
+        <item name="android:padding">10dp</item>
     </style>
 </resources>
 EOF
@@ -200,7 +210,7 @@ cat << 'EOF' > "$RES_DIR/drawable/bg_neon_btn.xml"
         android:startColor="#00E676"
         android:endColor="#00C853"
         android:angle="45"/>
-    <corners android:radius="12dp"/>
+    <corners android:radius="14dp"/>
 </shape>
 EOF
 
@@ -236,62 +246,84 @@ cat << 'EOF' > "$RES_DIR/drawable/ic_launcher_background.xml"
 </vector>
 EOF
 
-# 5. MODELLER (Playlist + StreamItem geliştirilmiş)
+# 5) MODELLER
 
 cat << 'EOF' > "$PKG_DIR/model/AppModels.java"
 package com.merdolda.player.model;
 
 import com.google.gson.annotations.SerializedName;
+
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 public class AppModels {
 
     public static class Playlist implements Serializable {
-        public String id, name, type, url, user, pass;
+        public String id;
+        public String name;
+        public String type;   // Xtream / M3U
+        public String url;
+        public String user;
+        public String pass;
         public String m3uContent;
-        public String expiry; // Xtream bitiş tarihi (exp_date)
+        public String expDate;   // Xtream bitiş (timestamp string)
     }
 
     public static class LoginResponse implements Serializable {
-        @SerializedName("user_info")  public UserInfo userInfo;
-        @SerializedName("server_info") public ServerInfo serverInfo;
+        @SerializedName("user_info")
+        public UserInfo userInfo;
+        @SerializedName("server_info")
+        public ServerInfo serverInfo;
     }
 
     public static class UserInfo implements Serializable {
-        @SerializedName("username") public String username;
-        @SerializedName("auth")     public int auth;
-        @SerializedName("exp_date") public String expDate;
+        @SerializedName("username")
+        public String username;
+        @SerializedName("auth")
+        public int auth;
+        @SerializedName("exp_date")
+        public String expDate;
     }
 
     public static class ServerInfo implements Serializable {
-        @SerializedName("url") public String url;
+        @SerializedName("url")
+        public String url;
     }
 
     public static class Category implements Serializable {
-        @SerializedName("category_id")   public String id;
-        @SerializedName("category_name") public String name;
-        public Category(String id, String name) { this.id = id; this.name = name; }
+        @SerializedName("category_id")
+        public String id;
+        @SerializedName("category_name")
+        public String name;
+
+        public Category(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
     }
 
     public static class StreamItem implements Serializable {
-        @SerializedName("name")          public String name;
-        @SerializedName("stream_id")     public String streamId;
-        @SerializedName("stream_icon")   public String icon;
-        @SerializedName("container_extension") public String ext;
+        @SerializedName("name")
+        public String name;
+        @SerializedName("stream_id")
+        public String streamId;
+        @SerializedName("stream_icon")
+        public String icon;
+        @SerializedName("container_extension")
+        public String ext;
 
         public String directUrl;
         public String group;
 
-        // M3U özel header'ları
-        public String referrer;
-        public String origin;
+        // M3U #EXTVLCOPT header desteği
+        public String headerReferrer;
+        public String headerOrigin;
     }
 }
 EOF
 
-# 6. API & UTILS (M3U Parser + Pref)
+# 6) API & UTILS
 
 cat << 'EOF' > "$PKG_DIR/api/XtreamApi.java"
 package com.merdolda.player.api;
@@ -340,53 +372,79 @@ package com.merdolda.player.utils;
 
 import com.merdolda.player.model.AppModels.StreamItem;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * M3U PARSER
+ * - #EXTINF'den isim / logo / grup alır
+ * - #EXTVLCOPT:http-referrer / http-origin satırlarını okur
+ * - Altındaki URL'yi directUrl yapar
+ */
 public class M3UParser {
 
     public static Map<String, List<StreamItem>> parse(String content) {
         Map<String, List<StreamItem>> map = new LinkedHashMap<>();
-        String[] lines = content.split("\\n");
+        if (content == null) return map;
+
+        String[] lines = content.split("\\r?\\n");
         String currentGroup = "Uncategorized";
         StreamItem currentItem = null;
 
         Pattern pGroup = Pattern.compile("group-title=\"([^\"]*)\"");
         Pattern pLogo  = Pattern.compile("tvg-logo=\"([^\"]*)\"");
 
-        for (String raw : lines) {
-            String line = raw.trim();
+        for (String rawLine : lines) {
+            String line = rawLine.trim();
+            if (line.isEmpty()) continue;
 
             if (line.startsWith("#EXTINF")) {
                 currentItem = new StreamItem();
-
                 int comma = line.lastIndexOf(",");
-                if (comma > 0) currentItem.name = line.substring(comma + 1).trim();
-                else currentItem.name = "Unknown Channel";
+                if (comma > 0 && comma < line.length() - 1) {
+                    currentItem.name = line.substring(comma + 1).trim();
+                } else {
+                    currentItem.name = "Unknown Channel";
+                }
 
                 Matcher mGroup = pGroup.matcher(line);
-                if (mGroup.find()) currentGroup = mGroup.group(1);
-                else currentGroup = "Uncategorized";
+                if (mGroup.find()) {
+                    currentGroup = mGroup.group(1);
+                } else {
+                    currentGroup = "Uncategorized";
+                }
 
                 Matcher mLogo = pLogo.matcher(line);
-                if (mLogo.find()) currentItem.icon = mLogo.group(1);
+                if (mLogo.find()) {
+                    currentItem.icon = mLogo.group(1);
+                }
 
                 currentItem.group = currentGroup;
+                currentItem.headerReferrer = null;
+                currentItem.headerOrigin = null;
 
-            } else if (line.startsWith("#EXTVLCOPT:http-referrer=")) {
-                if (currentItem != null) {
-                    currentItem.referrer = line.substring(line.indexOf('=') + 1).trim();
+            } else if (line.startsWith("#EXTVLCOPT") && currentItem != null) {
+                // #EXTVLCOPT:http-referrer=http://...
+                // #EXTVLCOPT:http-origin=http://...
+                String lower = line.toLowerCase();
+                int eqIndex = line.indexOf('=');
+                if (eqIndex > 0 && eqIndex < line.length() - 1) {
+                    String value = line.substring(eqIndex + 1).trim();
+                    if (lower.contains("http-referrer")) {
+                        currentItem.headerReferrer = value;
+                    } else if (lower.contains("http-origin")) {
+                        currentItem.headerOrigin = value;
+                    }
                 }
 
-            } else if (line.startsWith("#EXTVLCOPT:http-origin=")) {
-                if (currentItem != null) {
-                    currentItem.origin = line.substring(line.indexOf('=') + 1).trim();
-                }
-
-            } else if (!line.startsWith("#") && !line.isEmpty() && currentItem != null) {
-                // gerçek stream URL satırı
+            } else if (!line.startsWith("#") && currentItem != null) {
+                // URL satırı
                 currentItem.directUrl = line;
+
                 if (!map.containsKey(currentGroup)) {
                     map.put(currentGroup, new ArrayList<>());
                 }
@@ -394,6 +452,7 @@ public class M3UParser {
                 currentItem = null;
             }
         }
+
         return map;
     }
 }
@@ -411,66 +470,52 @@ import com.merdolda.player.model.AppModels.Playlist;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public class PrefUtils {
 
     private static SharedPreferences get(Context c) {
-        return c.getSharedPreferences("ERD_V14", 0);
-    }
-
-    public static List<Playlist> getPlaylists(Context c) {
-        String j = get(c).getString("L", "[]");
-        List<Playlist> list = new Gson().fromJson(j, new TypeToken<List<Playlist>>(){}.getType());
-        if (list == null) list = new ArrayList<>();
-        return list;
+        return c.getSharedPreferences("ERD_V14", Context.MODE_PRIVATE);
     }
 
     public static void savePlaylist(Context c, Playlist p) {
-        List<Playlist> l = getPlaylists(c);
-
-        if (p.id == null || p.id.isEmpty()) {
-            p.id = UUID.randomUUID().toString();
-        }
-
-        // aynı id varsa güncelle
-        boolean updated = false;
-        for (int i = 0; i < l.size(); i++) {
-            if (l.get(i).id.equals(p.id)) {
-                l.set(i, p);
-                updated = true;
-                break;
+        List<Playlist> list = getPlaylists(c);
+        // Aynı ID varsa sil ve sona ekle (çakışmayı önlemek için)
+        List<Playlist> newList = new ArrayList<>();
+        for (Playlist old : list) {
+            if (!old.id.equals(p.id)) {
+                newList.add(old);
             }
         }
-        if (!updated) {
-            l.add(p);
-        }
-
+        newList.add(p);
         get(c).edit()
-                .putString("L", new Gson().toJson(l))
+                .putString("L", new Gson().toJson(newList))
                 .putString("A", p.id)
                 .apply();
     }
 
+    public static List<Playlist> getPlaylists(Context c) {
+        String j = get(c).getString("L", "[]");
+        List<Playlist> res = new Gson().fromJson(j, new TypeToken<List<Playlist>>(){}.getType());
+        if (res == null) res = new ArrayList<>();
+        return res;
+    }
+
     public static Playlist getActive(Context c) {
         String id = get(c).getString("A", "");
+        if (id == null || id.isEmpty()) return null;
         for (Playlist p : getPlaylists(c)) {
-            if (p.id != null && p.id.equals(id)) return p;
+            if (id.equals(p.id)) return p;
         }
         return null;
     }
 
-    public static void setActive(Context c, String id) {
-        get(c).edit().putString("A", id).apply();
-    }
-
     public static void deletePlaylist(Context c, String id) {
-        List<Playlist> l = getPlaylists(c);
-        List<Playlist> n = new ArrayList<>();
-        for (Playlist p : l) {
-            if (!p.id.equals(id)) n.add(p);
+        List<Playlist> list = getPlaylists(c);
+        List<Playlist> newList = new ArrayList<>();
+        for (Playlist p : list) {
+            if (!p.id.equals(id)) newList.add(p);
         }
-        get(c).edit().putString("L", new Gson().toJson(n)).apply();
+        get(c).edit().putString("L", new Gson().toJson(newList)).apply();
     }
 
     public static void logout(Context c) {
@@ -479,7 +524,7 @@ public class PrefUtils {
 }
 EOF
 
-# 7. ADAPTERLER
+# 7) ADAPTERLER
 
 cat << 'EOF' > "$PKG_DIR/adapter/PlaylistAdapter.java"
 package com.merdolda.player.adapter;
@@ -492,6 +537,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.merdolda.player.R;
 import com.merdolda.player.model.AppModels.Playlist;
 
@@ -499,56 +545,50 @@ import java.util.List;
 
 public class PlaylistAdapter extends RecyclerView.Adapter<PlaylistAdapter.VH> {
 
-    private List<Playlist> list;
-    private OnClick listener;
-
     public interface OnClick {
         void onClick(Playlist p);
         void onDelete(Playlist p);
     }
+
+    private final List<Playlist> list;
+    private final OnClick listener;
 
     public PlaylistAdapter(List<Playlist> list, OnClick listener) {
         this.list = list;
         this.listener = listener;
     }
 
-    public void update(List<Playlist> n) {
-        this.list = n;
-        notifyDataSetChanged();
-    }
-
     @NonNull
     @Override
-    public VH onCreateViewHolder(@NonNull ViewGroup p, int t) {
-        return new VH(LayoutInflater.from(p.getContext()).inflate(R.layout.item_playlist, p, false));
+    public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View v = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_playlist, parent, false);
+        return new VH(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull VH h, int pos) {
-        Playlist i = list.get(pos);
-        h.n.setText(i.name != null ? i.name : "Playlist");
-        String info = i.type != null ? i.type : "";
-        if (i.expiry != null && !i.expiry.isEmpty()) {
-            info += " • Exp: " + i.expiry;
-        }
-        h.t.setText(info);
+    public void onBindViewHolder(@NonNull VH holder, int position) {
+        Playlist item = list.get(position);
+        holder.n.setText(item.name);
+        holder.t.setText(item.type != null ? item.type : "");
 
-        h.itemView.setOnClickListener(v -> {
-            if (listener != null) listener.onClick(i); // tek tık
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onClick(item);
         });
-
-        h.d.setOnClickListener(v -> {
-            if (listener != null) listener.onDelete(i);
+        holder.d.setOnClickListener(v -> {
+            if (listener != null) listener.onDelete(item);
         });
     }
 
     @Override
-    public int getItemCount() { return list != null ? list.size() : 0; }
+    public int getItemCount() {
+        return list != null ? list.size() : 0;
+    }
 
     static class VH extends RecyclerView.ViewHolder {
         TextView n, t;
         ImageView d;
-        VH(View v) {
+        VH(@NonNull View v) {
             super(v);
             n = v.findViewById(R.id.tvPlayName);
             t = v.findViewById(R.id.tvPlayInfo);
@@ -576,54 +616,53 @@ import java.util.List;
 
 public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.VH> {
 
-    private List<Category> list;
-    private OnClick listener;
-    private int sel = 0;
+    public interface OnClick {
+        void onClick(Category item, int position);
+    }
 
-    public interface OnClick { void onClick(Category item); }
+    private final List<Category> list;
+    private final OnClick listener;
+    private int selected = 0;
 
     public CategoryAdapter(List<Category> list, OnClick listener) {
         this.list = list;
         this.listener = listener;
     }
 
-    public void setSelectedIndex(int index) {
-        int old = sel;
-        sel = index;
-        notifyItemChanged(old);
-        notifyItemChanged(sel);
-    }
-
     @NonNull
     @Override
-    public VH onCreateViewHolder(@NonNull ViewGroup p, int t) {
-        return new VH(LayoutInflater.from(p.getContext()).inflate(R.layout.item_category, p, false));
+    public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View v = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_category, parent, false);
+        return new VH(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull VH h, int pos) {
-        Category c = list.get(pos);
-        h.t.setText(c.name);
+    public void onBindViewHolder(@NonNull VH holder, int position) {
+        Category item = list.get(position);
+        holder.t.setText(item.name);
 
-        h.itemView.setBackgroundResource(sel == pos ? R.drawable.bg_neon_btn : R.drawable.bg_glass_input);
+        holder.itemView.setBackgroundResource(
+                selected == position ? R.drawable.bg_neon_btn : R.drawable.bg_glass_input
+        );
 
-        h.itemView.setOnClickListener(v -> {
-            int adapterPos = h.getAdapterPosition();
-            if (adapterPos == RecyclerView.NO_POSITION) return;
-            int old = sel;
-            sel = adapterPos;
+        holder.itemView.setOnClickListener(v -> {
+            int old = selected;
+            selected = holder.getAdapterPosition();
             notifyItemChanged(old);
-            notifyItemChanged(sel);
-            if (listener != null) listener.onClick(list.get(adapterPos)); // tek tık
+            notifyItemChanged(selected);
+            if (listener != null) listener.onClick(item, selected);
         });
     }
 
     @Override
-    public int getItemCount() { return list != null ? list.size() : 0; }
+    public int getItemCount() {
+        return list != null ? list.size() : 0;
+    }
 
     static class VH extends RecyclerView.ViewHolder {
         TextView t;
-        VH(View v) {
+        VH(@NonNull View v) {
             super(v);
             t = v.findViewById(R.id.tvCatName);
         }
@@ -642,6 +681,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
 import com.merdolda.player.R;
 import com.merdolda.player.model.AppModels.StreamItem;
@@ -651,49 +691,57 @@ import java.util.List;
 
 public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
 
-    private List<StreamItem> list;
-    private OnItemClick listener;
+    public interface OnItemClick {
+        void onClick(StreamItem item);
+    }
 
-    public interface OnItemClick { void onClick(StreamItem item); }
+    private final OnItemClick listener;
+    private List<StreamItem> list = new ArrayList<>();
 
-    public StreamAdapter(List<StreamItem> list, OnItemClick listener) {
-        this.list = list != null ? list : new ArrayList<>();
+    public StreamAdapter(OnItemClick listener) {
         this.listener = listener;
     }
 
-    public void update(List<StreamItem> n) {
-        this.list = n != null ? n : new ArrayList<>();
+    public void update(List<StreamItem> newList) {
+        if (newList == null) {
+            this.list = new ArrayList<>();
+        } else {
+            this.list = newList;
+        }
         notifyDataSetChanged();
     }
 
     @NonNull
     @Override
-    public VH onCreateViewHolder(@NonNull ViewGroup p, int t) {
-        return new VH(LayoutInflater.from(p.getContext()).inflate(R.layout.item_channel, p, false));
+    public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View v = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_channel, parent, false);
+        return new VH(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull VH h, int pos) {
-        StreamItem i = list.get(pos);
-        h.t.setText(i.name);
-
-        Glide.with(h.itemView.getContext())
-                .load(i.icon)
+    public void onBindViewHolder(@NonNull VH holder, int position) {
+        StreamItem item = list.get(position);
+        holder.t.setText(item.name);
+        Glide.with(holder.itemView.getContext())
+                .load(item.icon)
                 .placeholder(R.drawable.ic_play)
-                .into(h.i);
+                .into(holder.i);
 
-        h.itemView.setOnClickListener(v -> {
-            if (listener != null) listener.onClick(i); // tek tık
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onClick(item);
         });
     }
 
     @Override
-    public int getItemCount() { return list != null ? list.size() : 0; }
+    public int getItemCount() {
+        return list != null ? list.size() : 0;
+    }
 
     static class VH extends RecyclerView.ViewHolder {
         TextView t;
         ImageView i;
-        VH(View v) {
+        VH(@NonNull View v) {
             super(v);
             t = v.findViewById(R.id.tvName);
             i = v.findViewById(R.id.ivIcon);
@@ -702,9 +750,8 @@ public class StreamAdapter extends RecyclerView.Adapter<StreamAdapter.VH> {
 }
 EOF
 
-# 8. LAYOUTLAR (ARAMA ALANLARI EKLENDİ)
+# 8) LAYOUTLAR
 
-# Selection (Playlist listesi + arama)
 cat << 'EOF' > "$RES_DIR/layout/activity_selection.xml"
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -716,12 +763,12 @@ cat << 'EOF' > "$RES_DIR/layout/activity_selection.xml"
         android:layout_height="match_parent"
         android:alpha="0.25"
         android:scaleType="centerCrop"
-        android:src="@android:drawable/ic_menu_gallery"/>
+        android:src="@android:drawable/ic_menu_gallery" />
 
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/black_overlay"/>
+        android:background="@color/black_overlay" />
 
     <TextView
         android:id="@+id/header"
@@ -729,54 +776,58 @@ cat << 'EOF' > "$RES_DIR/layout/activity_selection.xml"
         android:layout_height="wrap_content"
         android:text="MY PLAYLISTS"
         android:textColor="@color/text_primary"
-        android:textSize="30sp"
+        android:textSize="28sp"
         android:textStyle="bold"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="40dp"/>
+        android:layout_marginTop="40dp" />
 
     <EditText
         android:id="@+id/etSearchPlaylists"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_below="@id/header"
-        android:layout_margin="16dp"
-        android:hint="Search playlists..."
-        android:paddingLeft="16dp"
-        android:paddingRight="16dp"
-        style="@style/GlassInput"/>
+        android:layout_marginTop="12dp"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:hint="Ara..."
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"
+        android:background="@drawable/bg_glass_input" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvPlaylists"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         android:layout_below="@id/etSearchPlaylists"
         android:layout_above="@+id/btnGroup"
-        android:padding="20dp"
-        android:clipToPadding="false"/>
+        android:layout_margin="20dp"
+        android:clipToPadding="false" />
 
     <LinearLayout
         android:id="@+id/btnGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:layout_alignParentBottom="true"
-        android:padding="20dp">
+        android:padding="20dp"
+        android:orientation="vertical">
 
         <Button
             android:id="@+id/btnXtream"
             android:layout_width="match_parent"
-            android:layout_height="60dp"
+            android:layout_height="52dp"
             android:text="ADD XTREAM API"
             style="@style/NeonButton"
-            android:layout_marginBottom="12dp"/>
+            android:layout_marginBottom="10dp" />
 
         <Button
             android:id="@+id/btnM3u"
             android:layout_width="match_parent"
-            android:layout_height="60dp"
+            android:layout_height="52dp"
             android:text="ADD M3U LINK"
             style="@style/GlassInput"
-            android:textColor="#FFFFFF"/>
+            android:textColor="@color/text_primary" />
     </LinearLayout>
 
 </RelativeLayout>
@@ -787,7 +838,7 @@ cat << 'EOF' > "$RES_DIR/layout/item_playlist.xml"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     style="@style/GlassCard"
-    android:layout_marginBottom="12dp"
+    android:layout_marginBottom="10dp"
     android:orientation="horizontal"
     android:gravity="center_vertical">
 
@@ -801,56 +852,56 @@ cat << 'EOF' > "$RES_DIR/layout/item_playlist.xml"
             android:id="@+id/tvPlayName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/text_primary"
             android:textSize="18sp"
-            android:textStyle="bold"/>
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvPlayInfo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:textColor="@color/text_secondary"
-            android:textSize="13sp"/>
+            android:textSize="12sp" />
     </LinearLayout>
 
     <ImageView
         android:id="@+id/btnDel"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
         android:src="@drawable/ic_delete"
-        android:padding="4dp"/>
+        android:padding="4dp" />
+
 </LinearLayout>
 EOF
 
-# Dashboard
 cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_dark"
     android:orientation="vertical"
-    android:padding="30dp"
-    android:gravity="center">
+    android:gravity="center"
+    android:padding="30dp">
 
     <TextView
         android:id="@+id/tvUser"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary"
         android:gravity="center"
-        android:textSize="24sp"
-        android:layout_marginBottom="16dp"
-        android:textStyle="bold"/>
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp" />
 
     <TextView
-        android:id="@+id/tvExp"
+        android:id="@+id/tvExpiry"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/text_secondary"
         android:gravity="center"
-        android:textSize="14sp"
-        android:layout_marginBottom="40dp"/>
+        android:textSize="12sp"
+        android:layout_marginBottom="30dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -862,7 +913,7 @@ cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
         <LinearLayout
             android:id="@+id/btnLive"
             android:layout_width="0dp"
-            android:layout_height="160dp"
+            android:layout_height="140dp"
             android:layout_weight="1"
             android:layout_marginRight="10dp"
             style="@style/GlassCard"
@@ -873,15 +924,15 @@ cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="LIVE TV"
-                android:textColor="#FFFFFF"
-                android:textSize="22sp"
-                android:textStyle="bold"/>
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/btnMovies"
             android:layout_width="0dp"
-            android:layout_height="160dp"
+            android:layout_height="140dp"
             android:layout_weight="1"
             android:layout_marginLeft="10dp"
             style="@style/GlassCard"
@@ -892,9 +943,9 @@ cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="VOD"
-                android:textColor="#FFFFFF"
-                android:textSize="22sp"
-                android:textStyle="bold"/>
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </LinearLayout>
 
@@ -905,11 +956,11 @@ cat << 'EOF' > "$RES_DIR/layout/activity_dashboard.xml"
         android:text="SWITCH PLAYLIST"
         style="@style/NeonButton"
         android:paddingLeft="40dp"
-        android:paddingRight="40dp"/>
+        android:paddingRight="40dp" />
+
 </LinearLayout>
 EOF
 
-# XTREAM LOGIN
 cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -923,10 +974,10 @@ cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="XTREAM LOGIN"
-        android:textColor="#FFFFFF"
-        android:textSize="28sp"
+        android:textColor="@color/text_primary"
+        android:textSize="26sp"
         android:textStyle="bold"
-        android:layout_marginBottom="40dp"/>
+        android:layout_marginBottom="30dp" />
 
     <EditText
         android:id="@+id/etName"
@@ -934,7 +985,7 @@ cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
         android:layout_height="wrap_content"
         android:hint="Playlist Name"
         style="@style/GlassInput"
-        android:layout_marginBottom="15dp"/>
+        android:layout_marginBottom="12dp" />
 
     <EditText
         android:id="@+id/etUser"
@@ -942,7 +993,7 @@ cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
         android:layout_height="wrap_content"
         android:hint="Username"
         style="@style/GlassInput"
-        android:layout_marginBottom="15dp"/>
+        android:layout_marginBottom="12dp" />
 
     <EditText
         android:id="@+id/etPass"
@@ -951,7 +1002,7 @@ cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
         android:hint="Password"
         android:inputType="textPassword"
         style="@style/GlassInput"
-        android:layout_marginBottom="15dp"/>
+        android:layout_marginBottom="12dp" />
 
     <EditText
         android:id="@+id/etDns"
@@ -959,18 +1010,18 @@ cat << 'EOF' > "$RES_DIR/layout/activity_login_xtream.xml"
         android:layout_height="wrap_content"
         android:hint="http://url:port"
         style="@style/GlassInput"
-        android:layout_marginBottom="40dp"/>
+        android:layout_marginBottom="25dp" />
 
     <Button
         android:id="@+id/btnLogin"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="52dp"
         android:text="CONNECT"
-        style="@style/NeonButton"/>
+        style="@style/NeonButton" />
+
 </LinearLayout>
 EOF
 
-# M3U LOGIN
 cat << 'EOF' > "$RES_DIR/layout/activity_login_m3u.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -984,10 +1035,10 @@ cat << 'EOF' > "$RES_DIR/layout/activity_login_m3u.xml"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="M3U LINK"
-        android:textColor="#FFFFFF"
-        android:textSize="28sp"
+        android:textColor="@color/text_primary"
+        android:textSize="26sp"
         android:textStyle="bold"
-        android:layout_marginBottom="40dp"/>
+        android:layout_marginBottom="30dp" />
 
     <EditText
         android:id="@+id/etName"
@@ -995,7 +1046,7 @@ cat << 'EOF' > "$RES_DIR/layout/activity_login_m3u.xml"
         android:layout_height="wrap_content"
         android:hint="Playlist Name"
         style="@style/GlassInput"
-        android:layout_marginBottom="15dp"/>
+        android:layout_marginBottom="12dp" />
 
     <EditText
         android:id="@+id/etUrl"
@@ -1003,18 +1054,18 @@ cat << 'EOF' > "$RES_DIR/layout/activity_login_m3u.xml"
         android:layout_height="wrap_content"
         android:hint="http://example.com/playlist.m3u"
         style="@style/GlassInput"
-        android:layout_marginBottom="40dp"/>
+        android:layout_marginBottom="25dp" />
 
     <Button
         android:id="@+id/btnSave"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="52dp"
         android:text="DOWNLOAD &amp; SAVE"
-        style="@style/NeonButton"/>
+        style="@style/NeonButton" />
+
 </LinearLayout>
 EOF
 
-# Liste ekranı (kategori + arama + stream)
 cat << 'EOF' > "$RES_DIR/layout/activity_list.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -1023,27 +1074,30 @@ cat << 'EOF' > "$RES_DIR/layout/activity_list.xml"
     android:background="@color/bg_dark">
 
     <EditText
-        android:id="@+id/etSearchStreams"
+        android:id="@+id/etSearch"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:layout_margin="8dp"
-        android:hint="Search channels..."
-        android:paddingLeft="16dp"
-        android:paddingRight="16dp"
-        style="@style/GlassInput"/>
+        android:hint="Ara..."
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_secondary"
+        android:background="@drawable/bg_glass_input"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvCats"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:padding="8dp"
-        android:clipToPadding="false"/>
+        android:layout_height="52dp"
+        android:padding="6dp"
+        android:clipToPadding="false" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvStreams"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp"/>
+        android:padding="8dp" />
+
 </LinearLayout>
 EOF
 
@@ -1051,7 +1105,7 @@ cat << 'EOF' > "$RES_DIR/layout/item_channel.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="12dp"
+    android:padding="10dp"
     style="@style/GlassCard"
     android:layout_marginBottom="8dp"
     android:orientation="horizontal"
@@ -1061,16 +1115,17 @@ cat << 'EOF' > "$RES_DIR/layout/item_channel.xml"
         android:id="@+id/ivIcon"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:src="@drawable/ic_play"/>
+        android:src="@drawable/ic_play" />
 
     <TextView
         android:id="@+id/tvName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/text_primary"
         android:textSize="16sp"
-        android:layout_marginLeft="15dp"
-        android:textStyle="bold"/>
+        android:layout_marginLeft="12dp"
+        android:textStyle="bold" />
+
 </LinearLayout>
 EOF
 
@@ -1078,21 +1133,20 @@ cat << 'EOF' > "$RES_DIR/layout/item_category.xml"
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:padding="10dp"
-    android:layout_marginRight="8dp"
+    android:padding="8dp"
+    android:layout_marginRight="6dp"
     android:gravity="center">
 
     <TextView
         android:id="@+id/tvCatName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#FFFFFF"
-        android:textSize="14sp"
-        android:textStyle="bold"/>
+        android:textColor="@color/text_primary"
+        android:textSize="13sp"
+        android:textStyle="bold" />
 </LinearLayout>
 EOF
 
-# Player
 cat << 'EOF' > "$RES_DIR/layout/activity_player.xml"
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -1107,19 +1161,19 @@ cat << 'EOF' > "$RES_DIR/layout/activity_player.xml"
 
     <ImageButton
         android:id="@+id/btnZoom"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:src="@drawable/ic_zoom"
         android:background="@drawable/bg_glass"
         android:layout_gravity="top|right"
-        android:layout_margin="30dp"
-        android:padding="10dp"/>
+        android:layout_margin="20dp"
+        android:padding="10dp" />
+
 </FrameLayout>
 EOF
 
-# 9. JAVA UI SINIFLARI
+# 9) JAVA UI SINIFLARI
 
-# SelectionActivity
 cat << 'EOF' > "$PKG_DIR/ui/SelectionActivity.java"
 package com.merdolda.player.ui;
 
@@ -1144,83 +1198,84 @@ import java.util.List;
 public class SelectionActivity extends AppCompatActivity {
 
     private PlaylistAdapter adapter;
-    private List<Playlist> allList = new ArrayList<>();
-    private RecyclerView rv;
+    private List<Playlist> fullList = new ArrayList<>();
+    private List<Playlist> filteredList = new ArrayList<>();
 
     @Override
-    protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_selection);
 
-        rv = findViewById(R.id.rvPlaylists);
+        RecyclerView rv = findViewById(R.id.rvPlaylists);
         rv.setLayoutManager(new LinearLayoutManager(this));
+
+        EditText etSearch = findViewById(R.id.etSearchPlaylists);
+
+        loadData();
+
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterPlaylists(s.toString());
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
 
         findViewById(R.id.btnXtream).setOnClickListener(v ->
                 startActivity(new Intent(this, LoginXtreamActivity.class)));
 
         findViewById(R.id.btnM3u).setOnClickListener(v ->
                 startActivity(new Intent(this, LoginM3uActivity.class)));
-
-        EditText etSearch = findViewById(R.id.etSearchPlaylists);
-        etSearch.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence c, int i, int i1, int i2) {}
-            @Override public void onTextChanged(CharSequence c, int i, int i1, int i2) {}
-            @Override public void afterTextChanged(Editable e) {
-                filterPlaylists(e.toString());
-            }
-        });
-
-        load();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        load();
+        loadData();
     }
 
-    private void load() {
-        allList = PrefUtils.getPlaylists(this);
-        if (adapter == null) {
-            adapter = new PlaylistAdapter(allList, new PlaylistAdapter.OnClick() {
-                @Override
-                public void onClick(Playlist p) {
-                    PrefUtils.setActive(SelectionActivity.this, p.id);
-                    startActivity(new Intent(SelectionActivity.this, DashboardActivity.class));
-                }
+    private void loadData() {
+        fullList = PrefUtils.getPlaylists(this);
+        filteredList = new ArrayList<>(fullList);
 
-                @Override
-                public void onDelete(Playlist p) {
-                    PrefUtils.deletePlaylist(SelectionActivity.this, p.id);
-                    allList = PrefUtils.getPlaylists(SelectionActivity.this);
-                    adapter.update(allList);
-                }
-            });
-            rv.setAdapter(adapter);
+        adapter = new PlaylistAdapter(filteredList, new PlaylistAdapter.OnClick() {
+            @Override
+            public void onClick(Playlist p) {
+                // Sadece aktif playlist olarak kaydet, sonra Dashboard'a git
+                PrefUtils.savePlaylist(SelectionActivity.this, p);
+                startActivity(new Intent(SelectionActivity.this, DashboardActivity.class));
+            }
+
+            @Override
+            public void onDelete(Playlist p) {
+                PrefUtils.deletePlaylist(SelectionActivity.this, p.id);
+                fullList.remove(p);
+                filteredList.remove(p);
+                adapter.notifyDataSetChanged();
+            }
+        });
+
+        RecyclerView rv = findViewById(R.id.rvPlaylists);
+        rv.setAdapter(adapter);
+    }
+
+    private void filterPlaylists(String query) {
+        filteredList.clear();
+        if (query == null || query.trim().isEmpty()) {
+            filteredList.addAll(fullList);
         } else {
-            adapter.update(allList);
-        }
-    }
-
-    private void filterPlaylists(String q) {
-        if (adapter == null) return;
-        if (q == null) q = "";
-        q = q.toLowerCase().trim();
-
-        List<Playlist> filtered = new ArrayList<>();
-        for (Playlist p : allList) {
-            String name = p.name != null ? p.name.toLowerCase() : "";
-            String type = p.type != null ? p.type.toLowerCase() : "";
-            if (name.contains(q) || type.contains(q)) {
-                filtered.add(p);
+            String lower = query.toLowerCase();
+            for (Playlist p : fullList) {
+                if (p.name != null && p.name.toLowerCase().contains(lower)) {
+                    filteredList.add(p);
+                }
             }
         }
-        adapter.update(filtered);
+        if (adapter != null) adapter.notifyDataSetChanged();
     }
 }
 EOF
 
-# DashboardActivity
 cat << 'EOF' > "$PKG_DIR/ui/DashboardActivity.java"
 package com.merdolda.player.ui;
 
@@ -1237,21 +1292,37 @@ import com.merdolda.player.utils.PrefUtils;
 public class DashboardActivity extends AppCompatActivity {
 
     @Override
-    protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_dashboard);
 
         TextView tvUser = findViewById(R.id.tvUser);
-        TextView tvExp  = findViewById(R.id.tvExp);
+        TextView tvExpiry = findViewById(R.id.tvExpiry);
 
         Playlist p = PrefUtils.getActive(this);
         if (p != null) {
             tvUser.setText(p.name != null ? p.name : "Active Playlist");
-            if (p.expiry != null && !p.expiry.isEmpty()) {
-                tvExp.setText("Expires at: " + p.expiry);
+            if (p.expDate != null && !p.expDate.isEmpty() && !"null".equals(p.expDate)) {
+                try {
+                    long expSeconds = Long.parseLong(p.expDate);
+                    long expMillis = expSeconds * 1000L;
+                    long now = System.currentTimeMillis();
+                    long diff = expMillis - now;
+                    long days = diff / (1000L * 60L * 60L * 24L);
+                    if (days >= 0) {
+                        tvExpiry.setText("Abonelik bitişi: " + days + " gün sonra");
+                    } else {
+                        tvExpiry.setText("Abonelik süresi dolmuş.");
+                    }
+                } catch (Exception e) {
+                    tvExpiry.setText("Süre bilgisi okunamadı.");
+                }
             } else {
-                tvExp.setText("");
+                tvExpiry.setText("Süre bilgisi yok.");
             }
+        } else {
+            tvUser.setText("Playlist seçilmedi");
+            tvExpiry.setText("");
         }
 
         findViewById(R.id.btnLive).setOnClickListener(v -> {
@@ -1275,7 +1346,6 @@ public class DashboardActivity extends AppCompatActivity {
 }
 EOF
 
-# LoginXtreamActivity
 cat << 'EOF' > "$PKG_DIR/ui/LoginXtreamActivity.java"
 package com.merdolda.player.ui;
 
@@ -1292,6 +1362,8 @@ import com.merdolda.player.model.AppModels.LoginResponse;
 import com.merdolda.player.model.AppModels.Playlist;
 import com.merdolda.player.utils.PrefUtils;
 
+import java.util.UUID;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -1301,46 +1373,47 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class LoginXtreamActivity extends AppCompatActivity {
 
     @Override
-    protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login_xtream);
 
         EditText name = findViewById(R.id.etName);
-        EditText u    = findViewById(R.id.etUser);
-        EditText p    = findViewById(R.id.etPass);
-        EditText d    = findViewById(R.id.etDns);
+        EditText u = findViewById(R.id.etUser);
+        EditText p = findViewById(R.id.etPass);
+        EditText d = findViewById(R.id.etDns);
 
         findViewById(R.id.btnLogin).setOnClickListener(v -> {
             String url = d.getText().toString().trim();
-            if (!url.startsWith("http")) url = "http://" + url;
+            if (!url.startsWith("http")) {
+                url = "http://" + url;
+            }
 
+            String base = url.endsWith("/") ? url : url + "/";
             Retrofit r = new Retrofit.Builder()
-                    .baseUrl(url + "/")
+                    .baseUrl(base)
                     .addConverterFactory(GsonConverterFactory.create())
                     .build();
 
-            String finalUrl = url;
+            XtreamApi api = r.create(XtreamApi.class);
 
-            r.create(XtreamApi.class)
-                    .login(finalUrl + "/player_api.php",
-                            u.getText().toString().trim(),
-                            p.getText().toString().trim())
+            api.login(base + "player_api.php",
+                    u.getText().toString().trim(),
+                    p.getText().toString().trim())
                     .enqueue(new Callback<LoginResponse>() {
                         @Override
-                        public void onResponse(Call<LoginResponse> c, Response<LoginResponse> res) {
-                            if (res.body() != null && res.body().userInfo != null) {
-                                LoginResponse body = res.body();
+                        public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
+                            if (response.body() != null && response.body().userInfo != null) {
+                                LoginResponse body = response.body();
                                 Playlist pl = new Playlist();
-                                pl.id   = null; // yeni
+                                pl.id = UUID.randomUUID().toString();
                                 pl.type = "Xtream";
-                                pl.url  = finalUrl;
+                                pl.url = url;
                                 pl.user = u.getText().toString().trim();
                                 pl.pass = p.getText().toString().trim();
                                 pl.name = name.getText().toString().trim();
-                                if (body.userInfo.expDate != null) {
-                                    pl.expiry = body.userInfo.expDate;
+                                if (body.userInfo != null) {
+                                    pl.expDate = body.userInfo.expDate;
                                 }
-
                                 PrefUtils.savePlaylist(LoginXtreamActivity.this, pl);
                                 startActivity(new Intent(LoginXtreamActivity.this, DashboardActivity.class));
                                 finish();
@@ -1350,7 +1423,7 @@ public class LoginXtreamActivity extends AppCompatActivity {
                         }
 
                         @Override
-                        public void onFailure(Call<LoginResponse> c, Throwable t) {
+                        public void onFailure(Call<LoginResponse> call, Throwable t) {
                             Toast.makeText(LoginXtreamActivity.this, "Connection Error", Toast.LENGTH_SHORT).show();
                         }
                     });
@@ -1359,7 +1432,6 @@ public class LoginXtreamActivity extends AppCompatActivity {
 }
 EOF
 
-# LoginM3uActivity
 cat << 'EOF' > "$PKG_DIR/ui/LoginM3uActivity.java"
 package com.merdolda.player.ui;
 
@@ -1374,7 +1446,7 @@ import com.merdolda.player.R;
 import com.merdolda.player.model.AppModels.Playlist;
 import com.merdolda.player.utils.PrefUtils;
 
-import java.io.IOException;
+import java.util.UUID;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -1383,8 +1455,8 @@ import okhttp3.Response;
 public class LoginM3uActivity extends AppCompatActivity {
 
     @Override
-    protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login_m3u);
 
         EditText n = findViewById(R.id.etName);
@@ -1393,38 +1465,36 @@ public class LoginM3uActivity extends AppCompatActivity {
         findViewById(R.id.btnSave).setOnClickListener(v -> {
             String url = u.getText().toString().trim();
             if (url.isEmpty()) {
-                Toast.makeText(this, "URL is empty", Toast.LENGTH_SHORT).show();
+                Toast.makeText(LoginM3uActivity.this, "URL boş olamaz", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             OkHttpClient client = new OkHttpClient();
-            Request request = new Request.Builder().url(url).build();
 
             new Thread(() -> {
                 try {
+                    Request request = new Request.Builder().url(url).build();
                     Response response = client.newCall(request).execute();
                     if (response.isSuccessful() && response.body() != null) {
                         String content = response.body().string();
-
                         runOnUiThread(() -> {
                             Playlist pl = new Playlist();
-                            pl.id   = null;
+                            pl.id = UUID.randomUUID().toString();
                             pl.type = "M3U";
                             pl.name = n.getText().toString().trim();
-                            pl.url  = url;
+                            pl.url = url;
                             pl.m3uContent = content;
-
-                            PrefUtils.savePlaylist(this, pl);
-                            startActivity(new Intent(this, DashboardActivity.class));
+                            PrefUtils.savePlaylist(LoginM3uActivity.this, pl);
+                            startActivity(new Intent(LoginM3uActivity.this, DashboardActivity.class));
                             finish();
                         });
                     } else {
                         runOnUiThread(() ->
-                                Toast.makeText(this, "Failed to download M3U", Toast.LENGTH_SHORT).show());
+                                Toast.makeText(LoginM3uActivity.this, "M3U indirilemedi", Toast.LENGTH_SHORT).show());
                     }
-                } catch (IOException e) {
+                } catch (Exception e) {
                     runOnUiThread(() ->
-                            Toast.makeText(this, "Failed to download M3U", Toast.LENGTH_SHORT).show());
+                            Toast.makeText(LoginM3uActivity.this, "Hata: " + e.getMessage(), Toast.LENGTH_SHORT).show());
                 }
             }).start();
         });
@@ -1432,7 +1502,6 @@ public class LoginM3uActivity extends AppCompatActivity {
 }
 EOF
 
-# CommonListActivity (ilk kategori otomatik, arama, M3U header)
 cat << 'EOF' > "$PKG_DIR/ui/CommonListActivity.java"
 package com.merdolda.player.ui;
 
@@ -1471,177 +1540,190 @@ public class CommonListActivity extends AppCompatActivity {
 
     private XtreamApi api;
     private RecyclerView rvC, rvS;
-    private StreamAdapter adp;
+    private StreamAdapter streamAdapter;
     private String type;
     private Playlist p;
 
     private Map<String, List<StreamItem>> m3uMap = new LinkedHashMap<>();
-    private List<Category> catList = new ArrayList<>();
     private List<StreamItem> currentList = new ArrayList<>();
+    private List<StreamItem> filteredList = new ArrayList<>();
 
     @Override
-    protected void onCreate(Bundle s) {
-        super.onCreate(s);
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
 
         type = getIntent().getStringExtra("type");
-        p    = PrefUtils.getActive(this);
+        p = PrefUtils.getActive(this);
 
         rvC = findViewById(R.id.rvCats);
         rvS = findViewById(R.id.rvStreams);
+        EditText etSearch = findViewById(R.id.etSearch);
 
-        rvC.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        rvC.setLayoutManager(new LinearLayoutManager(this, RecyclerView.HORIZONTAL, false));
         rvS.setLayoutManager(new LinearLayoutManager(this));
 
-        adp = new StreamAdapter(new ArrayList<>(), item -> {
-            if (p == null) return;
-            Intent in = new Intent(this, PlayerActivity.class);
-
+        streamAdapter = new StreamAdapter(item -> {
             String url;
-            String ref = null;
-            String org = null;
+            String ref = item.headerReferrer;
+            String org = item.headerOrigin;
 
             if ("Xtream".equals(p.type)) {
-                String path = type.equals("live") ? "live" : "movie";
-                String ext = (item.ext != null && !item.ext.isEmpty()) ? item.ext : "ts";
+                String path = "live";
+                if ("vod".equals(type)) path = "movie";
+                String ext = item.ext != null && !item.ext.isEmpty() ? item.ext : "ts";
                 url = p.url + "/" + path + "/" + p.user + "/" + p.pass + "/" + item.streamId + "." + ext;
+                ref = null;
+                org = null;
             } else {
                 url = item.directUrl;
-                ref = item.referrer;
-                org = item.origin;
             }
 
+            Intent in = new Intent(this, PlayerActivity.class);
             in.putExtra("url", url);
             if (ref != null) in.putExtra("ref", ref);
             if (org != null) in.putExtra("org", org);
             startActivity(in);
         });
-        rvS.setAdapter(adp);
 
-        EditText etSearch = findViewById(R.id.etSearchStreams);
+        rvS.setAdapter(streamAdapter);
+
         etSearch.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence c, int i, int i1, int i2) {}
-            @Override public void onTextChanged(CharSequence c, int i, int i1, int i2) {}
-            @Override public void afterTextChanged(Editable e) {
-                filterStreams(e.toString());
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filterStreams(s.toString());
             }
+            @Override public void afterTextChanged(Editable s) {}
         });
 
-        if (p != null) {
-            if ("Xtream".equals(p.type)) {
-                loadXtream();
-            } else {
-                loadM3u();
-            }
+        if (p != null && "Xtream".equals(p.type)) {
+            loadXtream();
+        } else if (p != null && "M3U".equals(p.type)) {
+            loadM3u();
         }
     }
 
-    private void filterStreams(String q) {
-        if (q == null) q = "";
-        q = q.toLowerCase().trim();
-
-        List<StreamItem> filtered = new ArrayList<>();
-        for (StreamItem s : currentList) {
-            String name = s.name != null ? s.name.toLowerCase() : "";
-            if (name.contains(q)) filtered.add(s);
+    private void filterStreams(String query) {
+        filteredList.clear();
+        if (query == null || query.trim().isEmpty()) {
+            filteredList.addAll(currentList);
+        } else {
+            String lower = query.toLowerCase();
+            for (StreamItem item : currentList) {
+                if (item.name != null && item.name.toLowerCase().contains(lower)) {
+                    filteredList.add(item);
+                }
+            }
         }
-        adp.update(filtered);
+        streamAdapter.update(filteredList);
     }
 
     private void loadM3u() {
-        if (p.m3uContent == null || p.m3uContent.isEmpty()) return;
         m3uMap = M3UParser.parse(p.m3uContent);
-        catList.clear();
+        List<Category> cats = new ArrayList<>();
         for (String key : m3uMap.keySet()) {
-            catList.add(new Category(key, key));
+            cats.add(new Category(key, key));
         }
 
-        if (catList.isEmpty()) return;
+        if (cats.isEmpty()) {
+            rvC.setAdapter(null);
+            currentList.clear();
+            filteredList.clear();
+            streamAdapter.update(new ArrayList<>());
+            return;
+        }
 
-        CategoryAdapter catAdp = new CategoryAdapter(catList, cat -> {
-            List<StreamItem> list = m3uMap.get(cat.id);
-            if (list == null) list = new ArrayList<>();
-            currentList = list;
-            adp.update(currentList);
+        CategoryAdapter catAdapter = new CategoryAdapter(cats, (cat, pos) -> {
+            currentList = m3uMap.get(cat.id);
+            if (currentList == null) currentList = new ArrayList<>();
+            filterStreams(((EditText)findViewById(R.id.etSearch)).getText().toString());
         });
-        rvC.setAdapter(catAdp);
+        rvC.setAdapter(catAdapter);
 
-        // İlk kategoriyi otomatik seç ve yükle
-        Category first = catList.get(0);
-        currentList = m3uMap.get(first.id);
+        // İlk kategori otomatik seçilsin
+        currentList = m3uMap.get(cats.get(0).id);
         if (currentList == null) currentList = new ArrayList<>();
-        adp.update(currentList);
-        catAdp.setSelectedIndex(0);
+        filteredList = new ArrayList<>(currentList);
+        streamAdapter.update(filteredList);
     }
 
     private void loadXtream() {
-        api = new Retrofit.Builder()
-                .baseUrl(p.url + "/")
+        String base = p.url;
+        if (!base.startsWith("http")) base = "http://" + base;
+        if (!base.endsWith("/")) base += "/";
+        Retrofit r = new Retrofit.Builder()
+                .baseUrl(base)
                 .addConverterFactory(GsonConverterFactory.create())
-                .build()
-                .create(XtreamApi.class);
+                .build();
+        api = r.create(XtreamApi.class);
 
-        String a = type.equals("live") ? "get_live_categories" : "get_vod_categories";
+        String action = "get_live_categories";
+        if ("vod".equals(type)) action = "get_vod_categories";
 
-        api.getCategories(p.url + "/player_api.php", p.user, p.pass, a)
+        api.getCategories(base + "player_api.php", p.user, p.pass, action)
                 .enqueue(new Callback<List<Category>>() {
                     @Override
-                    public void onResponse(Call<List<Category>> c, Response<List<Category>> r) {
-                        List<Category> body = r.body();
-                        if (body == null || body.isEmpty()) return;
+                    public void onResponse(Call<List<Category>> call, Response<List<Category>> response) {
+                        List<Category> cats = response.body();
+                        if (cats == null) cats = new ArrayList<>();
+                        CategoryAdapter catAdapter = new CategoryAdapter(cats, (cat, pos) -> loadItems(cat.id));
+                        rvC.setAdapter(catAdapter);
 
-                        catList = body;
-                        CategoryAdapter catAdp = new CategoryAdapter(catList, cat -> loadItems(cat.id));
-                        rvC.setAdapter(catAdp);
-
-                        // İlk kategoriyi otomatik yükle
-                        Category first = catList.get(0);
-                        catAdp.setSelectedIndex(0);
-                        loadItems(first.id);
+                        if (!cats.isEmpty()) {
+                            loadItems(cats.get(0).id);
+                        }
                     }
 
                     @Override
-                    public void onFailure(Call<List<Category>> c, Throwable t) { }
+                    public void onFailure(Call<List<Category>> call, Throwable t) {
+                    }
                 });
     }
 
     private void loadItems(String id) {
-        String a = type.equals("live") ? "get_live_streams" : "get_vod_streams";
-        api.getStreams(p.url + "/player_api.php", p.user, p.pass, a, id)
+        if (api == null) return;
+        String base = p.url;
+        if (!base.startsWith("http")) base = "http://" + base;
+        if (!base.endsWith("/")) base += "/";
+
+        String action = "get_live_streams";
+        if ("vod".equals(type)) action = "get_vod_streams";
+
+        api.getStreams(base + "player_api.php", p.user, p.pass, action, id)
                 .enqueue(new Callback<List<StreamItem>>() {
                     @Override
-                    public void onResponse(Call<List<StreamItem>> c, Response<List<StreamItem>> r) {
-                        List<StreamItem> body = r.body();
-                        if (body == null) body = new ArrayList<>();
-                        currentList = body;
-                        adp.update(currentList);
+                    public void onResponse(Call<List<StreamItem>> call, Response<List<StreamItem>> response) {
+                        List<StreamItem> list = response.body();
+                        if (list == null) list = new ArrayList<>();
+                        currentList = list;
+                        filterStreams(((EditText)findViewById(R.id.etSearch)).getText().toString());
                     }
 
                     @Override
-                    public void onFailure(Call<List<StreamItem>> c, Throwable t) { }
+                    public void onFailure(Call<List<StreamItem>> call, Throwable t) {
+                    }
                 });
     }
 }
 EOF
 
-# PlayerActivity (headers + 3sn controller hide)
 cat << 'EOF' > "$PKG_DIR/ui/PlayerActivity.java"
 package com.merdolda.player.ui;
 
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
-import com.google.android.exoplayer2.source.MediaSource;
-import com.google.android.exoplayer2.source.ProgressiveMediaSource;
-import com.google.android.exoplayer2.source.hls.HlsMediaSource;
+import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
@@ -1652,73 +1734,82 @@ import java.util.Map;
 
 public class PlayerActivity extends AppCompatActivity {
 
-    private ExoPlayer p;
-    private StyledPlayerView pv;
-    private int resizeMode = 0; // 0:Fit, 1:Fill, 2:Zoom
+    private ExoPlayer player;
+    private StyledPlayerView playerView;
+    private ImageButton btnZoom;
+    private int resizeMode = 0;
+    private final Handler handler = new Handler();
+
+    private final Runnable hideZoomRunnable = () -> {
+        if (btnZoom != null) btnZoom.setVisibility(View.GONE);
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Tam ekran, bildirim barı vs göstermeden
+        // Tam ekran, ekran açık kalsın
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            getWindow().setFlags(
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-            );
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
             getWindow().getAttributes().layoutInDisplayCutoutMode =
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.activity_player);
-        pv = findViewById(R.id.player_view);
 
-        // Kontroller 3 saniye sonra otomatik kaybolsun
-        pv.setControllerShowTimeoutMs(3000);
-        pv.setControllerAutoShow(true);
+        playerView = findViewById(R.id.player_view);
+        btnZoom = findViewById(R.id.btnZoom);
 
-        findViewById(R.id.btnZoom).setOnClickListener(v -> toggleZoom());
+        // 3 sn sonra Zoom butonu gizlensin
+        handler.postDelayed(hideZoomRunnable, 3000);
 
-        p = new ExoPlayer.Builder(this).build();
-        pv.setPlayer(p);
+        playerView.setOnClickListener(v -> {
+            if (btnZoom.getVisibility() == View.VISIBLE) {
+                btnZoom.setVisibility(View.GONE);
+            } else {
+                btnZoom.setVisibility(View.VISIBLE);
+                handler.removeCallbacks(hideZoomRunnable);
+                handler.postDelayed(hideZoomRunnable, 3000);
+            }
+        });
+
+        btnZoom.setOnClickListener(v -> toggleZoom());
 
         String url = getIntent().getStringExtra("url");
         String ref = getIntent().getStringExtra("ref");
         String org = getIntent().getStringExtra("org");
 
-        if (url != null && !url.isEmpty()) {
-            playWithHeaders(url, ref, org);
-        } else {
-            Toast.makeText(this, "URL not found", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void playWithHeaders(String url, String ref, String org) {
-        DefaultHttpDataSource.Factory factory = new DefaultHttpDataSource.Factory()
+        DefaultHttpDataSource.Factory dataSourceFactory = new DefaultHttpDataSource.Factory()
                 .setAllowCrossProtocolRedirects(true);
 
         Map<String, String> headers = new HashMap<>();
-        if (ref != null && !ref.isEmpty()) headers.put("Referer", ref);
-        if (org != null && !org.isEmpty()) headers.put("Origin", org);
-        if (!headers.isEmpty()) {
-            factory.setDefaultRequestProperties(headers);
+        headers.put("User-Agent", "Mozilla/5.0 (Android) ErdinPlayer/14");
+        if (ref != null && !ref.isEmpty()) {
+            headers.put("Referer", ref);
         }
+        if (org != null && !org.isEmpty()) {
+            headers.put("Origin", org);
+        }
+        dataSourceFactory.setDefaultRequestProperties(headers);
 
-        Uri uri = Uri.parse(url);
-        MediaItem item = MediaItem.fromUri(uri);
+        player = new ExoPlayer.Builder(this)
+                .setMediaSourceFactory(new DefaultMediaSourceFactory(dataSourceFactory))
+                .build();
 
-        MediaSource mediaSource;
-        // Uzantısız / yönlendirmeli linkler için HLS tespiti
-        if (url.contains(".m3u8") || url.contains("m3u8?")) {
-            mediaSource = new HlsMediaSource.Factory(factory).createMediaSource(item);
+        playerView.setPlayer(player);
+
+        if (url != null && !url.isEmpty()) {
+            MediaItem mediaItem = new MediaItem.Builder()
+                    .setUri(Uri.parse(url))
+                    .build();
+            player.setMediaItem(mediaItem);
+            player.prepare();
+            player.play();
         } else {
-            mediaSource = new ProgressiveMediaSource.Factory(factory).createMediaSource(item);
+            Toast.makeText(this, "URL bulunamadı", Toast.LENGTH_SHORT).show();
         }
-
-        p.setMediaSource(mediaSource);
-        p.prepare();
-        p.play();
     }
 
     private void toggleZoom() {
@@ -1726,36 +1817,37 @@ public class PlayerActivity extends AppCompatActivity {
         if (resizeMode > 2) resizeMode = 0;
 
         if (resizeMode == 0) {
-            pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
+            playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT);
             Toast.makeText(this, "MODE: FIT", Toast.LENGTH_SHORT).show();
         } else if (resizeMode == 1) {
-            pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
-            Toast.makeText(this, "MODE: STRETCH FILL", Toast.LENGTH_SHORT).show();
+            playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
+            Toast.makeText(this, "MODE: FILL", Toast.LENGTH_SHORT).show();
         } else {
-            pv.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
-            Toast.makeText(this, "MODE: ZOOM CROP", Toast.LENGTH_SHORT).show();
+            playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
+            Toast.makeText(this, "MODE: ZOOM", Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (p != null) {
-            p.release();
-            p = null;
+        handler.removeCallbacks(hideZoomRunnable);
+        if (player != null) {
+            player.release();
+            player = null;
         }
     }
 }
 EOF
 
-# 10. MANIFEST
+# 10) MANIFEST
+
 cat << 'EOF' > "$MODULE_DIR/src/main/AndroidManifest.xml"
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:name="androidx.multidex.MultiDexApplication"
         android:label="ErdinPlayer"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
@@ -1787,16 +1879,19 @@ cat << 'EOF' > "$MODULE_DIR/src/main/AndroidManifest.xml"
             android:name=".ui.PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:screenOrientation="sensor" />
+
     </application>
+
 </manifest>
 EOF
 
-# 11. WRAPPER GENERATION
-echo "⚙ Gradle Wrapper oluşturuluyor..."
+# 11) WRAPPER (İsteğe bağlı; GitHub Actions gradle komutu kullanıyor)
+
+echo "⚙️ Gradle wrapper hazırlanıyor..."
 cd "$PROJECT_ROOT"
-gradle wrapper --gradle-version 8.4
-chmod +x gradlew
+gradle wrapper --gradle-version 8.4 || true
+chmod +x gradlew || true
 cd ..
 
-echo "✅ ERDINPLAYER v14: PROJE HAZIR."
-echo "👉 Şimdi GitHub Actions içinde: gradle assembleRelease --no-daemon"
+echo "✅ ERDINPLAYER v14 HAZIR."
+echo "👉 GitHub Actions zaten: gradle assembleRelease --no-daemon çalıştırıyor."
