@@ -224,9 +224,9 @@ EOF
 # ----------------------------------------------------
 # 6) PROGUARD DOSYASI
 # ----------------------------------------------------
-cat > "$MODULE_DIR/proguard-rules.pro" <<'EOF'
+cat > "$MODULE_DIR/proguard-rules.pro" <<EOF
 # ErdinPlayer için basit ProGuard ayarları
--keep class com.merdolda.player.** { *; }
+-keep class $PACKAGE_NAME.** { *; }
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
@@ -367,7 +367,6 @@ cat > "$RES_DIR/drawable/ic_launcher_background.xml" <<'EOF'
 EOF
 
 # Layouts
-
 cat > "$RES_DIR/layout/activity_selection.xml" <<'EOF'
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -867,8 +866,8 @@ public class M3UParser {
         String currentGroup = "Uncategorized";
         StreamItem currentItem = null;
 
-        Pattern pGroup = Pattern.compile("group-title=\"([^\"]*)\"");
-        Pattern pLogo  = Pattern.compile("tvg-logo=\"([^\"]*)\"");
+        Pattern pGroup = Pattern.compile("group-title=\\"([^\\"]*)\\"");
+        Pattern pLogo  = Pattern.compile("tvg-logo=\\"([^\\"]*)\\"");
 
         for (String lineRaw : lines) {
             String line = lineRaw.trim();
@@ -948,7 +947,6 @@ public class PrefUtils {
 
     public static void savePlaylist(Context c, Playlist p) {
         List<Playlist> list = getPlaylists(c);
-        // ID zaten varsa eskiyi sil
         List<Playlist> newList = new ArrayList<>();
         for (Playlist pl : list) {
             if (!pl.id.equals(p.id)) newList.add(pl);
@@ -1699,7 +1697,7 @@ public class PlayerActivity extends AppCompatActivity {
         setContentView(R.layout.activity_player);
 
         playerView = findViewById(R.id.player_view);
-        playerView.setControllerShowTimeoutMs(3000); // 3 sn sonra kontroller kaybolsun
+        playerView.setControllerShowTimeoutMs(3000);
 
         ImageButton btnZoom = findViewById(R.id.btnZoom);
         btnZoom.setOnClickListener(v -> toggleZoom());
@@ -1708,7 +1706,6 @@ public class PlayerActivity extends AppCompatActivity {
         String ref = getIntent().getStringExtra("ref");
         String origin = getIntent().getStringExtra("origin");
 
-        // HTTP DataSource + header'lar
         DefaultHttpDataSource.Factory dsFactory = new DefaultHttpDataSource.Factory();
         if (ref != null && !ref.isEmpty()) {
             dsFactory.setDefaultRequestProperty("Referer", ref);
@@ -1762,10 +1759,11 @@ public class PlayerActivity extends AppCompatActivity {
 EOF
 
 # ----------------------------------------------------
-# 15) ANDROIDMANIFEST
+# 15) ANDROIDMANIFEST  (✅ FIX: android:name artık geçerli class name)
 # ----------------------------------------------------
 cat > "$MODULE_DIR/src/main/AndroidManifest.xml" <<EOF
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="$PACKAGE_NAME">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -1777,7 +1775,7 @@ cat > "$MODULE_DIR/src/main/AndroidManifest.xml" <<EOF
         android:icon="@mipmap/ic_launcher">
 
         <activity
-            android:name="$PACKAGE_NAME.ui.SelectionActivity"
+            android:name=".ui.SelectionActivity"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -1787,29 +1785,28 @@ cat > "$MODULE_DIR/src/main/AndroidManifest.xml" <<EOF
         </activity>
 
         <activity
-            android:name="$PACKAGE_NAME.ui.LoginXtreamActivity"
+            android:name=".ui.LoginXtreamActivity"
             android:screenOrientation="portrait" />
 
         <activity
-            android:name="$PACKAGE_NAME.ui.LoginM3uActivity"
+            android:name=".ui.LoginM3uActivity"
             android:screenOrientation="portrait" />
 
         <activity
-            android:name="$PACKAGE_NAME.ui.DashboardActivity"
+            android:name=".ui.DashboardActivity"
             android:screenOrientation="portrait" />
 
         <activity
-            android:name="$PACKAGE_NAME.ui.CommonListActivity"
+            android:name=".ui.CommonListActivity"
             android:screenOrientation="portrait" />
 
         <activity
-            android:name="$PACKAGE_NAME.ui.PlayerActivity"
+            android:name=".ui.PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:screenOrientation="sensor" />
     </application>
 </manifest>
 EOF
-
 
 # ----------------------------------------------------
 # 16) GRADLE WRAPPER
