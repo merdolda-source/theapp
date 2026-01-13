@@ -20,7 +20,7 @@ VERSION_NAME="13.0"
 PRIMARY_AD_MODE="unity"      # unity aktif
 INTER_INTERVAL=3             # unity inter: her 3 tıklama
 BANNER_INTERVAL=6            # şimdilik sabit (banner hep gösterilir)
-REWARD_ON_START=0            # pasif
+REWARD_ON_START=1            # pasif
 
 # Unity ids
 UNITY_GAME_ID="5497808"
