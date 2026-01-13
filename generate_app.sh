@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# ==============================
+# REPO ROOT AYARLARI (SENİN DURUMUN)
+# ==============================
 PROJECT_ROOT="."
 APP_DIR="$PROJECT_ROOT/app"
 PKG="com.erdin.xtream"
@@ -8,12 +11,15 @@ PKG_PATH="${PKG//./\/}"
 JAVA_DIR="$APP_DIR/src/main/java/$PKG_PATH"
 RES_DIR="$APP_DIR/src/main/res"
 
-echo "✅ UPDATE: Unity aktif (interstitial), AdMob sadece banner + Xtream Series/Episodes"
-echo "📦 Package: $PKG"
-echo "📂 Project: $PROJECT_ROOT"
+echo "=============================================="
+echo " UPDATE (REPO ROOT): Unity inter aktif + AdMob banner"
+echo " Series + Episodes (Xtream) eklenecek"
+echo " Package: $PKG"
+echo "=============================================="
 
-if [ ! -d "$PROJECT_ROOT" ]; then
-  echo "❌ theapp klasörü bulunamadı. Repo kökünde 'theapp' olmalı."
+if [ ! -d "$APP_DIR" ]; then
+  echo "❌ app/ modülü bulunamadı. Repo kökünde misin?"
+  echo "   (app/build.gradle dosyası repo root'ta olmalı)"
   exit 1
 fi
 
@@ -21,18 +27,121 @@ mkdir -p "$JAVA_DIR/utils" "$JAVA_DIR/ui" "$JAVA_DIR/api" "$JAVA_DIR/model" "$JA
 mkdir -p "$RES_DIR/layout" "$RES_DIR/values"
 
 # ----------------------------------------------------
-# 1) strings.xml (AdMob banner ID + app_name)
+# 0) app/build.gradle -> (Unity + AdMob deps + BuildConfig alanları)
+# ----------------------------------------------------
+APP_GRADLE="$APP_DIR/build.gradle"
+if [ ! -f "$APP_GRADLE" ]; then
+  echo "❌ app/build.gradle yok."
+  exit 1
+fi
+
+# build.gradle'ı komple güvenli biçimde overwrite ediyoruz (tek dosya mantığı)
+cat > "$APP_GRADLE" <<EOF
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace '$PKG'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId '$PKG'
+        minSdk 21
+        targetSdk 34
+        versionCode 13
+        versionName '13.0'
+        multiDexEnabled true
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("release.keystore")
+            storePassword "123456"
+            keyAlias "erdinplayer"
+            keyPassword "123456"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // ✅ Reklam modları: Unity inter aktif, AdMob sadece banner (inter/reward yok)
+            buildConfigField "String", "PRIMARY_AD_MODE", "\"unity\""
+            buildConfigField "int", "BANNER_INTERVAL", "6"
+            buildConfigField "int", "INTER_INTERVAL", "3"
+            buildConfigField "int", "REWARD_ON_START", "0"
+
+            // ✅ Unity IDs
+            buildConfigField "String", "UNITY_GAME_ID", "\"5497808\""
+            buildConfigField "String", "UNITY_INTER_ID", "\"Interstitial_Android\""
+        }
+
+        debug {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+
+            buildConfigField "String", "PRIMARY_AD_MODE", "\"unity\""
+            buildConfigField "int", "BANNER_INTERVAL", "6"
+            buildConfigField "int", "INTER_INTERVAL", "3"
+            buildConfigField "int", "REWARD_ON_START", "0"
+
+            buildConfigField "String", "UNITY_GAME_ID", "\"5497808\""
+            buildConfigField "String", "UNITY_INTER_ID", "\"Interstitial_Android\""
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.recyclerview:recyclerview:1.3.1'
+
+    implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
+    implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
+
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+
+    // ✅ AdMob (banner)
+    implementation 'com.google.android.gms:play-services-ads:23.0.0'
+
+    // ✅ Unity Ads (interstitial)
+    implementation 'com.unity3d.ads:unity-ads:4.9.3'
+}
+EOF
+
+# ----------------------------------------------------
+# 1) strings.xml (app_name + AdMob banner id)
 # ----------------------------------------------------
 cat > "$RES_DIR/values/strings.xml" <<'EOF'
 <resources>
     <string name="app_name">ERDİNXTREAM</string>
+
     <!-- AdMob TEST Banner -->
     <string name="admob_banner_id">ca-app-pub-3940256099942544/6300978111</string>
 </resources>
 EOF
 
 # ----------------------------------------------------
-# 2) activity_list.xml -> AdMob Banner eklendi
+# 2) activity_list.xml -> Banner eklendi (AdMob sadece banner)
 # ----------------------------------------------------
 cat > "$RES_DIR/layout/activity_list.xml" <<'EOF'
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -56,7 +165,7 @@ cat > "$RES_DIR/layout/activity_list.xml" <<'EOF'
         android:layout_weight="1"
         android:padding="8dp" />
 
-    <!-- ✅ AdMob Banner (Sadece banner aktif kalacak) -->
+    <!-- ✅ AdMob Banner -->
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"
         android:layout_width="match_parent"
@@ -69,7 +178,7 @@ cat > "$RES_DIR/layout/activity_list.xml" <<'EOF'
 EOF
 
 # ----------------------------------------------------
-# 3) Dashboard layout -> Series butonu eklendi (3. kutu)
+# 3) Dashboard layout -> SERIES eklendi
 # ----------------------------------------------------
 cat > "$RES_DIR/layout/activity_dashboard.xml" <<'EOF'
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -136,7 +245,6 @@ cat > "$RES_DIR/layout/activity_dashboard.xml" <<'EOF'
         </LinearLayout>
     </LinearLayout>
 
-    <!-- ✅ Series -->
     <LinearLayout
         android:id="@+id/btnSeries"
         android:layout_width="match_parent"
@@ -219,12 +327,11 @@ cat > "$RES_DIR/layout/item_episode.xml" <<'EOF'
         android:textSize="15sp"
         android:layout_marginLeft="12dp"
         android:textStyle="bold" />
-
 </LinearLayout>
 EOF
 
 # ----------------------------------------------------
-# 5) AppModels.java -> Series + Episodes modelleri eklendi
+# 5) Modeller + API (Series/Episodes)
 # ----------------------------------------------------
 cat > "$JAVA_DIR/model/AppModels.java" <<EOF
 package $PKG.model;
@@ -274,7 +381,7 @@ public class AppModels {
         public String origin;
     }
 
-    // ✅ XTREAM SERIES (liste)
+    // ✅ SERIES list
     public static class SeriesItem implements Serializable {
         @SerializedName("name") public String name;
         @SerializedName("series_id") public String seriesId;
@@ -283,13 +390,13 @@ public class AppModels {
         @SerializedName("rating") public String rating;
     }
 
-    // ✅ XTREAM SERIES INFO (episodes)
+    // ✅ episodes: season -> list
     public static class SeriesInfoResponse implements Serializable {
-        @SerializedName("episodes") public Map<String, List<EpisodeItem>> episodes; // season -> episodes
+        @SerializedName("episodes") public Map<String, List<EpisodeItem>> episodes;
     }
 
     public static class EpisodeItem implements Serializable {
-        @SerializedName("id") public String id; // episode id (playback uses /series/user/pass/{id}.ext)
+        @SerializedName("id") public String id; // episode id
         @SerializedName("title") public String title;
         @SerializedName("episode_num") public String episodeNum;
         @SerializedName("season") public String season;
@@ -298,9 +405,6 @@ public class AppModels {
 }
 EOF
 
-# ----------------------------------------------------
-# 6) XtreamApi.java -> series endpoints eklendi
-# ----------------------------------------------------
 cat > "$JAVA_DIR/api/XtreamApi.java" <<EOF
 package $PKG.api;
 
@@ -366,7 +470,9 @@ public interface XtreamApi {
 EOF
 
 # ----------------------------------------------------
-# 7) AdMobManager.java -> SADECE BANNER (interstitial pasif)
+# 6) Reklam Yöneticileri
+#   - AdMob: sadece banner
+#   - Unity: interstitial aktif
 # ----------------------------------------------------
 cat > "$JAVA_DIR/utils/AdMobManager.java" <<EOF
 package $PKG.utils;
@@ -385,14 +491,11 @@ public class AdMobManager {
     public static void init(Activity a) {
         if (inited) return;
         inited = true;
-        try {
-            MobileAds.initialize(a, status -> {});
-        } catch (Throwable t) {
-            Log.e("AdMobManager", "init err: " + t);
-        }
+        try { MobileAds.initialize(a, status -> {}); }
+        catch (Throwable t) { Log.e("AdMobManager", "init err: " + t); }
     }
 
-    // ✅ Sadece banner aktif
+    // ✅ Sadece banner
     public static void loadBanner(Activity a, AdView adView) {
         try {
             init(a);
@@ -403,16 +506,13 @@ public class AdMobManager {
         }
     }
 
-    // ❌ Interstitial PASİF (bilerek boş)
+    // ❌ Interstitial pasif
     public static void showInterstitialIfNeeded(Activity a, int clickCount, Runnable onDone) {
         if (onDone != null) onDone.run();
     }
 }
 EOF
 
-# ----------------------------------------------------
-# 8) UnityAdsManager.java -> Unity interstitial AKTİF (click ile)
-# ----------------------------------------------------
 cat > "$JAVA_DIR/utils/UnityAdsManager.java" <<EOF
 package $PKG.utils;
 
@@ -439,9 +539,7 @@ public class UnityAdsManager {
         inited = true;
 
         UnityAds.initialize(a, BuildConfig.UNITY_GAME_ID, false, new IUnityAdsInitializationListener() {
-            @Override public void onInitializationComplete() {
-                loadInterstitial();
-            }
+            @Override public void onInitializationComplete() { loadInterstitial(); }
             @Override public void onInitializationFailed(UnityAds.UnityAdsInitializationError error, String message) {
                 loaded = false;
             }
@@ -465,34 +563,6 @@ public class UnityAdsManager {
         });
     }
 
-    // ✅ Açılış reklamı (Unity interstitial)
-    public static void showStartAd(Activity a, Runnable onDone) {
-        init(a);
-
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (!loaded || !UnityAds.isInitialized()) {
-                if (onDone != null) onDone.run();
-                return;
-            }
-
-            UnityAds.show(a, BuildConfig.UNITY_INTER_ID, new UnityAdsShowOptions(), new IUnityAdsShowListener() {
-                @Override public void onUnityAdsShowStart(String placementId) {}
-                @Override public void onUnityAdsShowClick(String placementId) {}
-                @Override public void onUnityAdsShowComplete(String placementId, UnityAds.UnityAdsShowCompletionState state) {
-                    loaded = false;
-                    loadInterstitial();
-                    if (onDone != null) onDone.run();
-                }
-                @Override public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
-                    loaded = false;
-                    loadInterstitial();
-                    if (onDone != null) onDone.run();
-                }
-            });
-        }, 700);
-    }
-
-    // ✅ Tıklama interstitial: interval dolduysa Unity göster
     public static void showInterstitialIfNeeded(Activity a, int clickCount, Runnable onDone) {
         init(a);
 
@@ -527,7 +597,7 @@ public class UnityAdsManager {
 EOF
 
 # ----------------------------------------------------
-# 9) EpisodeAdapter.java (episodes list)
+# 7) Episodes Adapter + Activity
 # ----------------------------------------------------
 cat > "$JAVA_DIR/adapter/EpisodeAdapter.java" <<EOF
 package $PKG.adapter;
@@ -547,9 +617,7 @@ import $PKG.model.AppModels.EpisodeItem;
 
 public class EpisodeAdapter extends RecyclerView.Adapter<EpisodeAdapter.VH> {
 
-    public interface OnClick {
-        void onClick(EpisodeItem ep);
-    }
+    public interface OnClick { void onClick(EpisodeItem ep); }
 
     private List<EpisodeItem> list;
     private OnClick listener;
@@ -559,8 +627,7 @@ public class EpisodeAdapter extends RecyclerView.Adapter<EpisodeAdapter.VH> {
         this.listener = listener;
     }
 
-    @NonNull
-    @Override
+    @NonNull @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_episode, parent, false);
         return new VH(v);
@@ -574,23 +641,15 @@ public class EpisodeAdapter extends RecyclerView.Adapter<EpisodeAdapter.VH> {
     }
 
     @Override
-    public int getItemCount() {
-        return list == null ? 0 : list.size();
-    }
+    public int getItemCount() { return list == null ? 0 : list.size(); }
 
     static class VH extends RecyclerView.ViewHolder {
         TextView t;
-        VH(@NonNull View v) {
-            super(v);
-            t = v.findViewById(R.id.tvEpName);
-        }
+        VH(@NonNull View v) { super(v); t = v.findViewById(R.id.tvEpName); }
     }
 }
 EOF
 
-# ----------------------------------------------------
-# 10) SeriesEpisodesActivity.java (series_id -> episodes -> play)
-# ----------------------------------------------------
 cat > "$JAVA_DIR/ui/SeriesEpisodesActivity.java" <<EOF
 package $PKG.ui;
 
@@ -619,11 +678,13 @@ import $PKG.model.AppModels.Playlist;
 import $PKG.model.AppModels.SeriesInfoResponse;
 import $PKG.adapter.EpisodeAdapter;
 import $PKG.utils.PrefUtils;
+import $PKG.utils.UnityAdsManager;
 
 public class SeriesEpisodesActivity extends AppCompatActivity {
 
     private XtreamApi api;
     private Playlist playlist;
+    private int clickCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -632,14 +693,10 @@ public class SeriesEpisodesActivity extends AppCompatActivity {
 
         String seriesId = getIntent().getStringExtra("series_id");
         String seriesName = getIntent().getStringExtra("series_name");
-
         ((TextView)findViewById(R.id.tvTitle)).setText(seriesName == null ? "EPISODES" : seriesName);
 
         playlist = PrefUtils.getActive(this);
-        if (playlist == null || seriesId == null) {
-            finish();
-            return;
-        }
+        if (playlist == null || seriesId == null) { finish(); return; }
 
         RecyclerView rv = findViewById(R.id.rvEpisodes);
         rv.setLayoutManager(new LinearLayoutManager(this));
@@ -658,7 +715,6 @@ public class SeriesEpisodesActivity extends AppCompatActivity {
                         if (body == null || body.episodes == null) return;
 
                         List<EpisodeItem> flat = new ArrayList<>();
-
                         for (Map.Entry<String, List<EpisodeItem>> e : body.episodes.entrySet()) {
                             String seasonKey = e.getKey();
                             List<EpisodeItem> eps = e.getValue();
@@ -674,14 +730,17 @@ public class SeriesEpisodesActivity extends AppCompatActivity {
                         }
 
                         rv.setAdapter(new EpisodeAdapter(flat, ep -> {
-                            String ext = (ep.ext != null && !ep.ext.isEmpty()) ? ep.ext : "mp4";
-                            String url = playlist.url + "/series/" + playlist.user + "/" + playlist.pass + "/" + ep.id + "." + ext;
-
-                            Intent in = new Intent(SeriesEpisodesActivity.this, PlayerActivity.class);
-                            in.putExtra("url", url);
-                            in.putExtra("ref", (String) null);
-                            in.putExtra("origin", (String) null);
-                            startActivity(in);
+                            clickCount++;
+                            Runnable go = () -> {
+                                String ext = (ep.ext != null && !ep.ext.isEmpty()) ? ep.ext : "mp4";
+                                String url = playlist.url + "/series/" + playlist.user + "/" + playlist.pass + "/" + ep.id + "." + ext;
+                                Intent in = new Intent(SeriesEpisodesActivity.this, PlayerActivity.class);
+                                in.putExtra("url", url);
+                                in.putExtra("ref", (String) null);
+                                in.putExtra("origin", (String) null);
+                                startActivity(in);
+                            };
+                            UnityAdsManager.showInterstitialIfNeeded(this, clickCount, go);
                         }));
                     }
 
@@ -693,7 +752,7 @@ public class SeriesEpisodesActivity extends AppCompatActivity {
 EOF
 
 # ----------------------------------------------------
-# 11) DashboardActivity.java -> Series butonu bağlandı
+# 8) DashboardActivity -> Series butonu bağla
 # ----------------------------------------------------
 cat > "$JAVA_DIR/ui/DashboardActivity.java" <<EOF
 package $PKG.ui;
@@ -716,9 +775,7 @@ public class DashboardActivity extends AppCompatActivity {
         setContentView(R.layout.activity_dashboard);
 
         Playlist p = PrefUtils.getActive(this);
-        if (p != null) {
-            ((TextView)findViewById(R.id.tvUser)).setText(p.name);
-        }
+        if (p != null) ((TextView)findViewById(R.id.tvUser)).setText(p.name);
 
         findViewById(R.id.btnLive).setOnClickListener(v -> {
             Intent i = new Intent(this, CommonListActivity.class);
@@ -732,7 +789,6 @@ public class DashboardActivity extends AppCompatActivity {
             startActivity(i);
         });
 
-        // ✅ SERIES
         findViewById(R.id.btnSeries).setOnClickListener(v -> {
             Intent i = new Intent(this, CommonListActivity.class);
             i.putExtra("type", "series");
@@ -749,7 +805,7 @@ public class DashboardActivity extends AppCompatActivity {
 EOF
 
 # ----------------------------------------------------
-# 12) CommonListActivity.java -> Unity interstitial + AdMob banner + Series list
+# 9) CommonListActivity -> AdMob banner + Unity inter + Series list
 # ----------------------------------------------------
 cat > "$JAVA_DIR/ui/CommonListActivity.java" <<EOF
 package $PKG.ui;
@@ -793,7 +849,6 @@ public class CommonListActivity extends AppCompatActivity {
     private StreamAdapter streamAdapter;
     private String type;
     private Playlist playlist;
-
     private Map<String, List<StreamItem>> m3uMap;
 
     private int clickCount = 0;
@@ -816,50 +871,40 @@ public class CommonListActivity extends AppCompatActivity {
         AdView adView = findViewById(R.id.adView);
         if (adView != null) AdMobManager.loadBanner(this, adView);
 
-        if (playlist == null) {
-            finish();
-            return;
-        }
+        if (playlist == null) { finish(); return; }
 
-        // StreamAdapter (Live/VOD için)
         streamAdapter = new StreamAdapter(new ArrayList<>(), item -> {
             clickCount++;
 
-            Runnable goPlay = () -> {
+            Runnable go = () -> {
                 Intent in = new Intent(this, PlayerActivity.class);
                 String url;
 
                 if ("Xtream".equals(playlist.type)) {
-                    String path;
-                    if ("live".equals(type)) path = "live";
-                    else path = "movie";
-
+                    String path = "live".equals(type) ? "live" : "movie";
                     String ext = (item.ext != null && !item.ext.isEmpty()) ? item.ext : "ts";
                     url = playlist.url + "/" + path + "/" + playlist.user + "/" + playlist.pass + "/" + item.streamId + "." + ext;
-
                     in.putExtra("ref", (String) null);
                     in.putExtra("origin", (String) null);
+                    in.putExtra("url", url);
+                    startActivity(in);
                 } else {
                     url = item.directUrl;
                     in.putExtra("ref", item.ref);
                     in.putExtra("origin", item.origin);
+                    in.putExtra("url", url);
+                    startActivity(in);
                 }
-
-                in.putExtra("url", url);
-                startActivity(in);
             };
 
-            // ✅ Unity interstitial aktif (AdMob interstitial kapalı)
-            UnityAdsManager.showInterstitialIfNeeded(this, clickCount, goPlay);
+            // ✅ Unity interstitial aktif
+            UnityAdsManager.showInterstitialIfNeeded(this, clickCount, go);
         });
 
         rvS.setAdapter(streamAdapter);
 
-        if ("Xtream".equals(playlist.type)) {
-            loadXtream();
-        } else {
-            loadM3u();
-        }
+        if ("Xtream".equals(playlist.type)) loadXtream();
+        else loadM3u();
     }
 
     private void loadM3u() {
@@ -867,16 +912,10 @@ public class CommonListActivity extends AppCompatActivity {
         List<Category> cats = new ArrayList<>();
         for (String key : m3uMap.keySet()) cats.add(new Category(key, key));
 
-        CategoryAdapter catAdapter = new CategoryAdapter(cats, cat -> {
-            List<StreamItem> items = m3uMap.get(cat.id);
-            streamAdapter.update(items);
-        });
-
+        CategoryAdapter catAdapter = new CategoryAdapter(cats, cat -> streamAdapter.update(m3uMap.get(cat.id)));
         rvC.setAdapter(catAdapter);
 
-        if (!cats.isEmpty()) {
-            streamAdapter.update(m3uMap.get(cats.get(0).id));
-        }
+        if (!cats.isEmpty()) streamAdapter.update(m3uMap.get(cats.get(0).id));
     }
 
     private void loadXtream() {
@@ -889,7 +928,7 @@ public class CommonListActivity extends AppCompatActivity {
         String action;
         if ("live".equals(type)) action = "get_live_categories";
         else if ("vod".equals(type)) action = "get_vod_categories";
-        else action = "get_series_categories"; // ✅ series
+        else action = "get_series_categories";
 
         api.getCategories(playlist.url + "/player_api.php", playlist.user, playlist.pass, action)
                 .enqueue(new Callback<List<Category>>() {
@@ -904,14 +943,12 @@ public class CommonListActivity extends AppCompatActivity {
                         if (!body.isEmpty()) loadItems(body.get(0).id);
                     }
 
-                    @Override
-                    public void onFailure(Call<List<Category>> call, Throwable t) {}
+                    @Override public void onFailure(Call<List<Category>> call, Throwable t) {}
                 });
     }
 
     private void loadItems(String id) {
         if ("series".equals(type)) {
-            // ✅ Series list (get_series)
             api.getSeries(playlist.url + "/player_api.php", playlist.user, playlist.pass, "get_series", id)
                     .enqueue(new Callback<List<SeriesItem>>() {
                         @Override
@@ -919,37 +956,30 @@ public class CommonListActivity extends AppCompatActivity {
                             List<SeriesItem> list = response.body();
                             if (list == null) return;
 
-                            // Series'i StreamAdapter ile göstermiyoruz; hızlı çözüm: StreamItem'a çeviriyoruz
+                            // Series'i listede göstermek için StreamItem'a map ediyoruz
                             List<StreamItem> fake = new ArrayList<>();
                             for (SeriesItem s : list) {
                                 StreamItem it = new StreamItem();
                                 it.name = s.name;
                                 it.icon = s.cover;
-                                it.streamId = s.seriesId; // series_id burada
-                                it.ext = "mp4";
+                                it.streamId = s.seriesId; // series_id
                                 fake.add(it);
                             }
 
-                            streamAdapter.update(fake);
-
-                            // Tıklamada episode sayfasına yönlendirme için adapter click'i override gerekir.
-                            // Basit çözüm: rvS’ye yeni adapter set ediyoruz:
+                            // Series tıklanınca Episodes ekranı
                             rvS.setAdapter(new StreamAdapter(fake, item -> {
                                 clickCount++;
-
-                                Runnable goNext = () -> {
+                                Runnable go = () -> {
                                     Intent in = new Intent(CommonListActivity.this, SeriesEpisodesActivity.class);
                                     in.putExtra("series_id", item.streamId);
                                     in.putExtra("series_name", item.name);
                                     startActivity(in);
                                 };
-
-                                UnityAdsManager.showInterstitialIfNeeded(CommonListActivity.this, clickCount, goNext);
+                                UnityAdsManager.showInterstitialIfNeeded(CommonListActivity.this, clickCount, go);
                             }));
                         }
 
-                        @Override
-                        public void onFailure(Call<List<SeriesItem>> call, Throwable t) {}
+                        @Override public void onFailure(Call<List<SeriesItem>> call, Throwable t) {}
                     });
             return;
         }
@@ -962,22 +992,18 @@ public class CommonListActivity extends AppCompatActivity {
                         List<StreamItem> body = response.body();
                         if (body != null) streamAdapter.update(body);
                     }
-                    @Override
-                    public void onFailure(Call<List<StreamItem>> call, Throwable t) {}
+                    @Override public void onFailure(Call<List<StreamItem>> call, Throwable t) {}
                 });
     }
 }
 EOF
 
 # ----------------------------------------------------
-# 13) AndroidManifest.xml -> SeriesEpisodesActivity eklendi
-# (Mevcut dosyan varsa silip yenisini yazmıyoruz; sadece eklemen için garanti update yapıyoruz.)
-# Basit yöntem: dosyayı komple tekrar yazmak yerine, yoksa bırak. Varsa elle eklemek yerine direkt overwrite ederiz.
+# 10) Manifest -> package + AdMob App ID + SeriesEpisodesActivity
+# Launcher olarak SelectionActivity (Sende kesin var)
 # ----------------------------------------------------
 MANIFEST="$APP_DIR/src/main/AndroidManifest.xml"
-if [ -f "$MANIFEST" ]; then
-  # overwrite - güvenli: senin activity listeni koruyacak şekilde minimum alanları içerir
-  cat > "$MANIFEST" <<EOF
+cat > "$MANIFEST" <<EOF
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="$PKG">
 
@@ -990,13 +1016,13 @@ if [ -f "$MANIFEST" ]; then
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher">
 
-        <!-- AdMob App ID (test) -->
+        <!-- AdMob App ID (TEST) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713" />
 
         <activity
-            android:name=".ui.SplashActivity"
+            android:name=".ui.SelectionActivity"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -1005,7 +1031,6 @@ if [ -f "$MANIFEST" ]; then
             </intent-filter>
         </activity>
 
-        <activity android:name=".ui.SelectionActivity" android:screenOrientation="portrait" />
         <activity android:name=".ui.LoginXtreamActivity" android:screenOrientation="portrait" />
         <activity android:name=".ui.LoginM3uActivity" android:screenOrientation="portrait" />
         <activity android:name=".ui.DashboardActivity" android:screenOrientation="portrait" />
@@ -1021,7 +1046,7 @@ if [ -f "$MANIFEST" ]; then
     </application>
 </manifest>
 EOF
-fi
 
-echo "✅ UPDATE tamamlandı."
-echo "➡️ Build: cd theapp && ./gradlew assembleRelease --no-daemon"
+echo "✅ UPDATE bitti."
+echo "➡️ Şimdi build:"
+echo "   ./gradlew assembleRelease --no-daemon"
