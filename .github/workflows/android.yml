@@ -39,13 +39,10 @@ jobs:
 
       - name: Build Debug
         run: ./gradlew assembleDebug
-        env:
-          JAVA_HOME: ${{ runner.temp }}/jdk
 
       - name: Upload artifact (APK)
-        if: success()
+        if: ${{ success() }}
         uses: actions/upload-artifact@v4
         with:
           name: ERDINXPLAYER-debug-apk
           path: app/build/outputs/apk/debug/*.apk
-EOF
