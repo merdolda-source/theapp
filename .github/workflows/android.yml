@@ -12,10 +12,10 @@ jobs:
 
     steps:
     - name: Depoyu Çek (Checkout)
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4  # v3 -> v4 yaptık (Güncel)
 
     - name: JDK 17 Kurulumu
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4 # v3 -> v4 yaptık (Güncel)
       with:
         java-version: '17'
         distribution: 'temurin'
@@ -24,15 +24,14 @@ jobs:
     - name: Gradle İzinlerini Ayarla
       run: chmod +x gradlew || true
 
-    # Eğer projede Gradle Wrapper yoksa bu adım onu indirir ve kurar
-    - name: Gradle ile APK Derle (Release)
-      uses: gradle/gradle-build-action@v2
+    - name: Gradle Kur ve Derle
+      uses: gradle/gradle-build-action@v3 # v2 -> v3 yaptık (Güncel)
       with:
-        gradle-version: 8.0 # Gradle sürümü
+        gradle-version: 8.0 # Wrapper dosyası yoksa bu sürümü indirir
         arguments: assembleRelease
 
     - name: APK'yı Yükle (Artifact)
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4 # HATA VEREN KISIM BURASIYDI (v3 -> v4 yaptık)
       with:
         name: erdin-player-release
         path: app/build/outputs/apk/release/app-release.apk
