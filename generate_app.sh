@@ -1992,7 +1992,6 @@ public class SeriesEpisodesActivity extends AppCompatActivity {
     }
 }
 
-}
 EOF
 
 cat > "$JAVA_DIR/ui/PlayerActivity.java" <<EOF
