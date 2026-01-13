@@ -1,4 +1,4 @@
-name: Auto-Fix and Build APK
+name: Final Build APK
 
 on:
   push:
@@ -32,26 +32,31 @@ jobs:
         chmod +x "$SCRIPT_FILE"
         bash "$SCRIPT_FILE"
 
-    - name: 🚑 Acil Müdahale (Build Dosyası Onarımı)
+    - name: 🚑 Acil Müdahale (Gradle ve AndroidX Onarımı)
       run: |
-        # build.gradle dosyasını nerede olursa olsun bul
+        # Proje klasörünü bul
         BUILD_FILE=$(find . -maxdepth 2 -name "build.gradle" | head -n 1)
         PROJECT_ROOT=$(dirname "$BUILD_FILE")
         
-        echo "🔧 Hata veren ayarlar düzeltiliyor: $PROJECT_ROOT/app/build.gradle"
+        echo "🔧 Ayarlar düzeltiliyor: $PROJECT_ROOT"
         
-        # 1. ViewBinding'i KAPAT (Hatanın asıl sebebi bu)
-        # Dosya içinde "viewBinding true" yazan yeri bulup "viewBinding false" yapar.
+        # 1. ViewBinding HATASINI DÜZELT
         if [ -f "$PROJECT_ROOT/app/build.gradle" ]; then
             sed -i 's/viewBinding true/viewBinding false/g' "$PROJECT_ROOT/app/build.gradle"
-            echo "✅ ViewBinding kapatıldı (Çatışma engellendi)."
+            echo "✅ ViewBinding kapatıldı."
         fi
 
-        # 2. Kotlin Sürümünü Yükselt (Gradle 8 ile daha uyumlu olsun)
+        # 2. Kotlin Sürümünü GÜNCELLE
         if [ -f "$PROJECT_ROOT/build.gradle" ]; then
             sed -i "s/ext.kotlin_version = '1.8.0'/ext.kotlin_version = '1.9.0'/g" "$PROJECT_ROOT/build.gradle"
-            echo "✅ Kotlin sürümü 1.9.0'a yükseltildi."
+            echo "✅ Kotlin sürümü güncellendi."
         fi
+
+        # 3. (YENİ) ANDROIDX AYARINI EKLE (Hatanın Çözümü Burası) 👇
+        # gradle.properties dosyası yoksa oluşturur, varsa ekleme yapar.
+        echo "android.useAndroidX=true" >> "$PROJECT_ROOT/gradle.properties"
+        echo "android.enableJetifier=true" >> "$PROJECT_ROOT/gradle.properties"
+        echo "✅ AndroidX ayarları gradle.properties dosyasına eklendi."
 
     - name: 🔧 Gradle 8.0 Kurulumu
       uses: gradle/actions/setup-gradle@v3
@@ -69,7 +74,7 @@ jobs:
         fi
         
         cd "$PROJECT_ROOT"
-        # --stacktrace ile derleyelim ki hata varsa detaylı görelim
+        echo "🚀 Derleme Başlıyor..."
         gradle assembleRelease --stacktrace
 
     - name: 📦 APK'yı Paketle ve Sun
