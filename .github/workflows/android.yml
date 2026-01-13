@@ -30,7 +30,8 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          # Proje ERDINXPLAYER alt klasöründe ise hashFiles'i oraya yönlendiriyoruz
+          key: ${{ runner.os }}-gradle-${{ hashFiles('ERDINXPLAYER/**/build.gradle*', 'ERDINXPLAYER/**/settings.gradle*', 'ERDINXPLAYER/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -38,12 +39,13 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: assembleDebug
-          # Eğer repo'da gradle wrapper yoksa bu sürüm indirilecektir
           gradle-version: '8.1.1'
+        # Önemli: çalışma dizinini proje klasörüne ayarlıyoruz
+        working-directory: ERDINXPLAYER
 
       - name: Upload artifact (APK)
         if: ${{ success() }}
         uses: actions/upload-artifact@v4
         with:
           name: ERDINXPLAYER-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: ERDINXPLAYER/app/build/outputs/apk/debug/*.apk
