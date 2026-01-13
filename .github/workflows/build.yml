@@ -1,92 +1,51 @@
-# .github/workflows/build.yml
-# Workflow: panel'den tetiklenebilecek build workflow'u
-# Gereksinimler:
-# - workflow_dispatch ile tetiklenme
-# - Secrets: ANDROID_KEYSTORE (base64), ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD, GITHUB_TOKEN (workflow için)
-name: android-build
+name: Android CI
 
 on:
-  workflow_dispatch:
-    inputs:
-      app_id:
-        description: 'App ID from panel'
-        required: true
-        default: '1'
-      package_name:
-        description: 'Target package name'
-        required: true
-        default: 'com.example.xtreamplayer'
-      version_name:
-        description: 'Version name'
-        required: true
-        default: '1.0.0'
-      version_code:
-        description: 'Version code'
-        required: true
-        default: '1'
-      icon_url:
-        description: 'Icon PNG URL (optional)'
-        required: false
-        default: ''
-      build_variant:
-        description: 'Build variant (release/debug)'
-        required: true
-        default: 'release'
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
 
 jobs:
   build:
+    name: Build Debug APK
     runs-on: ubuntu-latest
-    env:
-      APP_ID: ${{ github.event.inputs.app_id }}
-      PACKAGE_NAME: ${{ github.event.inputs.package_name }}
-      VERSION_NAME: ${{ github.event.inputs.version_name }}
-      VERSION_CODE: ${{ github.event.inputs.version_code }}
-      ICON_URL: ${{ github.event.inputs.icon_url }}
-      BUILD_VARIANT: ${{ github.event.inputs.build_variant }}
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Setup JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: '17'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-    - name: Install Android SDK (minimal)
-      uses: android-actions/setup-android@v2
-      with:
-        api-level: 33
-        target: default
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-    - name: Decode keystore if present
-      if: secrets.ANDROID_KEYSTORE != ''
-      run: |
-        echo "$ANDROID_KEYSTORE" | base64 --decode > android_keystore.jks
-      env:
-        ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew || true
 
-    - name: Make build script executable
-      run: chmod +x ./scripts/build.sh
+      - name: Build Debug
+        run: ./gradlew assembleDebug
+        env:
+          JAVA_HOME: ${{ runner.temp }}/jdk
 
-    - name: Run build script
-      run: |
-        ./scripts/build.sh \
-          "${PACKAGE_NAME}" \
-          "${VERSION_NAME}" \
-          "${VERSION_CODE}" \
-          "${ICON_URL}" \
-          "${BUILD_VARIANT}"
-      env:
-        ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
-        ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-        ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-
-    - name: Upload artifact
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-artifacts-${{ env.APP_ID }}-${{ env.VERSION_NAME }}
-        path: app/build/outputs/**/*.apk || app/build/outputs/**/*.aab
+      - name: Upload artifact (APK)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ERDINXPLAYER-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+EOF
