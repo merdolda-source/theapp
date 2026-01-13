@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-PROJECT_ROOT="theapp"
+PROJECT_ROOT="."
 APP_DIR="$PROJECT_ROOT/app"
 PKG="com.erdin.xtream"
 PKG_PATH="${PKG//./\/}"
