@@ -1423,7 +1423,7 @@ EOF
 
 # ---------------- UI ----------------
 cat > "$JAVA_DIR/ui/SelectionActivity.java" <<EOF
-package $PACKAGE_NAME.ui;
+package com.erdin.xtream.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -1434,13 +1434,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
 
-import $PACKAGE_NAME.R;
-import $PACKAGE_NAME.adapter.PlaylistAdapter;
-import $PACKAGE_NAME.model.AppModels.Playlist;
-import $PACKAGE_NAME.utils.PrefUtils;
+import com.erdin.xtream.R;
+import com.erdin.xtream.adapter.PlaylistAdapter;
+import com.erdin.xtream.model.AppModels.Playlist;
+import com.erdin.xtream.utils.PrefUtils;
 
 public class SelectionActivity extends AppCompatActivity {
 
+    private RecyclerView rv;              // ✅ eklendi
     private PlaylistAdapter adapter;
     private List<Playlist> list;
 
@@ -1449,35 +1450,46 @@ public class SelectionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_selection);
 
-        RecyclerView rv = findViewById(R.id.rvPlaylists);
+        rv = findViewById(R.id.rvPlaylists);   // ✅ eklendi
         rv.setLayoutManager(new LinearLayoutManager(this));
-        load();
 
         findViewById(R.id.btnXtream).setOnClickListener(v ->
                 startActivity(new Intent(this, LoginXtreamActivity.class)));
 
         findViewById(R.id.btnM3u).setOnClickListener(v ->
                 startActivity(new Intent(this, LoginM3uActivity.class)));
+
+        load(); // ✅ ilk yükleme
     }
 
-    @Override protected void onResume() { super.onResume(); load(); }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        load();
+    }
 
     private void load() {
         list = PrefUtils.getPlaylists(this);
+
         adapter = new PlaylistAdapter(list, new PlaylistAdapter.OnClick() {
-            @Override public void onClick(Playlist p) {
+            @Override
+            public void onClick(Playlist p) {
                 PrefUtils.savePlaylist(SelectionActivity.this, p);
                 startActivity(new Intent(SelectionActivity.this, DashboardActivity.class));
             }
-            @Override public void onDelete(Playlist p) {
+
+            @Override
+            public void onDelete(Playlist p) {
                 PrefUtils.deletePlaylist(SelectionActivity.this, p.id);
                 list.remove(p);
                 adapter.notifyDataSetChanged();
             }
         });
-        rv.setAdapter(adapter);
+
+        rv.setAdapter(adapter); // ✅ artık rv var
     }
 }
+
 EOF
 
 cat > "$JAVA_DIR/ui/DashboardActivity.java" <<EOF
@@ -1874,7 +1886,7 @@ public class CommonListActivity extends AppCompatActivity {
 EOF
 
 cat > "$JAVA_DIR/ui/SeriesEpisodesActivity.java" <<EOF
-package $PACKAGE_NAME.ui;
+package com.erdin.xtream.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -1894,14 +1906,14 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-import $PACKAGE_NAME.R;
-import $PACKAGE_NAME.api.XtreamApi;
-import $PACKAGE_NAME.model.AppModels.EpisodeItem;
-import $PACKAGE_NAME.model.AppModels.Playlist;
-import $PACKAGE_NAME.model.AppModels.SeriesInfoResponse;
-import $PACKAGE_NAME.adapter.EpisodeAdapter;
-import $PACKAGE_NAME.utils.PrefUtils;
-import $PACKAGE_NAME.utils.UnityAdsManager;
+import com.erdin.xtream.R;
+import com.erdin.xtream.api.XtreamApi;
+import com.erdin.xtream.model.AppModels.EpisodeItem;
+import com.erdin.xtream.model.AppModels.Playlist;
+import com.erdin.xtream.model.AppModels.SeriesInfoResponse;
+import com.erdin.xtream.adapter.EpisodeAdapter;
+import com.erdin.xtream.utils.PrefUtils;
+import com.erdin.xtream.utils.UnityAdsManager;
 
 public class SeriesEpisodesActivity extends AppCompatActivity {
 
@@ -1916,10 +1928,13 @@ public class SeriesEpisodesActivity extends AppCompatActivity {
 
         String seriesId = getIntent().getStringExtra("series_id");
         String seriesName = getIntent().getStringExtra("series_name");
-        ((TextView)findViewById(R.id.tvTitle)).setText(seriesName == null ? "EPISODES" : seriesName);
+        ((TextView) findViewById(R.id.tvTitle)).setText(seriesName == null ? "EPISODES" : seriesName);
 
         playlist = PrefUtils.getActive(this);
-        if (playlist == null || seriesId == null) { finish(); return; }
+        if (playlist == null || seriesId == null) {
+            finish();
+            return;
+        }
 
         RecyclerView rv = findViewById(R.id.rvEpisodes);
         rv.setLayoutManager(new LinearLayoutManager(this));
@@ -1953,22 +1968,30 @@ public class SeriesEpisodesActivity extends AppCompatActivity {
 
                         rv.setAdapter(new EpisodeAdapter(flat, ep -> {
                             clickCount++;
+
                             Runnable go = () -> {
                                 String ext = (ep.ext != null && !ep.ext.isEmpty()) ? ep.ext : "mp4";
                                 String url = playlist.url + "/series/" + playlist.user + "/" + playlist.pass + "/" + ep.id + "." + ext;
+
                                 Intent in = new Intent(SeriesEpisodesActivity.this, PlayerActivity.class);
                                 in.putExtra("url", url);
                                 in.putExtra("ref", (String) null);
                                 in.putExtra("origin", (String) null);
                                 startActivity(in);
                             };
-                            UnityAdsManager.showInterstitialIfNeeded(this, clickCount, go);
+
+                            // ✅ burada Activity referansı şart:
+                            UnityAdsManager.showInterstitialIfNeeded(SeriesEpisodesActivity.this, clickCount, go);
                         }));
                     }
 
-                    @Override public void onFailure(Call<SeriesInfoResponse> call, Throwable t) {}
+                    @Override
+                    public void onFailure(Call<SeriesInfoResponse> call, Throwable t) {
+                    }
                 });
     }
+}
+
 }
 EOF
 
