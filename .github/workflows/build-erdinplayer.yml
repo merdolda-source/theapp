@@ -1,39 +1,17 @@
-name: Xtrewmmmm Auto Build
+name: Build Xtream Player
 on:
   workflow_dispatch:
-    inputs:
-      app_name: { required: true }
-      package_name: { required: true }
-      icon_url: { required: true }
-      ad_app_id: { required: true }
-      banner_id: { required: true }
-      inter_id: { required: true }
-      inter_count: { required: true }
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source
+      - name: Kodları çek
         uses: actions/checkout@v3
-
-      - name: set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: gradle
-
-      - name: Run Xtrewmmmm Processor
-        run: |
-          chmod +x scripts/processor.sh
-          ./scripts/processor.sh "${{ github.event.inputs.app_name }}" "${{ github.event.inputs.package_name }}" "${{ github.event.inputs.icon_url }}" "${{ github.event.inputs.ad_app_id }}" "${{ github.event.inputs.banner_id }}" "${{ github.event.inputs.inter_id }}" "${{ github.event.inputs.inter_count }}"
-
-      - name: Build Release APK
-        run: ./gradlew assembleRelease
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v3
-        with:
-          name: Xtrewmmmm-Output
-          path: app/build/outputs/apk/release/*.apk
+      - name: Flutter Setup
+        uses: subosito/flutter-action@v2
+      - name: Ortam değişkenleri yükle
+        run: flutter pub get
+      - name: APK Build
+        run: flutter build apk --release
+      - name: Build tamamlandı
+        run: echo "Yeni build başarıyla oluşturuldu!"
