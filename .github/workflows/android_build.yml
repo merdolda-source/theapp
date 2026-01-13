@@ -3,8 +3,7 @@ name: Android Build APK
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+  workflow_dispatch: # Manuel tetikleme butonu ekler
 
 jobs:
   build:
@@ -21,20 +20,24 @@ jobs:
         distribution: 'temurin'
 
     - name: Gradle İzinlerini Ayarla
-      # Eğer gradlew dosyası yoksa bu adım hata vermesin diye '|| true' ekledik
-      run: chmod +x ErdinPlayer/gradlew || true 
+      # Klasör adı olmadan direkt gradlew'e yetki veriyoruz
+      run: chmod +x gradlew || true 
 
-    - name: Gradle Kur ve Derle
+    - name: Gradle Kur ve Derle (İmzalı)
       uses: gradle/gradle-build-action@v3
       with:
-        # HATA BURADAYDI: '8.0' yerine tırnak içinde '8.2' yaptık.
-        gradle-version: '8.2' 
+        gradle-version: '8.2'
         arguments: assembleRelease
-        # Senin proje klasörünün adı (Scriptte değiştirdiysen burayı da değiştir)
-        build-root-directory: ErdinPlayer 
+        # 'build-root-directory' satırını SİLDİK. Artık ana dizinde çalışacak.
+
+    - name: Dosya Kontrolü (Debug)
+      # Eğer APK oluşmazsa nedenini görmek için dosya listesini basar
+      if: failure()
+      run: ls -R app/build/outputs/apk/
 
     - name: APK'yı Yükle (Artifact)
       uses: actions/upload-artifact@v4
       with:
         name: erdin-player-release
-        path: ErdinPlayer/app/build/outputs/apk/release/app-release.apk
+        # Yolu ana dizine göre güncelledik
+        path: app/build/outputs/apk/release/app-release.apk
