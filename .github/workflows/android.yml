@@ -30,7 +30,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          # Proje ERDINXPLAYER alt klasöründe ise hashFiles'i oraya yönlendiriyoruz
+          # Eğer projen ERDINXPLAYER alt klasöründe ise hashFiles o klasöre göre
           key: ${{ runner.os }}-gradle-${{ hashFiles('ERDINXPLAYER/**/build.gradle*', 'ERDINXPLAYER/**/settings.gradle*', 'ERDINXPLAYER/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
@@ -40,7 +40,6 @@ jobs:
         with:
           arguments: assembleDebug
           gradle-version: '8.1.1'
-        # Önemli: çalışma dizinini proje klasörüne ayarlıyoruz
         working-directory: ERDINXPLAYER
 
       - name: Upload artifact (APK)
