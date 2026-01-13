@@ -1,4 +1,4 @@
-name: All-in-One Android Builder (Fixed)
+name: Final Fix Android Builder
 
 on:
   push:
@@ -34,16 +34,14 @@ jobs:
         mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME
         mkdir -p $APP_NAME/app/src/main/res/layout
         mkdir -p $APP_NAME/app/src/main/res/values
-        
-        # 🔥 KRİTİK DÜZELTME: İKON KLASÖRÜ OLUŞTURUYORUZ 🔥
         mkdir -p $APP_NAME/app/src/main/res/mipmap-hdpi
         
         cd $APP_NAME
 
-        # 🔥 KRİTİK DÜZELTME: İKON İNDİRİYORUZ 🔥
-        # Google'ın örnek projelerinden standart bir ikon çekiyoruz
-        echo "⬇️ Uygulama ikonu indiriliyor..."
-        wget -O app/src/main/res/mipmap-hdpi/ic_launcher.png https://raw.githubusercontent.com/android/architecture-samples/main/app/src/main/res/mipmap-hdpi/ic_launcher.png
+        # 🔥 YENİ İKON İNDİRİLİYOR (Verdiğin Link) 🔥
+        echo "⬇️ Özel ikon indiriliyor..."
+        # User-Agent ekledik ki site engellemesin
+        wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://www.freepnglogos.com/uploads/512x512-logo-png/512x512-logo-download-anarchy-png-image-transparent-png-31.png"
 
         # --- A. KEYSTORE (İMZA) ---
         echo "🔐 İmza dosyası hazırlanıyor..."
@@ -60,6 +58,7 @@ jobs:
         org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
         android.useAndroidX=true
         android.enableJetifier=true
+        kotlin.code.style=official
         EOF
 
         # --- D. BUILD.GRADLE (Proje) ---
@@ -86,7 +85,7 @@ jobs:
         }
         EOF
 
-        # --- E. BUILD.GRADLE (App) ---
+        # --- E. BUILD.GRADLE (App) - FIX EKLENDİ ---
         cat <<EOF > app/build.gradle
         plugins {
             id 'com.android.application'
@@ -119,6 +118,15 @@ jobs:
             }
             buildFeatures {
                 viewBinding false
+            }
+            
+            // 🔥 JVM HATASINI ÇÖZEN KISIM BURASI 🔥
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+            kotlinOptions {
+                jvmTarget = '17'
             }
         }
         dependencies {
