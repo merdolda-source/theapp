@@ -29,7 +29,7 @@ jobs:
 
       - name: Verify generated project
         run: |
-          ls -ლა
+          ls -al
           test -d "./theapp" || (echo "❌ theapp klasörü oluşmadı" && exit 1)
           test -f "./theapp/gradlew" || (echo "❌ theapp/gradlew yok" && exit 1)
           test -f "./theapp/app/build.gradle" || (echo "❌ theapp/app/build.gradle yok" && exit 1)
