@@ -1,4 +1,4 @@
-name: Generate and Build APK
+name: Generate and Build APK (Global Gradle)
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Depoyu Çek (Scripti Al)
+    - name: Depoyu Çek
       uses: actions/checkout@v4
 
     - name: JDK 17 Kurulumu
@@ -22,41 +22,35 @@ jobs:
     - name: 🏗️ Uygulama Oluşturuluyor (Script Çalıştırılıyor)
       run: |
         echo "⚙️ Script aranıyor..."
-        # Klasördeki .sh uzantılı dosyayı bul ve çalıştır
         SCRIPT_FILE=$(find . -maxdepth 1 -name "*.sh" | head -n 1)
         
         if [ -z "$SCRIPT_FILE" ]; then
-          echo "❌ Script bulunamadı! Lütfen 'create_app.sh' dosyasının yüklü olduğundan emin ol."
+          echo "❌ Script bulunamadı!"
           exit 1
         fi
         
-        echo "✅ Script bulundu: $SCRIPT_FILE"
+        echo "✅ Script bulundu ve çalıştırılıyor: $SCRIPT_FILE"
         chmod +x "$SCRIPT_FILE"
         bash "$SCRIPT_FILE"
-        
-        echo "📂 Oluşturulan dosyalar kontrol ediliyor..."
-        ls -R
 
-    - name: 🛠️ Eksik Dosyaları Tamamla ve Derle
+    - name: 🛠️ Eksikleri Tamamla ve Derle
       run: |
-        # Oluşturulan proje klasörünü bul (build.gradle içeren klasör)
+        # Proje klasörünü bul
         BUILD_FILE=$(find . -maxdepth 2 -name "build.gradle" | head -n 1)
         PROJECT_ROOT=$(dirname "$BUILD_FILE")
         
         echo "🏠 Proje Ana Dizini: $PROJECT_ROOT"
         
-        # settings.gradle eksikse oluştur (Önceki script hatası için yama)
+        # settings.gradle eksikse oluştur
         if [ ! -f "$PROJECT_ROOT/settings.gradle" ]; then
            echo "include ':app'" > "$PROJECT_ROOT/settings.gradle"
            echo "✅ settings.gradle oluşturuldu."
         fi
-
-        # Gradle'a çalıştırma izni ver
-        chmod +x "$PROJECT_ROOT/gradlew"
         
-        # Derleme Başlasın
+        # 🚀 KRİTİK DEĞİŞİKLİK:
+        # './gradlew' yerine sunucunun kendi 'gradle' komutunu kullanıyoruz.
         cd "$PROJECT_ROOT"
-        bash ./gradlew assembleRelease
+        gradle assembleRelease --no-daemon
 
     - name: 📦 APK'yı Paketle ve Sun
       uses: actions/upload-artifact@v4
