@@ -1,4 +1,4 @@
-name: Final Build APK
+name: All-in-One Android Builder
 
 on:
   push:
@@ -10,77 +10,287 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Depoyu Çek
+    - name: 1. Sanal Makine Hazırlığı (Checkout & Java)
       uses: actions/checkout@v4
-
+    
     - name: JDK 17 Kurulumu
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 🏗️ Uygulama Oluşturuluyor (Script Çalıştırılıyor)
+    - name: 2. Proje Dosyalarını Oluştur (Sihirli Adım)
       run: |
-        echo "⚙️ Script aranıyor..."
-        SCRIPT_FILE=$(find . -maxdepth 1 -name "*.sh" | head -n 1)
+        # --- AYARLAR ---
+        APP_NAME="ErdinPlayer"
+        PACKAGE_NAME="com.erdin.player"
+        PATH_NAME="com/erdin/player"
+        KEYSTORE_PASS="erdin123"
+        KEY_ALIAS="key0"
         
-        if [ -z "$SCRIPT_FILE" ]; then
-          echo "❌ Script bulunamadı!"
-          exit 1
-        fi
+        echo "🚀 Proje sıfırdan oluşturuluyor..."
+
+        # Klasörleri Aç
+        mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME
+        mkdir -p $APP_NAME/app/src/main/res/layout
+        mkdir -p $APP_NAME/app/src/main/res/values
         
-        chmod +x "$SCRIPT_FILE"
-        bash "$SCRIPT_FILE"
+        cd $APP_NAME
 
-    - name: 🚑 Acil Müdahale (Gradle ve AndroidX Onarımı)
-      run: |
-        # Proje klasörünü bul
-        BUILD_FILE=$(find . -maxdepth 2 -name "build.gradle" | head -n 1)
-        PROJECT_ROOT=$(dirname "$BUILD_FILE")
+        # --- A. KEYSTORE (İMZA) OLUŞTUR ---
+        echo "🔐 İmza dosyası hazırlanıyor..."
+        keytool -genkey -v -keystore app/keystore.jks \
+                -keyalg RSA -keysize 2048 -validity 10000 \
+                -alias $KEY_ALIAS -storepass $KEYSTORE_PASS -keypass $KEYSTORE_PASS \
+                -dname "CN=Erdin, OU=TV, O=ErdinMedia, L=Istanbul, S=Istanbul, C=TR"
+
+        # --- B. SETTINGS.GRADLE ---
+        echo "include ':app'" > settings.gradle
+
+        # --- C. GRADLE.PROPERTIES (AndroidX ve RAM Ayarı) ---
+        cat <<EOF > gradle.properties
+        org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+        android.useAndroidX=true
+        android.enableJetifier=true
+        EOF
+
+        # --- D. BUILD.GRADLE (Proje Seviyesi) ---
+        cat <<EOF > build.gradle
+        buildscript {
+            ext.kotlin_version = '1.9.0'
+            repositories {
+                google()
+                mavenCentral()
+            }
+            dependencies {
+                classpath 'com.android.tools.build:gradle:8.0.0'
+                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version"
+            }
+        }
+        allprojects {
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+        task clean(type: Delete) {
+            delete rootProject.buildDir
+        }
+        EOF
+
+        # --- E. BUILD.GRADLE (App Modülü) ---
+        cat <<EOF > app/build.gradle
+        plugins {
+            id 'com.android.application'
+            id 'kotlin-android'
+        }
+        android {
+            namespace '$PACKAGE_NAME'
+            compileSdk 33
+            defaultConfig {
+                applicationId "$PACKAGE_NAME"
+                minSdk 24
+                targetSdk 33
+                versionCode 1
+                versionName "1.0"
+            }
+            signingConfigs {
+                release {
+                    storeFile file("keystore.jks")
+                    storePassword "$KEYSTORE_PASS"
+                    keyAlias "$KEY_ALIAS"
+                    keyPassword "$KEYSTORE_PASS"
+                }
+            }
+            buildTypes {
+                release {
+                    minifyEnabled true
+                    proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                    signingConfig signingConfigs.release
+                }
+            }
+            buildFeatures {
+                viewBinding false
+            }
+        }
+        dependencies {
+            implementation 'androidx.core:core-ktx:1.7.0'
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+            implementation 'com.google.android.material:material:1.9.0'
+            implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+            implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+            implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+            implementation 'androidx.media3:media3-exoplayer:1.1.0'
+            implementation 'androidx.media3:media3-ui:1.1.0'
+            implementation 'com.google.android.gms:play-services-ads:22.1.0'
+        }
+        EOF
+
+        # --- F. ANDROID MANIFEST ---
+        cat <<EOF > app/src/main/AndroidManifest.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:tools="http://schemas.android.com/tools">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <application
+                android:allowBackup="true"
+                android:icon="@mipmap/ic_launcher"
+                android:label="@string/app_name"
+                android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+                android:usesCleartextTraffic="true">
+                <meta-data
+                    android:name="com.google.android.gms.ads.APPLICATION_ID"
+                    android:value="ca-app-pub-3940256099942544~3347511713"/>
+                <activity android:name=".LoginActivity" android:exported="true">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
+                    </intent-filter>
+                </activity>
+                <activity android:name=".PlayerActivity" />
+            </application>
+        </manifest>
+        EOF
+
+        # --- G. STRINGS.XML ---
+        cat <<EOF > app/src/main/res/values/strings.xml
+        <resources>
+            <string name="app_name">$APP_NAME</string>
+            <string name="login">Giriş Yap</string>
+            <string name="url_hint">http://url:port</string>
+            <string name="user_hint">Kullanıcı Adı</string>
+            <string name="pass_hint">Şifre</string>
+        </resources>
+        EOF
+
+        # --- H. LOGIN ACTIVITY (Kotlin) ---
+        cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
+        package $PACKAGE_NAME
+        import android.content.Intent
+        import android.os.Bundle
+        import android.widget.Button
+        import android.widget.EditText
+        import android.widget.Toast
+        import androidx.appcompat.app.AppCompatActivity
+        import com.google.android.gms.ads.AdRequest
+        import com.google.android.gms.ads.AdView
+        import com.google.android.gms.ads.MobileAds
+        import $PACKAGE_NAME.R
+        class LoginActivity : AppCompatActivity() {
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_login)
+                MobileAds.initialize(this) {}
+                val mAdView = findViewById<AdView>(R.id.adView)
+                val adRequest = AdRequest.Builder().build()
+                mAdView.loadAd(adRequest)
+                val btnLogin = findViewById<Button>(R.id.btnLogin)
+                val etUrl = findViewById<EditText>(R.id.etUrl)
+                val etUser = findViewById<EditText>(R.id.etUser)
+                val etPass = findViewById<EditText>(R.id.etPass)
+                btnLogin.setOnClickListener {
+                    val url = etUrl.text.toString()
+                    if(url.isNotEmpty()){
+                        val intent = Intent(this, PlayerActivity::class.java)
+                        intent.putExtra("stream_url", url) 
+                        startActivity(intent)
+                    } else {
+                        Toast.makeText(this, "Bilgileri giriniz", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+        EOF
+
+        # --- I. LOGIN LAYOUT (XML) ---
+        cat <<EOF > app/src/main/res/layout/activity_login.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:ads="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:gravity="center">
+            <EditText android:id="@+id/etUrl" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/url_hint"/>
+            <EditText android:id="@+id/etUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/user_hint"/>
+            <EditText android:id="@+id/etPass" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/pass_hint" android:inputType="textPassword"/>
+            <Button android:id="@+id/btnLogin" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/login" android:layout_marginTop="20dp"/>
+            <com.google.android.gms.ads.AdView
+                android:id="@+id/adView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="50dp"
+                ads:adSize="BANNER"
+                ads:adUnitId="ca-app-pub-3940256099942544/6300978111"/> 
+        </LinearLayout>
+        EOF
+
+        # --- J. PLAYER ACTIVITY (Kotlin) ---
+        cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
+        package $PACKAGE_NAME
+        import android.os.Bundle
+        import androidx.appcompat.app.AppCompatActivity
+        import androidx.media3.common.MediaItem
+        import androidx.media3.exoplayer.ExoPlayer
+        import androidx.media3.ui.PlayerView
+        import $PACKAGE_NAME.R
+        class PlayerActivity : AppCompatActivity() {
+            private var player: ExoPlayer? = null
+            private lateinit var playerView: PlayerView
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_player)
+                playerView = findViewById(R.id.player_view)
+                val streamUrl = intent.getStringExtra("stream_url") ?: ""
+                initializePlayer(streamUrl)
+            }
+            private fun initializePlayer(url: String) {
+                player = ExoPlayer.Builder(this).build()
+                playerView.player = player
+                val mediaItem = MediaItem.fromUri(url)
+                player!!.setMediaItem(mediaItem)
+                player!!.prepare()
+                player!!.play()
+            }
+            override fun onStop() {
+                super.onStop()
+                player?.release()
+                player = null
+            }
+        }
+        EOF
+
+        # --- K. PLAYER LAYOUT (XML) ---
+        cat <<EOF > app/src/main/res/layout/activity_player.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#000000">
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/player_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </FrameLayout>
+        EOF
         
-        echo "🔧 Ayarlar düzeltiliyor: $PROJECT_ROOT"
-        
-        # 1. ViewBinding HATASINI DÜZELT
-        if [ -f "$PROJECT_ROOT/app/build.gradle" ]; then
-            sed -i 's/viewBinding true/viewBinding false/g' "$PROJECT_ROOT/app/build.gradle"
-            echo "✅ ViewBinding kapatıldı."
-        fi
+        echo "✅ Tüm dosyalar başarıyla oluşturuldu!"
 
-        # 2. Kotlin Sürümünü GÜNCELLE
-        if [ -f "$PROJECT_ROOT/build.gradle" ]; then
-            sed -i "s/ext.kotlin_version = '1.8.0'/ext.kotlin_version = '1.9.0'/g" "$PROJECT_ROOT/build.gradle"
-            echo "✅ Kotlin sürümü güncellendi."
-        fi
-
-        # 3. (YENİ) ANDROIDX AYARINI EKLE (Hatanın Çözümü Burası) 👇
-        # gradle.properties dosyası yoksa oluşturur, varsa ekleme yapar.
-        echo "android.useAndroidX=true" >> "$PROJECT_ROOT/gradle.properties"
-        echo "android.enableJetifier=true" >> "$PROJECT_ROOT/gradle.properties"
-        echo "✅ AndroidX ayarları gradle.properties dosyasına eklendi."
-
-    - name: 🔧 Gradle 8.0 Kurulumu
+    - name: 3. Gradle 8.0 Kurulumu (Sabit Sürüm)
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.0'
 
-    - name: 🛠️ Eksikleri Tamamla ve Derle
+    - name: 4. APK Derleme (Build)
       run: |
-        BUILD_FILE=$(find . -maxdepth 2 -name "build.gradle" | head -n 1)
-        PROJECT_ROOT=$(dirname "$BUILD_FILE")
-        
-        # settings.gradle kontrolü
-        if [ ! -f "$PROJECT_ROOT/settings.gradle" ]; then
-           echo "include ':app'" > "$PROJECT_ROOT/settings.gradle"
-        fi
-        
-        cd "$PROJECT_ROOT"
+        cd ErdinPlayer
         echo "🚀 Derleme Başlıyor..."
-        gradle assembleRelease --stacktrace
+        gradle assembleRelease --no-daemon --stacktrace
 
-    - name: 📦 APK'yı Paketle ve Sun
+    - name: 5. APK'yı Yükle (Artifact)
       uses: actions/upload-artifact@v4
       with:
         name: erdin-player-release
         path: |
-          **/build/outputs/apk/release/*.apk
-          **/app-release.apk
+          ErdinPlayer/app/build/outputs/apk/release/*.apk
