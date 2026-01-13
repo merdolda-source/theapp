@@ -1,9 +1,9 @@
-name: Android Build APK
+name: Android Build APK (Auto-Fix)
 
 on:
   push:
     branches: [ "main", "master" ]
-  workflow_dispatch: # Manuel tetikleme butonu ekler
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,25 +19,46 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Gradle İzinlerini Ayarla
-      # Klasör adı olmadan direkt gradlew'e yetki veriyoruz
-      run: chmod +x gradlew || true 
+    - name: 🕵️ Otomatik Sorun Giderici ve Build
+      run: |
+        echo "🔍 Proje dosyaları aranıyor..."
+        
+        # build.gradle dosyasını nerede olursa olsun bul
+        # (Sadece root'taki veya ilk alt klasördeki build.gradle'ı hedefler)
+        BUILD_FILE=$(find . -maxdepth 2 -name "build.gradle" | head -n 1)
+        
+        if [ -z "$BUILD_FILE" ]; then
+          echo "❌ HATA: build.gradle dosyası bulunamadı! Depo boş veya yanlış yüklenmiş."
+          echo "📂 Mevcut Dosyalar:"
+          ls -R
+          exit 1
+        fi
+        
+        # Dosyanın olduğu klasörü al (Örn: ./ErdinPlayer veya .)
+        PROJECT_ROOT=$(dirname "$BUILD_FILE")
+        echo "✅ Proje şu klasörde bulundu: $PROJECT_ROOT"
+        
+        # 🛠️ DÜZELTME 1: settings.gradle EKSİKSE OLUŞTUR
+        if [ ! -f "$PROJECT_ROOT/settings.gradle" ]; then
+           echo "⚠️ settings.gradle eksik, otomatik oluşturuluyor..."
+           echo "include ':app'" > "$PROJECT_ROOT/settings.gradle"
+        fi
 
-    - name: Gradle Kur ve Derle (İmzalı)
-      uses: gradle/gradle-build-action@v3
-      with:
-        gradle-version: '8.2'
-        arguments: assembleRelease
-        # 'build-root-directory' satırını SİLDİK. Artık ana dizinde çalışacak.
+        # 🛠️ DÜZELTME 2: gradlew İZİNLERİ
+        if [ -f "$PROJECT_ROOT/gradlew" ]; then
+           chmod +x "$PROJECT_ROOT/gradlew"
+        fi
 
-    - name: Dosya Kontrolü (Debug)
-      # Eğer APK oluşmazsa nedenini görmek için dosya listesini basar
-      if: failure()
-      run: ls -R app/build/outputs/apk/
+        # 🚀 BUILD BAŞLATIYORUZ
+        echo "🚀 Derleme Başlıyor..."
+        cd "$PROJECT_ROOT"
+        bash ./gradlew assembleRelease
 
-    - name: APK'yı Yükle (Artifact)
+    - name: 📦 APK'yı Bul ve Yükle
       uses: actions/upload-artifact@v4
       with:
         name: erdin-player-release
-        # Yolu ana dizine göre güncelledik
-        path: app/build/outputs/apk/release/app-release.apk
+        # Klasör yolu ne olursa olsun APK'yı bulur
+        path: |
+          **/build/outputs/apk/release/*.apk
+          **/app-release.apk
