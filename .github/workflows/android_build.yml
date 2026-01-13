@@ -1,4 +1,4 @@
-name: All-in-One Android Builder
+name: All-in-One Android Builder (Fixed)
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 1. Sanal Makine Hazırlığı (Checkout & Java)
+    - name: 1. Hazırlık
       uses: actions/checkout@v4
     
     - name: JDK 17 Kurulumu
@@ -19,7 +19,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 2. Proje Dosyalarını Oluştur (Sihirli Adım)
+    - name: 2. Proje Dosyalarını ve İkonu Oluştur
       run: |
         # --- AYARLAR ---
         APP_NAME="ErdinPlayer"
@@ -28,16 +28,24 @@ jobs:
         KEYSTORE_PASS="erdin123"
         KEY_ALIAS="key0"
         
-        echo "🚀 Proje sıfırdan oluşturuluyor..."
+        echo "🚀 Proje oluşturuluyor..."
 
         # Klasörleri Aç
         mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME
         mkdir -p $APP_NAME/app/src/main/res/layout
         mkdir -p $APP_NAME/app/src/main/res/values
         
+        # 🔥 KRİTİK DÜZELTME: İKON KLASÖRÜ OLUŞTURUYORUZ 🔥
+        mkdir -p $APP_NAME/app/src/main/res/mipmap-hdpi
+        
         cd $APP_NAME
 
-        # --- A. KEYSTORE (İMZA) OLUŞTUR ---
+        # 🔥 KRİTİK DÜZELTME: İKON İNDİRİYORUZ 🔥
+        # Google'ın örnek projelerinden standart bir ikon çekiyoruz
+        echo "⬇️ Uygulama ikonu indiriliyor..."
+        wget -O app/src/main/res/mipmap-hdpi/ic_launcher.png https://raw.githubusercontent.com/android/architecture-samples/main/app/src/main/res/mipmap-hdpi/ic_launcher.png
+
+        # --- A. KEYSTORE (İMZA) ---
         echo "🔐 İmza dosyası hazırlanıyor..."
         keytool -genkey -v -keystore app/keystore.jks \
                 -keyalg RSA -keysize 2048 -validity 10000 \
@@ -47,14 +55,14 @@ jobs:
         # --- B. SETTINGS.GRADLE ---
         echo "include ':app'" > settings.gradle
 
-        # --- C. GRADLE.PROPERTIES (AndroidX ve RAM Ayarı) ---
+        # --- C. GRADLE.PROPERTIES ---
         cat <<EOF > gradle.properties
         org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
         android.useAndroidX=true
         android.enableJetifier=true
         EOF
 
-        # --- D. BUILD.GRADLE (Proje Seviyesi) ---
+        # --- D. BUILD.GRADLE (Proje) ---
         cat <<EOF > build.gradle
         buildscript {
             ext.kotlin_version = '1.9.0'
@@ -78,7 +86,7 @@ jobs:
         }
         EOF
 
-        # --- E. BUILD.GRADLE (App Modülü) ---
+        # --- E. BUILD.GRADLE (App) ---
         cat <<EOF > app/build.gradle
         plugins {
             id 'com.android.application'
@@ -163,7 +171,7 @@ jobs:
         </resources>
         EOF
 
-        # --- H. LOGIN ACTIVITY (Kotlin) ---
+        # --- H. LOGIN ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -202,7 +210,7 @@ jobs:
         }
         EOF
 
-        # --- I. LOGIN LAYOUT (XML) ---
+        # --- I. LOGIN LAYOUT ---
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -226,7 +234,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # --- J. PLAYER ACTIVITY (Kotlin) ---
+        # --- J. PLAYER ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.os.Bundle
@@ -261,7 +269,7 @@ jobs:
         }
         EOF
 
-        # --- K. PLAYER LAYOUT (XML) ---
+        # --- K. PLAYER LAYOUT ---
         cat <<EOF > app/src/main/res/layout/activity_player.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -275,20 +283,20 @@ jobs:
         </FrameLayout>
         EOF
         
-        echo "✅ Tüm dosyalar başarıyla oluşturuldu!"
+        echo "✅ İkon indirildi ve dosyalar hazır!"
 
-    - name: 3. Gradle 8.0 Kurulumu (Sabit Sürüm)
+    - name: 3. Gradle 8.0 Kurulumu
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.0'
 
-    - name: 4. APK Derleme (Build)
+    - name: 4. APK Derleme
       run: |
         cd ErdinPlayer
         echo "🚀 Derleme Başlıyor..."
         gradle assembleRelease --no-daemon --stacktrace
 
-    - name: 5. APK'yı Yükle (Artifact)
+    - name: 5. APK'yı Yükle
       uses: actions/upload-artifact@v4
       with:
         name: erdin-player-release
