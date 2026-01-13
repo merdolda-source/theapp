@@ -1,119 +1,97 @@
 #!/bin/bash
 
-# --- 1. Değişkenler (Panelden Gelenler) ---
-APP_NAME="${1:-XtrewmmmmPlayer}"
-PKG_NAME="${2:-com.xtrewmmmm.tv}"
-ICON_URL="${3:-https://site.com/icon.png}"
-AD_APP_ID="${4:-ca-app-pub-3940256099942544~3347511713}"
-BANNER_ID="${5:-ca-app-pub-3940256099942544/6300978111}"
-INTER_ID="${6:-ca-app-pub-3940256099942544/1033173712}"
-INT_COUNT="${7:-3}"
+# --- 1. PARAMETRELER (Panelden Gelenler) ---
+NAME=$1; PKG=$2; ICON=$3; AD_APP_ID=$4; BANNER_ID=$5; INTER_ID=$6; INT_COUNT=$7
+PATH_PKG=${PKG//./\/}
 
-# Renkler
-BG="#1A1A1A"
-GREEN="#2E7D32"
-MAROON="#800000"
+echo "--- Xtrewmmmm Full Build Başlatıldı ---"
 
-echo "--- Xtrewmmmm: Proje İnşa Ediliyor: $PKG_NAME ---"
-
-# --- 2. Klasör Yapısını Oluştur ---
-PKG_PATH=${PKG_NAME//./\/}
-mkdir -p app/src/main/java/$PKG_PATH
+# --- 2. KLASÖR YAPISINI SIFIRDAN OLUŞTUR ---
+mkdir -p app/src/main/java/$PATH_PKG
 mkdir -p app/src/main/res/layout
 mkdir -p app/src/main/res/values
-mkdir -p app/src/main/res/mipmap-xxxhdpi
-mkdir -p gradle/wrapper
+mkdir -p app/src/main/res/drawable
 
-# --- 3. Root build.gradle Oluştur ---
+# --- 3. GRADLE DOSYALARI (ROOT & APP) ---
 cat <<EOF > build.gradle
-buildscript {
-    repositories { google(); mavenCentral() }
-    dependencies { classpath 'com.android.tools.build:gradle:8.1.1' }
-}
-allprojects {
-    repositories { google(); mavenCentral(); maven { url 'https://jitpack.io' } }
-}
+buildscript { repositories { google(); mavenCentral() }; dependencies { classpath 'com.android.tools.build:gradle:8.1.1' } }
+allprojects { repositories { google(); mavenCentral(); maven { url 'https://jitpack.io' } } }
 EOF
 
-# --- 4. App build.gradle Oluştur (Kütüphaneler Dahil) ---
 cat <<EOF > app/build.gradle
 apply plugin: 'com.android.application'
 android {
-    namespace '$PKG_NAME'
+    namespace '$PKG'
     compileSdk 34
-    defaultConfig {
-        applicationId '$PKG_NAME'
-        minSdk 21
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
-    }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
+    defaultConfig { applicationId '$PKG'; minSdk 21; targetSdk 34; versionCode 1; versionName "1.0" }
+    buildTypes { release { minifyEnabled false } }
 }
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'com.google.android.exoplayer:exoplayer:2.19.1'
     implementation 'com.google.android.gms:play-services-ads:22.3.0'
-    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.github.bumptech.glide:glide:4.15.1'
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
 }
 EOF
 
-# --- 5. Android Manifest (Notch/Reklam/İzinler) ---
+# --- 4. MANIFEST (NOTCH/ÇENTİK VE REKLAM DESTEĞİ) ---
 cat <<EOF > app/src/main/AndroidManifest.xml
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="$APP_NAME"
-        android:theme="@style/Theme.Xtrew"
+        android:label="$NAME"
+        android:theme="@style/XtrewTheme"
         android:usesCleartextTraffic="true">
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="$AD_APP_ID"/>
         <activity android:name=".MainActivity" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
-        <activity android:name=".PlayerActivity" android:configChanges="orientation|screenSize|layoutDirection" />
+        <activity android:name=".PlayerActivity" android:screenOrientation="landscape" android:configChanges="orientation|screenSize" />
     </application>
 </manifest>
 EOF
 
-# --- 6. Kaynak Dosyaları (Colors & Strings) ---
+# --- 5. KAYNAKLAR VE RENKLER (Gri, Yeşil, Bordo) ---
 cat <<EOF > app/src/main/res/values/colors.xml
 <resources>
-    <color name="colorPrimary">$MAROON</color>
-    <color name="colorAccent">$GREEN</color>
-    <color name="bg_dark">$BG</color>
+    <color name="bg_dark">#1A1A1A</color>
+    <color name="sport_green">#2E7D32</color>
+    <color name="maroon">#800000</color>
     <color name="white">#FFFFFF</color>
 </resources>
 EOF
 
 cat <<EOF > app/src/main/res/values/themes.xml
-<resources>
-    <style name="Theme.Xtrew" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">$MAROON</item>
+<resources xmlns:tools="http://schemas.xml/tools">
+    <style name="XtrewTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/bg_dark</item>
-        <item name="android:windowLayoutInDisplayCutoutMode" tools:ignore="NewApi">shortEdges</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>
 EOF
 
-# --- 7. Java Kodları: Player & Header Logic ---
-# PlayerActivity (Referer, Origin ve Zoom modlarını içerir)
-cat <<EOF > app/src/main/java/$PKG_PATH/PlayerActivity.java
-package $PKG_NAME;
+# --- 6. LAYOUTLAR (GİRİŞ VE PLAYER) ---
+# Giriş ekranı: Xtream ve M3U butonları arasına reklam koyar
+cat <<EOF > app/src/main/res/layout/activity_main.xml
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/bg_dark">
+    <LinearLayout android:id="@+id/btnGroup" android:orientation="vertical" android:layout_centerInParent="true" android:layout_width="300dp" android:layout_height="wrap_content">
+        <Button android:id="@+id/btnXtream" android:text="Xtream Port Giriş" android:backgroundTint="@color/maroon" android:layout_width="match_parent" android:layout_height="60dp" />
+        <com.google.android.gms.ads.AdView xmlns:ads="http://schemas.android.com/apk/res-auto" android:id="@+id/banner_middle" ads:adSize="BANNER" ads:adUnitId="$BANNER_ID" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:layout_margin="10dp"/>
+        <Button android:id="@+id/btnM3u" android:text="M3U URL Giriş" android:backgroundTint="@color/sport_green" android:layout_width="match_parent" android:layout_height="60dp" />
+    </LinearLayout>
+    <com.google.android.gms.ads.AdView xmlns:ads="http://schemas.android.com/apk/res-auto" android:id="@+id/banner_bottom" ads:adSize="BANNER" ads:adUnitId="$BANNER_ID" android:layout_alignParentBottom="true" android:layout_centerHorizontal="true" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+</RelativeLayout>
+EOF
+
+# --- 7. JAVA KODU: PLAYER (FULL ZOOM + REFERER + ORIGIN) ---
+cat <<EOF > app/src/main/java/$PATH_PKG/PlayerActivity.java
+package $PKG;
 import android.os.Bundle;
+import android.view.View;
 import android.view.WindowManager;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -121,49 +99,47 @@ import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 import com.google.android.exoplayer2.ui.StyledPlayerView;
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource;
+import java.util.HashMap;
+import java.util.Map;
 
 public class PlayerActivity extends AppCompatActivity {
     StyledPlayerView playerView;
     ExoPlayer player;
+    int zoomMode = 1; // 0:Kare, 1:Full, 2:Zoom
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_player);
-        
-        // Full screen notch bypass
+        // KAMERAYI VE ÇENTİĞİ AŞAN FULL MOD
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
-        
+        setContentView(R.layout.activity_player);
+
         playerView = findViewById(R.id.player_view);
         
-        // Header (Referer/Origin) Ayarı
-        DefaultHttpDataSource.Factory httpDataSourceFactory = new DefaultHttpDataSource.Factory()
-            .setUserAgent("XtrewPlayer")
-            .setDefaultRequestProperties(java.util.Collections.singletonMap("Referer", getIntent().getStringExtra("referer")));
+        // REFERER VE ORIGIN DESTEĞİ
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Referer", getIntent().getStringExtra("referer"));
+        headers.put("Origin", getIntent().getStringExtra("origin"));
 
-        player = new ExoPlayer.Builder(this).setMediaSourceFactory(new com.google.android.exoplayer2.source.DefaultMediaSourceFactory(httpDataSourceFactory)).build();
+        DefaultHttpDataSource.Factory ds = new DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers);
+        player = new ExoPlayer.Builder(this).build();
         playerView.setPlayer(player);
         
-        // ZOOM MODU (Kamera/Notch aşan mod)
-        playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM); 
+        // VARSAYILAN FULL MOD (Notch Dahil)
+        playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM);
 
-        String streamUrl = getIntent().getStringExtra("url");
-        player.setMediaItem(MediaItem.fromUri(streamUrl));
+        String url = getIntent().getStringExtra("url");
+        player.setMediaItem(MediaItem.fromUri(url));
         player.prepare();
         player.play();
     }
 }
 EOF
 
-# --- 8. İkon İndir ---
-curl -L "$ICON_URL" -o app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-
-# --- 9. Gradle Wrapper (Build için şart) ---
-# Eğer repoda gradlew yoksa otomatik oluşturur
-if [ ! -f "gradlew" ]; then
-    gradle wrapper --gradle-version 8.2
-fi
-
-chmod +x gradlew
-echo "--- Proje Oluşturuldu. Gradle Build Başlatılıyor... ---"
+# --- 8. İKON VE BİTİRİŞ ---
+curl -L "$ICON" -o app/src/main/res/drawable/ic_launcher.png
+# Gradle wrapper oluştur ve release build al
+gradle wrapper --gradle-version 8.2
 ./gradlew assembleRelease
+
+echo "--- Xtrewmmmm Build Tamamlandı! APK hazır. ---"
