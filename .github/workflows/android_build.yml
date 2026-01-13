@@ -1,4 +1,4 @@
-name: Final Stable Builder V5
+name: Final Cyber Builder V6
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 2. Dosyaları Oluştur (Fix Sürüm)
+    - name: 2. Dosyaları Oluştur (Cyber Tasarım)
       run: |
         # --- AYARLAR ---
         APP_NAME="ErdinPlayer"
@@ -28,7 +28,7 @@ jobs:
         KEYSTORE_PASS="erdin123"
         KEY_ALIAS="key0"
         
-        echo "🚀 Proje Onarılıyor ve Oluşturuluyor..."
+        echo "🚀 Proje Onarılıyor ve Yeni Tasarım Uygulanıyor..."
 
         # Temizlik ve Klasörler
         rm -rf $APP_NAME
@@ -40,8 +40,8 @@ jobs:
         
         cd $APP_NAME
 
-        # İKON İNDİR
-        wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://www.freepnglogos.com/uploads/512x512-logo-png/512x512-logo-download-anarchy-png-image-transparent-png-31.png"
+        # İKON İNDİR (Daha modern bir ikon linki varsa burayı değiştirebilirsin)
+        wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://cdn-icons-png.flaticon.com/512/2991/2991195.png"
 
         # --- A. KEYSTORE ---
         keytool -genkey -v -keystore app/keystore.jks \
@@ -81,8 +81,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 24
                 targetSdk 33
-                versionCode 1
-                versionName "1.0"
+                versionCode 2
+                versionName "2.0-Cyber"
             }
             signingConfigs {
                 release { storeFile file("keystore.jks"); storePassword "$KEYSTORE_PASS"; keyAlias "$KEY_ALIAS"; keyPassword "$KEYSTORE_PASS" }
@@ -105,46 +105,71 @@ jobs:
         }
         EOF
 
-        # --- C. TASARIM (DÜZELTİLDİ) ---
+        # --- C. YENİ TASARIM (CYBER DARK) ---
         
-        # 1. Renkler
+        # 1. Renkler (Mavi ve Koyu Siyah Teması)
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
-            <color name="bg_dark">#121212</color>
-            <color name="input_bg">#252525</color>
-            <color name="sport_green">#00E676</color>
+            <!-- Ana Arka Plan: Tam Siyah değil, çok koyu lacivert/siyah -->
+            <color name="bg_main">#050505</color>
+            
+            <!-- Kart/Input Arka Planı: Ana zeminden biraz daha açık -->
+            <color name="bg_card">#1A1A1A</color>
+            
+            <!-- Vurgu Rengi: Neon Mavi -->
+            <color name="accent_blue">#00D4FF</color>
+            
+            <!-- Yazı Renkleri -->
             <color name="text_white">#FFFFFF</color>
-            <color name="text_hint">#BBBBBB</color>
+            <color name="text_gray">#888888</color>
             <color name="black">#000000</color>
+            
+            <!-- Buton Gradyan Başlangıç/Bitiş -->
+            <color name="btn_start">#00D4FF</color>
+            <color name="btn_end">#007ACC</color>
         </resources>
         EOF
 
-        # 2. Şekiller
-        cat <<EOF > app/src/main/res/drawable/bg_input_border.xml
+        # 2. Şekiller (Drawables)
+        
+        # Input Alanı (Daha belirgin sınırları var)
+        cat <<EOF > app/src/main/res/drawable/bg_input_cyber.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <solid android:color="@color/input_bg"/>
-            <corners android:radius="8dp"/>
-            <stroke android:width="2dp" android:color="@color/sport_green"/>
+            <solid android:color="@color/bg_card"/>
+            <corners android:radius="12dp"/>
+            <stroke android:width="1dp" android:color="#333333"/>
         </shape>
         EOF
         
-        cat <<EOF > app/src/main/res/drawable/bg_button_green.xml
+        # Buton (Düz renk yerine hafif parlak)
+        cat <<EOF > app/src/main/res/drawable/bg_button_cyber.xml
         <?xml version="1.0" encoding="utf-8"?>
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <solid android:color="@color/sport_green"/>
-            <corners android:radius="8dp"/>
+            <solid android:color="@color/accent_blue"/>
+            <corners android:radius="12dp"/>
         </shape>
         EOF
 
-        # 3. TEMA (Yazı Rengini Buradan Zorluyoruz - Hata Çıkmaz)
+        # Kategori Butonları (Dashboard için)
+        cat <<EOF > app/src/main/res/drawable/bg_card_cyber.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <solid android:color="@color/bg_card"/>
+            <corners android:radius="16dp"/>
+            <stroke android:width="1dp" android:color="@color/accent_blue"/>
+        </shape>
+        EOF
+
+        # 3. TEMA (Yazı Rengini Zorla Beyaz Yapıyoruz)
         cat <<EOF > app/src/main/res/values/styles.xml
         <resources>
             <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.NoActionBar">
-                <item name="android:windowBackground">@color/bg_dark</item>
-                <item name="colorPrimary">@color/sport_green</item>
+                <item name="android:windowBackground">@color/bg_main</item>
+                <item name="colorPrimary">@color/accent_blue</item>
                 <item name="android:textColor">@color/text_white</item>
                 <item name="android:editTextColor">@color/text_white</item>
+                <item name="android:textColorHint">@color/text_gray</item>
             </style>
         </resources>
         EOF
@@ -161,7 +186,7 @@ jobs:
                 android:theme="@style/Theme.ErdinPlayer" 
                 android:usesCleartextTraffic="true">
                 <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>
-                <activity android:name=".LoginActivity" android:exported="true">
+                <activity android:name=".LoginActivity" android:exported="true" android:windowSoftInputMode="adjustResize">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN" />
                         <category android:name="android.intent.category.LAUNCHER" />
@@ -178,49 +203,143 @@ jobs:
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">$APP_NAME</string>
-            <string name="login_title">XTREAM GİRİŞ</string>
-            <string name="login_btn">GİRİŞ YAP</string>
+            <string name="login_title">XTREAM PANEL</string>
+            <string name="login_subtitle">Lütfen giriş bilgilerinizi giriniz</string>
+            <string name="login_btn">GÜVENLİ GİRİŞ</string>
         </resources>
         EOF
 
-        # --- F. LAYOUTLAR ---
+        # --- F. LAYOUTLAR (DÜZELTİLDİ) ---
 
-        # 1. LOGIN
+        # 1. LOGIN (Görünürlük sorunu burada çözüldü)
+        # textColor ve hintColor manuel olarak eklendi.
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent" android:layout_height="match_parent"
-            android:orientation="vertical" android:gravity="center" android:padding="30dp" android:background="@color/bg_dark">
-            <ImageView android:src="@mipmap/ic_launcher" android:layout_width="100dp" android:layout_height="100dp" android:layout_marginBottom="30dp"/>
-            <TextView android:text="@string/login_title" android:textColor="@color/sport_green" android:textSize="26sp" android:textStyle="bold" android:layout_marginBottom="30dp"/>
-            <EditText android:id="@+id/etUrl" android:hint="http://url:port" android:background="@drawable/bg_input_border" android:textColorHint="@color/text_hint" android:padding="18dp" android:layout_marginBottom="15dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-            <EditText android:id="@+id/etUser" android:hint="Kullanıcı Adı" android:background="@drawable/bg_input_border" android:textColorHint="@color/text_hint" android:padding="18dp" android:layout_marginBottom="15dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-            <EditText android:id="@+id/etPass" android:hint="Şifre" android:inputType="textPassword" android:background="@drawable/bg_input_border" android:textColorHint="@color/text_hint" android:padding="18dp" android:layout_marginBottom="30dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-            <androidx.appcompat.widget.AppCompatButton android:id="@+id/btnLogin" android:text="@string/login_btn" android:textColor="@color/black" android:textStyle="bold" android:background="@drawable/bg_button_green" android:layout_width="match_parent" android:layout_height="60dp"/>
+            android:orientation="vertical" android:gravity="center" 
+            android:padding="32dp" android:background="@color/bg_main">
+            
+            <ImageView android:src="@mipmap/ic_launcher" 
+                android:layout_width="120dp" android:layout_height="120dp" 
+                android:layout_marginBottom="20dp"/>
+            
+            <TextView android:text="@string/login_title" 
+                android:textColor="@color/text_white" android:textSize="28sp" 
+                android:textStyle="bold" android:layout_marginBottom="8dp"/>
+
+            <TextView android:text="@string/login_subtitle" 
+                android:textColor="@color/text_gray" android:textSize="14sp" 
+                android:layout_marginBottom="40dp"/>
+            
+            <!-- URL INPUT -->
+            <EditText android:id="@+id/etUrl" 
+                android:hint="http://url_adresi:port" 
+                android:inputType="textUri"
+                android:background="@drawable/bg_input_cyber" 
+                android:textColor="@color/text_white" 
+                android:textColorHint="@color/text_gray" 
+                android:padding="16dp" 
+                android:minHeight="55dp"
+                android:layout_marginBottom="16dp" 
+                android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            
+            <!-- USER INPUT -->
+            <EditText android:id="@+id/etUser" 
+                android:hint="Kullanıcı Adı" 
+                android:inputType="text"
+                android:background="@drawable/bg_input_cyber" 
+                android:textColor="@color/text_white" 
+                android:textColorHint="@color/text_gray" 
+                android:padding="16dp" 
+                android:minHeight="55dp"
+                android:layout_marginBottom="16dp" 
+                android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            
+            <!-- PASS INPUT -->
+            <EditText android:id="@+id/etPass" 
+                android:hint="Şifre" 
+                android:inputType="textPassword" 
+                android:background="@drawable/bg_input_cyber" 
+                android:textColor="@color/text_white" 
+                android:textColorHint="@color/text_gray" 
+                android:padding="16dp" 
+                android:minHeight="55dp"
+                android:layout_marginBottom="32dp" 
+                android:layout_width="match_parent" android:layout_height="wrap_content"/>
+            
+            <androidx.appcompat.widget.AppCompatButton android:id="@+id/btnLogin" 
+                android:text="@string/login_btn" 
+                android:textColor="@color/black" 
+                android:textStyle="bold" 
+                android:background="@drawable/bg_button_cyber" 
+                android:layout_width="match_parent" android:layout_height="60dp"/>
+                
         </LinearLayout>
         EOF
 
-        # 2. DASHBOARD
+        # 2. DASHBOARD (Kart Tasarımı)
         cat <<EOF > app/src/main/res/layout/activity_dashboard.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent" android:layout_height="match_parent"
-            android:orientation="vertical" android:gravity="center" android:padding="20dp" android:background="@color/bg_dark">
-            <TextView android:id="@+id/tvUser" android:text="Kullanıcı" android:textColor="@color/sport_green" android:textSize="20sp" android:layout_marginBottom="30dp"/>
-            <Button android:id="@+id/btnLive" android:text="CANLI TV" android:backgroundTint="#333" android:textColor="#FFF" android:layout_marginBottom="15dp" android:layout_width="match_parent" android:layout_height="70dp"/>
-            <Button android:id="@+id/btnVod" android:text="FİLMLER" android:backgroundTint="#333" android:textColor="#FFF" android:layout_marginBottom="15dp" android:layout_width="match_parent" android:layout_height="70dp"/>
-            <Button android:id="@+id/btnSeries" android:text="DİZİLER" android:backgroundTint="#333" android:textColor="#FFF" android:layout_width="match_parent" android:layout_height="70dp"/>
+            android:orientation="vertical" android:gravity="center" 
+            android:padding="24dp" android:background="@color/bg_main">
+            
+            <TextView android:id="@+id/tvUser" 
+                android:text="Hoşgeldiniz" 
+                android:textColor="@color/accent_blue" 
+                android:textSize="24sp" android:textStyle="bold"
+                android:layout_marginBottom="40dp"/>
+            
+            <Button android:id="@+id/btnLive" 
+                android:text="CANLI YAYINLAR" 
+                android:background="@drawable/bg_card_cyber" 
+                android:textColor="@color/text_white" 
+                android:textSize="18sp"
+                android:layout_marginBottom="20dp" 
+                android:layout_width="match_parent" android:layout_height="80dp"/>
+            
+            <Button android:id="@+id/btnVod" 
+                android:text="FİLMLER (VOD)" 
+                android:background="@drawable/bg_card_cyber" 
+                android:textColor="@color/text_white" 
+                android:textSize="18sp"
+                android:layout_marginBottom="20dp" 
+                android:layout_width="match_parent" android:layout_height="80dp"/>
+            
+            <Button android:id="@+id/btnSeries" 
+                android:text="DİZİLER" 
+                android:background="@drawable/bg_card_cyber" 
+                android:textColor="@color/text_white" 
+                android:textSize="18sp"
+                android:layout_width="match_parent" android:layout_height="80dp"/>
+                
         </LinearLayout>
         EOF
 
-        # 3. LIST
+        # 3. LIST (Liste Arka Planı ve Başlık)
         cat <<EOF > app/src/main/res/layout/activity_list.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent" android:layout_height="match_parent"
-            android:orientation="vertical" android:background="@color/bg_dark">
-            <TextView android:id="@+id/tvTitle" android:text="LİSTE" android:textColor="@color/sport_green" android:textSize="22sp" android:textStyle="bold" android:padding="20dp" android:gravity="center" android:background="#191919"/>
-            <ListView android:id="@+id/listView" android:layout_width="match_parent" android:layout_height="match_parent"/>
+            android:orientation="vertical" android:background="@color/bg_main">
+            
+            <TextView android:id="@+id/tvTitle" 
+                android:text="KATEGORİ" 
+                android:textColor="@color/black" 
+                android:textSize="20sp" 
+                android:textStyle="bold" 
+                android:padding="20dp" 
+                android:gravity="center" 
+                android:background="@color/accent_blue"/>
+            
+            <ListView android:id="@+id/listView" 
+                android:layout_width="match_parent" 
+                android:layout_height="match_parent"
+                android:divider="#333333"
+                android:dividerHeight="1dp"/>
+                
         </LinearLayout>
         EOF
 
@@ -233,7 +352,7 @@ jobs:
         </FrameLayout>
         EOF
 
-        # --- G. KOTLIN KODLARI (DÜZELTİLDİ) ---
+        # --- G. KOTLIN KODLARI ---
 
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
@@ -256,16 +375,16 @@ jobs:
                     val etUser = findViewById<EditText>(R.id.etUser)
                     val etPass = findViewById<EditText>(R.id.etPass)
                     btnLogin.setOnClickListener {
-                        val url = etUrl.text.toString()
-                        val user = etUser.text.toString()
-                        val pass = etPass.text.toString()
+                        val url = etUrl.text.toString().trim()
+                        val user = etUser.text.toString().trim()
+                        val pass = etPass.text.toString().trim()
                         if(url.isNotEmpty() && user.isNotEmpty()){
                             val intent = Intent(this, DashboardActivity::class.java)
                             intent.putExtra("url", url)
                             intent.putExtra("user", user)
                             intent.putExtra("pass", pass)
                             startActivity(intent)
-                        } else { Toast.makeText(this, "Bilgileri Giriniz", Toast.LENGTH_SHORT).show() }
+                        } else { Toast.makeText(this, "Lütfen tüm alanları doldurun", Toast.LENGTH_SHORT).show() }
                     }
                 } catch (e: Exception) { e.printStackTrace() }
             }
@@ -287,7 +406,7 @@ jobs:
                 val url = intent.getStringExtra("url")
                 val user = intent.getStringExtra("user")
                 val pass = intent.getStringExtra("pass")
-                findViewById<TextView>(R.id.tvUser).text = "Kullanıcı: " + user
+                findViewById<TextView>(R.id.tvUser).text = "Hoşgeldin, " + user
                 fun goToList(type: String) {
                     val intent = Intent(this, ListActivity::class.java)
                     intent.putExtra("url", url)
@@ -303,7 +422,7 @@ jobs:
         }
         EOF
 
-        # 🔥 LİSTE ADAPTÖRÜ DÜZELTİLDİ (Standart Layout kullanıldı, renkleri Styles.xml halledecek)
+        # Liste Adaptörü: Basit layout kullanıyoruz ama tema sayesinde yazılar beyaz olacak.
         cat <<EOF > app/src/main/java/$PATH_NAME/ListActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -311,6 +430,9 @@ jobs:
         import android.widget.ArrayAdapter
         import android.widget.ListView
         import android.widget.TextView
+        import android.graphics.Color
+        import android.view.View
+        import android.view.ViewGroup
         import androidx.appcompat.app.AppCompatActivity
         import $PACKAGE_NAME.R
         class ListActivity : AppCompatActivity() {
@@ -325,15 +447,22 @@ jobs:
                 findViewById<TextView>(R.id.tvTitle).text = type.uppercase() + " LISTESI"
                 val listView = findViewById<ListView>(R.id.listView)
                 
-                // WHEN YAPISI İLE DAHA GÜVENLİ LİSTE OLUŞTURMA
                 val items = when(type) {
-                    "live" -> listOf("TR: Ulusal 1", "TR: Spor 1", "TR: Sinema 1", "DE: Sport 1", "UK: News", "US: Action")
-                    "movie" -> listOf("Avatar 2", "Hızlı ve Öfkeli 10", "John Wick 4", "Oppenheimer", "Barbie")
-                    else -> listOf("Breaking Bad", "Game of Thrones", "La Casa De Papel", "The Witcher")
+                    "live" -> listOf("TR: Ulusal 1 HD", "TR: Spor 1 HD", "TR: Sinema Action", "DE: Sport 1", "UK: BBC News", "US: Fox Action")
+                    "movie" -> listOf("Avatar: The Way of Water", "Hızlı ve Öfkeli 10", "John Wick 4", "Oppenheimer", "Barbie", "The Batman")
+                    else -> listOf("Breaking Bad", "Game of Thrones", "La Casa De Papel", "The Witcher", "Stranger Things")
                 }
 
-                // Basit ve hatasız adapter. Rengi tema dosyasından alacak (Beyaz)
-                val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, items)
+                // Özel Adapter: Yazı rengini garanti beyaz yapmak için
+                val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, items) {
+                    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                        val view = super.getView(position, convertView, parent)
+                        val textView = view.findViewById<TextView>(android.R.id.text1)
+                        textView.setTextColor(Color.WHITE) // Yazıyı zorla beyaz yap
+                        textView.textSize = 18f
+                        return view
+                    }
+                }
                 listView.adapter = adapter
                 
                 listView.setOnItemClickListener { _, _, position, _ ->
@@ -383,7 +512,7 @@ jobs:
         }
         EOF
         
-        echo "✅ DOSYALAR TAMAM"
+        echo "✅ DOSYALAR TAMAMLANDI"
 
     - name: 3. Gradle 8.0 Kurulumu
       uses: gradle/actions/setup-gradle@v3
@@ -398,6 +527,6 @@ jobs:
     - name: 5. APK'yı Yükle
       uses: actions/upload-artifact@v4
       with:
-        name: erdin-player-stable-v5
+        name: erdin-player-cyber-v6
         path: |
           ErdinPlayer/app/build/outputs/apk/release/*.apk
