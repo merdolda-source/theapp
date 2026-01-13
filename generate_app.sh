@@ -5,7 +5,7 @@ set -e
 # REPO ROOT AYARLARI (SENİN DURUMUN)
 # ==============================
 PROJECT_ROOT="."
-APP_DIR="$PROJECT_ROOT/app"
+APP_DIR="$PROJECT_ROOT/"
 PKG="com.erdin.xtream"
 PKG_PATH="${PKG//./\/}"
 JAVA_DIR="$APP_DIR/src/main/java/$PKG_PATH"
