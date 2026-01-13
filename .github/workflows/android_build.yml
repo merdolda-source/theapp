@@ -1,4 +1,4 @@
-name: Fixed Version Build
+name: Auto-Fix and Build APK
 
 on:
   push:
@@ -32,27 +32,44 @@ jobs:
         chmod +x "$SCRIPT_FILE"
         bash "$SCRIPT_FILE"
 
-    - name: 🔧 Gradle 8.0 Kurulumu (Versiyon Sabitleme)
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.0' # SORUNU ÇÖZEN SATIR BURASI (9 yerine 8 kullan)
-
-    - name: 🛠️ Eksikleri Tamamla ve Derle
+    - name: 🚑 Acil Müdahale (Build Dosyası Onarımı)
       run: |
-        # Proje klasörünü bul
+        # build.gradle dosyasını nerede olursa olsun bul
         BUILD_FILE=$(find . -maxdepth 2 -name "build.gradle" | head -n 1)
         PROJECT_ROOT=$(dirname "$BUILD_FILE")
         
-        echo "🏠 Proje Ana Dizini: $PROJECT_ROOT"
+        echo "🔧 Hata veren ayarlar düzeltiliyor: $PROJECT_ROOT/app/build.gradle"
         
-        # settings.gradle eksikse oluştur
+        # 1. ViewBinding'i KAPAT (Hatanın asıl sebebi bu)
+        # Dosya içinde "viewBinding true" yazan yeri bulup "viewBinding false" yapar.
+        if [ -f "$PROJECT_ROOT/app/build.gradle" ]; then
+            sed -i 's/viewBinding true/viewBinding false/g' "$PROJECT_ROOT/app/build.gradle"
+            echo "✅ ViewBinding kapatıldı (Çatışma engellendi)."
+        fi
+
+        # 2. Kotlin Sürümünü Yükselt (Gradle 8 ile daha uyumlu olsun)
+        if [ -f "$PROJECT_ROOT/build.gradle" ]; then
+            sed -i "s/ext.kotlin_version = '1.8.0'/ext.kotlin_version = '1.9.0'/g" "$PROJECT_ROOT/build.gradle"
+            echo "✅ Kotlin sürümü 1.9.0'a yükseltildi."
+        fi
+
+    - name: 🔧 Gradle 8.0 Kurulumu
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.0'
+
+    - name: 🛠️ Eksikleri Tamamla ve Derle
+      run: |
+        BUILD_FILE=$(find . -maxdepth 2 -name "build.gradle" | head -n 1)
+        PROJECT_ROOT=$(dirname "$BUILD_FILE")
+        
+        # settings.gradle kontrolü
         if [ ! -f "$PROJECT_ROOT/settings.gradle" ]; then
            echo "include ':app'" > "$PROJECT_ROOT/settings.gradle"
         fi
         
-        # Derleme Başlasın
         cd "$PROJECT_ROOT"
-        # --warning-mode all ile detayları görerek, stacktrace ile derliyoruz
+        # --stacktrace ile derleyelim ki hata varsa detaylı görelim
         gradle assembleRelease --stacktrace
 
     - name: 📦 APK'yı Paketle ve Sun
