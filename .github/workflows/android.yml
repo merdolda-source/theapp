@@ -1,10 +1,8 @@
 name: Build ErdinXtream APK
 
 on:
-  # Kod 'main' veya 'master' dalına gönderildiğinde çalışır
   push:
     branches: [ "main", "master" ]
-  # GitHub arayüzünden manuel olarak 'Run Workflow' diyebilmek için
   workflow_dispatch:
 
 jobs:
@@ -13,33 +11,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Adım: Kodları GitHub deposundan sanal makineye çeker
+    # 1. Kodları Çek (v4 Sürümü)
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    # 2. Adım: Java 17 Kurulumu (AGP 8.0 ve üstü için ZORUNLUDUR)
+    # 2. Java 17 Kurulumu (v4 Sürümü)
     - name: Set up JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
         cache: gradle
 
-    # 3. Adım: Gradle Wrapper'a çalışma izni ver (Linux ortamı için kritik)
+    # 3. Gradle İzinlerini Ver
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    # 4. Adım: Projeyi Derle (Debug APK)
-    # --stacktrace: Hata olursa detay gösterir
-    # --no-daemon: GitHub sunucusunda RAM şişmesini engeller
+    # 4. Derleme (Build)
     - name: Build with Gradle
       run: ./gradlew assembleDebug --stacktrace --no-daemon
 
-    # 5. Adım: Oluşan APK'yı bul ve indirilebilir yap
+    # 5. APK Yükleme (v4 Sürümü - Hata Veren Kısım Düzeltildi)
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ErdinXtream-Debug-APK
-        # Gradle standart çıktı yolu burasıdır:
         path: app/build/outputs/apk/debug/app-debug.apk
-        retention-days: 7 # Dosya 7 gün boyunca indirilebilir kalır
+        retention-days: 7
