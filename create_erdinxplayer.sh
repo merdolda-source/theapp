@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # create_erdinxplayer.sh
-# Tek bir betikle basit bir Android Kotlin proje iskeleti oluşturur.
+# Tek betikle ERDINXPLAYER Android proje iskeleti oluşturur.
 # Uygulama: ERDİNXPLAYER
 # Paket: com.erdin.xplay
 # Versiyon: 1.0 (versionCode 1)
@@ -8,20 +8,22 @@
 # Kullanım:
 #   chmod +x create_erdinxplayer.sh
 #   ./create_erdinxplayer.sh
-set -e
+set -euo pipefail
 
-APP_NAME="ERDİNXPLAYER"
+APP_NAME="ERDINXPLAYER"
 PKG="com.erdin.xplay"
 PKG_DIR=${PKG//./\/}
 ROOT_DIR="$(pwd)/${APP_NAME}"
 APP_MODULE_DIR="${ROOT_DIR}/app"
 
 echo "Projeyi oluşturuyorum: ${ROOT_DIR}"
+
+# Dizin yapısını oluştur
 mkdir -p "${APP_MODULE_DIR}/src/main/java/${PKG_DIR}"
 mkdir -p "${APP_MODULE_DIR}/src/main/res/layout"
 mkdir -p "${APP_MODULE_DIR}/src/main/res/values"
-mkdir -p "${APP_MODULE_DIR}/src/main/AndroidManifest.xml" || true
 mkdir -p "${APP_MODULE_DIR}/src/main/assets"
+mkdir -p "${APP_MODULE_DIR}/src/main"
 
 # settings.gradle
 cat > "${ROOT_DIR}/settings.gradle" <<'EOF'
@@ -121,9 +123,9 @@ cat > "${APP_MODULE_DIR}/src/main/AndroidManifest.xml" <<EOF
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:allowBackup="true"
-        android:label="${APP_NAME}"
+        android:label="ERDİNXPLAYER"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        android:theme="@style/Theme.App">
         <activity android:name=".PlayerActivity" />
         <activity android:name=".MainActivity">
             <intent-filter>
@@ -223,7 +225,6 @@ class MainActivity : AppCompatActivity() {
             line = reader.readLine() ?: break
             val trimmed = line.trim()
             if (trimmed.startsWith("#EXTINF:", true)) {
-                // Basit parse: #EXTINF:-1,Channel Name
                 val comma = trimmed.indexOf(',')
                 lastTitle = if (comma >= 0 && comma + 1 < trimmed.length) trimmed.substring(comma + 1).trim() else "Untitled"
             } else if (trimmed.startsWith("http", true) || trimmed.startsWith("udp", true)) {
@@ -324,7 +325,7 @@ class PlayerActivity : AppCompatActivity() {
 EOF
 
 # Layouts
-cat > "${APP_MODULE_DIR}/src/main/res/layout/activity_main.xml" <<EOF
+cat > "${APP_MODULE_DIR}/src/main/res/layout/activity_main.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -339,7 +340,7 @@ cat > "${APP_MODULE_DIR}/src/main/res/layout/activity_main.xml" <<EOF
         android:hint="M3U URL veya Xtream M3U URL"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf=\"@+id/buttonFetch\"
+        app:layout_constraintEnd_toStartOf="@+id/buttonFetch"
         android:padding="12dp"
         android:layout_margin="12dp"/>
 
@@ -357,23 +358,23 @@ cat > "${APP_MODULE_DIR}/src/main/res/layout/activity_main.xml" <<EOF
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf=\"@+id/editTextUrl\"
-        app:layout_constraintEnd_toEndOf=\"parent\"
-        android:layout_margin=\"12dp\"/>
+        app:layout_constraintTop_toBottomOf="@+id/editTextUrl"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="12dp"/>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf=\"@+id/editTextUrl\"
-        app:layout_constraintBottom_toBottomOf=\"parent\"
-        app:layout_constraintStart_toStartOf=\"parent\"
-        app:layout_constraintEnd_toEndOf=\"parent\"
-        android:layout_margin=\"8dp\"/>
+        app:layout_constraintTop_toBottomOf="@+id/editTextUrl"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="8dp"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
 EOF
 
-cat > "${APP_MODULE_DIR}/src/main/res/layout/item_channel.xml" <<EOF
+cat > "${APP_MODULE_DIR}/src/main/res/layout/item_channel.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -395,7 +396,7 @@ cat > "${APP_MODULE_DIR}/src/main/res/layout/item_channel.xml" <<EOF
 </androidx.constraintlayout.widget.ConstraintLayout>
 EOF
 
-cat > "${APP_MODULE_DIR}/src/main/res/layout/activity_player.xml" <<EOF
+cat > "${APP_MODULE_DIR}/src/main/res/layout/activity_player.xml" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -409,14 +410,14 @@ cat > "${APP_MODULE_DIR}/src/main/res/layout/activity_player.xml" <<EOF
 </FrameLayout>
 EOF
 
-# values/styles.xml and strings
+# values
 cat > "${APP_MODULE_DIR}/src/main/res/values/strings.xml" <<EOF
 <resources>
     <string name="app_name">${APP_NAME}</string>
 </resources>
 EOF
 
-cat > "${APP_MODULE_DIR}/src/main/res/values/styles.xml" <<EOF
+cat > "${APP_MODULE_DIR}/src/main/res/values/styles.xml" <<'EOF'
 <resources>
     <style name="Theme.App" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <!-- Customize your theme here. -->
@@ -437,22 +438,22 @@ cat > "${ROOT_DIR}/README.md" <<EOF
 - Basit M3U / Xtream destekli demo player
 - ExoPlayer ile oynatma
 - Oluşturmak için: chmod +x create_erdinxplayer.sh && ./create_erdinxplayer.sh
-- Eğer Gradle wrapper yoksa proje dizininde 'gradle wrapper' komutunu çalıştırın.
+- Lokal geliştirme: projeye girdikten sonra 'gradle wrapper' ile wrapper oluşturup commit etmek en iyisidir.
 EOF
 
-echo "Dosyalar oluşturuldu."
-
-# Gradle wrapper oluşturmayı dene (eğer gradle yüklü ise)
+# Eğer yerelde gradle varsa wrapper oluşturmaya çalış
 if command -v gradle >/dev/null 2>&1; then
-    echo "Gradle yüklü, gradle wrapper oluşturuluyor..."
-    (cd "${ROOT_DIR}" && gradle wrapper) || echo "gradle wrapper komutu başarısız oldu, manuel oluşturun."
+  echo "Gradle bulundu; ERDINXPLAYER dizininde gradle wrapper oluşturuluyor..."
+  (cd "${ROOT_DIR}" && gradle wrapper) || true
+  if [ -f "${ROOT_DIR}/gradlew" ]; then
     chmod +x "${ROOT_DIR}/gradlew" || true
+    echo "gradlew oluşturuldu ve executable yapıldı."
+  fi
 else
-    echo "Sistemde 'gradle' komutu bulunamadı. Gradle wrapper oluşturmak için şu adımları izleyin:"
-    echo "1) Gradle yüklü bir makinada: cd ${ROOT_DIR} && gradle wrapper"
-    echo "2) veya local makinanızda Android Studio ile açıp build edin, wrapper otomatik oluşturulur."
+  echo "Sistemde 'gradle' komutu yok. İstersen kendin 'cd ${ROOT_DIR} && gradle wrapper' ile wrapper oluştur."
 fi
 
-echo "Tamam. Proje konumu: ${ROOT_DIR}"
-echo "Örnek: cd ${ROOT_DIR} && ./gradlew assembleDebug"
-EOF
+echo "İşlem tamamlandı. Proje konumu: ${ROOT_DIR}"
+echo "Projeyi derlemek için (yerel):"
+echo "  cd \"${ROOT_DIR}\""
+echo "  ./gradlew assembleDebug   # (eğer gradlew varsa) veya gradle assembleDebug"
