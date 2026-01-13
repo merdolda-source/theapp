@@ -1,20 +1,29 @@
 #!/bin/bash
 
-# Proje Ayarları
-APP_NAME="MyXtreamPlayer"
-PACKAGE_NAME="com.mybiz.xtreamplayer"
-PATH_NAME="com/mybiz/xtreamplayer"
+# --- AYARLAR ---
+APP_NAME="ErdinPlayer"
+PACKAGE_NAME="com.erdin.player"
+PATH_NAME="com/erdin/player"
+KEYSTORE_PASS="erdin123" # İmza şifresi (Otomatik girilecek)
+KEY_ALIAS="key0"
 
-echo "🚀 Proje Oluşturuluyor: $APP_NAME..."
+echo "🚀 Proje ve İmza Dosyaları Hazırlanıyor: $APP_NAME..."
 
 mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME
 mkdir -p $APP_NAME/app/src/main/res/layout
 mkdir -p $APP_NAME/app/src/main/res/values
-mkdir -p $APP_NAME/gradle/wrapper
+mkdir -p $APP_NAME/.github/workflows # GitHub Action klasörü
 
 cd $APP_NAME
 
-# 1. Build Gradle (Project)
+# 1. SAHTE İMZA OLUŞTURMA (KEYSTORE)
+echo "🔐 Keystore (İmza) oluşturuluyor..."
+keytool -genkey -v -keystore app/keystore.jks \
+        -keyalg RSA -keysize 2048 -validity 10000 \
+        -alias $KEY_ALIAS -storepass $KEYSTORE_PASS -keypass $KEYSTORE_PASS \
+        -dname "CN=Erdin, OU=TV, O=ErdinMedia, L=Istanbul, S=Istanbul, C=TR"
+
+# 2. Build Gradle (Project Level)
 cat <<EOF > build.gradle
 buildscript {
     ext.kotlin_version = '1.8.0'
@@ -33,9 +42,12 @@ allprojects {
         mavenCentral()
     }
 }
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
 EOF
 
-# 2. Build Gradle (Module: App) - ADMOB ve EXOPLAYER EKLENDİ
+# 3. Build Gradle (Module: App) - İMZA AYARLARI EKLENDİ
 cat <<EOF > app/build.gradle
 plugins {
     id 'com.android.application'
@@ -53,6 +65,23 @@ android {
         versionCode 1
         versionName "1.0"
     }
+
+    signingConfigs {
+        release {
+            storeFile file("keystore.jks")
+            storePassword "$KEYSTORE_PASS"
+            keyAlias "$KEY_ALIAS"
+            keyPassword "$KEYSTORE_PASS"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
     
     buildFeatures {
         viewBinding true
@@ -64,21 +93,15 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    
-    // API & JSON
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-    
-    // Video Player
     implementation 'androidx.media3:media3-exoplayer:1.1.0'
     implementation 'androidx.media3:media3-ui:1.1.0'
-    
-    // ADMOB (Reklam)
     implementation 'com.google.android.gms:play-services-ads:22.1.0'
 }
 EOF
 
-# 3. Android Manifest (İnternet ve Reklam İzinleri)
+# 4. Android Manifest
 cat <<EOF > app/src/main/AndroidManifest.xml
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -106,11 +129,10 @@ cat <<EOF > app/src/main/AndroidManifest.xml
         
         <activity android:name=".PlayerActivity" />
     </application>
-
 </manifest>
 EOF
 
-# 4. Strings
+# 5. Strings
 cat <<EOF > app/src/main/res/values/strings.xml
 <resources>
     <string name="app_name">$APP_NAME</string>
@@ -121,7 +143,7 @@ cat <<EOF > app/src/main/res/values/strings.xml
 </resources>
 EOF
 
-# 5. Login Activity (Kullanıcı Girişi ve Banner Reklam)
+# 6. Login Activity
 cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
 package $PACKAGE_NAME
 
@@ -136,14 +158,10 @@ import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.MobileAds
 
 class LoginActivity : AppCompatActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Layout'u dinamik oluşturuyoruz (XML dosyası ile uğraşma diye)
         setContentView(R.layout.activity_login)
 
-        // AdMob Başlat
         MobileAds.initialize(this) {}
         val mAdView = findViewById<AdView>(R.id.adView)
         val adRequest = AdRequest.Builder().build()
@@ -156,23 +174,19 @@ class LoginActivity : AppCompatActivity() {
 
         btnLogin.setOnClickListener {
             val url = etUrl.text.toString()
-            val user = etUser.text.toString()
-            val pass = etPass.text.toString()
-
-            if(url.isNotEmpty() && user.isNotEmpty() && pass.isNotEmpty()){
-                // Burada API Kontrolü yapılacak. Şimdilik direkt geçiyoruz.
+            if(url.isNotEmpty()){
                 val intent = Intent(this, PlayerActivity::class.java)
-                intent.putExtra("stream_url", "\$url/live/\$user/\$pass/1.ts") // Örnek Stream URL
+                intent.putExtra("stream_url", "\$url") 
                 startActivity(intent)
             } else {
-                Toast.makeText(this, "Lütfen tüm alanları doldurun", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Bilgileri giriniz", Toast.LENGTH_SHORT).show()
             }
         }
     }
 }
 EOF
 
-# 6. Login Layout (XML)
+# 7. Login Layout
 cat <<EOF > app/src/main/res/layout/activity_login.xml
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -183,40 +197,11 @@ cat <<EOF > app/src/main/res/layout/activity_login.xml
     android:padding="20dp"
     android:gravity="center">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Xtream Login"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="30dp"/>
-
-    <EditText
-        android:id="@+id/etUrl"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/url_hint"/>
-        
-    <EditText
-        android:id="@+id/etUser"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/user_hint"/>
-
-    <EditText
-        android:id="@+id/etPass"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/pass_hint"
-        android:inputType="textPassword"/>
-
-    <Button
-        android:id="@+id/btnLogin"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/login"
-        android:layout_marginTop="20dp"/>
-        
+    <EditText android:id="@+id/etUrl" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/url_hint"/>
+    <EditText android:id="@+id/etUser" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/user_hint"/>
+    <EditText android:id="@+id/etPass" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/pass_hint" android:inputType="textPassword"/>
+    <Button android:id="@+id/btnLogin" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/login" android:layout_marginTop="20dp"/>
+    
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"
         android:layout_width="wrap_content"
@@ -227,7 +212,7 @@ cat <<EOF > app/src/main/res/layout/activity_login.xml
 </LinearLayout>
 EOF
 
-# 7. Player Activity (Video Oynatıcı)
+# 8. Player Activity
 cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
 package $PACKAGE_NAME
 
@@ -238,16 +223,13 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 
 class PlayerActivity : AppCompatActivity() {
-    
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
-
         playerView = findViewById(R.id.player_view)
-        
         val streamUrl = intent.getStringExtra("stream_url") ?: ""
         initializePlayer(streamUrl)
     }
@@ -255,13 +237,12 @@ class PlayerActivity : AppCompatActivity() {
     private fun initializePlayer(url: String) {
         player = ExoPlayer.Builder(this).build()
         playerView.player = player
-        
         val mediaItem = MediaItem.fromUri(url)
         player!!.setMediaItem(mediaItem)
         player!!.prepare()
         player!!.play()
     }
-
+    
     override fun onStop() {
         super.onStop()
         player?.release()
@@ -270,14 +251,13 @@ class PlayerActivity : AppCompatActivity() {
 }
 EOF
 
-# 8. Player Layout
+# 9. Player Layout
 cat <<EOF > app/src/main/res/layout/activity_player.xml
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000">
-
     <androidx.media3.ui.PlayerView
         android:id="@+id/player_view"
         android:layout_width="match_parent"
@@ -285,6 +265,4 @@ cat <<EOF > app/src/main/res/layout/activity_player.xml
 </FrameLayout>
 EOF
 
-echo "✅ Proje $APP_NAME klasöründe oluşturuldu!"
-echo "👉 Şimdi Android Studio'yu aç ve bu klasörü seç."
-echo "👉 'ca-app-pub-...' kısımlarına kendi AdMob kodlarını yapıştırmayı unutma."
+echo "✅ Proje Hazır! Keystore oluşturuldu."
