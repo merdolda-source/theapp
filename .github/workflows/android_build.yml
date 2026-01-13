@@ -1,4 +1,4 @@
-name: Generate and Build APK (Global Gradle)
+name: Fixed Version Build
 
 on:
   push:
@@ -29,9 +29,13 @@ jobs:
           exit 1
         fi
         
-        echo "✅ Script bulundu ve çalıştırılıyor: $SCRIPT_FILE"
         chmod +x "$SCRIPT_FILE"
         bash "$SCRIPT_FILE"
+
+    - name: 🔧 Gradle 8.0 Kurulumu (Versiyon Sabitleme)
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.0' # SORUNU ÇÖZEN SATIR BURASI (9 yerine 8 kullan)
 
     - name: 🛠️ Eksikleri Tamamla ve Derle
       run: |
@@ -44,13 +48,12 @@ jobs:
         # settings.gradle eksikse oluştur
         if [ ! -f "$PROJECT_ROOT/settings.gradle" ]; then
            echo "include ':app'" > "$PROJECT_ROOT/settings.gradle"
-           echo "✅ settings.gradle oluşturuldu."
         fi
         
-        # 🚀 KRİTİK DEĞİŞİKLİK:
-        # './gradlew' yerine sunucunun kendi 'gradle' komutunu kullanıyoruz.
+        # Derleme Başlasın
         cd "$PROJECT_ROOT"
-        gradle assembleRelease --no-daemon
+        # --warning-mode all ile detayları görerek, stacktrace ile derliyoruz
+        gradle assembleRelease --stacktrace
 
     - name: 📦 APK'yı Paketle ve Sun
       uses: actions/upload-artifact@v4
