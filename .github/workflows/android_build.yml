@@ -1,0 +1,41 @@
+name: Android Build APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Depoyu Çek (Checkout)
+      uses: actions/checkout@v4
+
+    - name: JDK 17 Kurulumu
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        # cache: gradle satırını kaldırdık çünkü hata veriyordu.
+
+    - name: Gradle İzinlerini Ayarla
+      # 'ErdinPlayer' senin proje klasörünün adı. Eğer farklıysa burayı değiştir.
+      run: chmod +x ErdinPlayer/gradlew || true 
+
+    - name: Gradle Kur ve Derle
+      uses: gradle/gradle-build-action@v3
+      with:
+        gradle-version: 8.0
+        arguments: assembleRelease
+        # KRİTİK NOKTA: Projenin olduğu klasörü buraya yazıyoruz
+        build-root-directory: ErdinPlayer 
+
+    - name: APK'yı Yükle (Artifact)
+      uses: actions/upload-artifact@v4
+      with:
+        name: erdin-player-release
+        # APK yolu da klasörün içinde olduğu için güncelledik
+        path: ErdinPlayer/app/build/outputs/apk/release/app-release.apk
