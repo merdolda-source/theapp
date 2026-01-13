@@ -19,23 +19,22 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        # cache: gradle satırını kaldırdık çünkü hata veriyordu.
 
     - name: Gradle İzinlerini Ayarla
-      # 'ErdinPlayer' senin proje klasörünün adı. Eğer farklıysa burayı değiştir.
+      # Eğer gradlew dosyası yoksa bu adım hata vermesin diye '|| true' ekledik
       run: chmod +x ErdinPlayer/gradlew || true 
 
     - name: Gradle Kur ve Derle
       uses: gradle/gradle-build-action@v3
       with:
-        gradle-version: 8.0
+        # HATA BURADAYDI: '8.0' yerine tırnak içinde '8.2' yaptık.
+        gradle-version: '8.2' 
         arguments: assembleRelease
-        # KRİTİK NOKTA: Projenin olduğu klasörü buraya yazıyoruz
+        # Senin proje klasörünün adı (Scriptte değiştirdiysen burayı da değiştir)
         build-root-directory: ErdinPlayer 
 
     - name: APK'yı Yükle (Artifact)
       uses: actions/upload-artifact@v4
       with:
         name: erdin-player-release
-        # APK yolu da klasörün içinde olduğu için güncelledik
         path: ErdinPlayer/app/build/outputs/apk/release/app-release.apk
