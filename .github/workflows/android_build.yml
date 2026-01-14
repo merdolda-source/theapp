@@ -84,7 +84,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "1.4.0"
+                versionName "1.4.1"
             }
 
             signingConfigs {
@@ -119,19 +119,15 @@ jobs:
             implementation 'com.google.android.material:material:1.9.0'
             implementation 'androidx.recyclerview:recyclerview:1.3.0'
 
-            // DrawerLayout
             implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
 
-            // Media3 ExoPlayer + HLS + DASH
             implementation 'androidx.media3:media3-exoplayer:1.1.0'
             implementation 'androidx.media3:media3-ui:1.1.0'
             implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
             implementation 'androidx.media3:media3-exoplayer-dash:1.1.0'
 
-            // Glide (istersen icon için kullanırsın)
             implementation 'com.github.bumptech.glide:glide:4.15.1'
 
-            // ✅ AdMob Reklam SDK
             implementation 'com.google.android.gms:play-services-ads:23.4.0'
         }
         EOF
@@ -179,6 +175,14 @@ jobs:
         </shape>
         EOF
 
+        cat <<EOF > app/src/main/res/drawable/bg_input_dark.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <solid android:color="@color/gray_800"/>
+            <corners android:radius="12dp"/>
+            <stroke android:width="1dp" android:color="@color/bordo"/>
+        </shape>
+        EOF
+
         cat <<EOF > app/src/main/res/drawable/bg_header_card.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <corners android:radius="16dp"/>
@@ -194,7 +198,16 @@ jobs:
         </shape>
         EOF
 
-        # Yan menü yazı renkleri (seçili = yeşil, normal = beyaz)
+        cat <<EOF > app/src/main/res/drawable/bg_account_card.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <solid android:color="@color/gray_800"/>
+            <corners android:radius="14dp"/>
+            <stroke android:width="1dp" android:color="@color/bordo"/>
+            <padding android:left="12dp" android:top="10dp" android:right="12dp" android:bottom="10dp"/>
+        </shape>
+        EOF
+
+        # Yan menü yazı renkleri
         cat <<EOF > app/src/main/res/color/nav_item_text.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
             <item android:state_checked="true" android:color="@color/accent_green"/>
@@ -419,7 +432,6 @@ jobs:
         }
         EOF
 
-        # Reklam yönetimi (banner + geçiş)
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
         package $PACKAGE_NAME.utils
 
@@ -437,13 +449,11 @@ jobs:
             @Volatile
             private var initialized = false
 
-            // Geçiş reklamı
             private var interstitial: InterstitialAd? = null
             private var clickCount = 0
 
-            // 👉 Sen buradan değiştirebilirsin
-            var CHANNEL_INTERVAL = 4  // Kaç kanal tıklamasında bir interstitial
-            var LIST_OPEN_INTERVAL = 2 // İstersen liste açılışında da kullanırsın
+            var CHANNEL_INTERVAL = 4
+            var LIST_OPEN_INTERVAL = 2
 
             fun init(context: Context) {
                 if (!initialized) {
@@ -473,7 +483,6 @@ jobs:
                         override fun onAdLoaded(ad: InterstitialAd) {
                             interstitial = ad
                         }
-
                         override fun onAdFailedToLoad(error: LoadAdError) {
                             interstitial = null
                         }
@@ -487,7 +496,7 @@ jobs:
                 if (ad != null && CHANNEL_INTERVAL > 0 && (clickCount % CHANNEL_INTERVAL == 0)) {
                     ad.show(activity)
                     interstitial = null
-                    loadInterstitial(activity)  // yeniden yükle
+                    loadInterstitial(activity)
                     onContinue()
                 } else {
                     onContinue()
@@ -496,7 +505,7 @@ jobs:
         }
         EOF
 
-        # --- ADAPTER ---
+        # --- ADAPTERLER ---
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
 
@@ -533,7 +542,64 @@ jobs:
         }
         EOF
 
-        # --- LOGIN ACTIVITY (üstte banner) ---
+        cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
+        package $PACKAGE_NAME.adapters
+
+        import android.content.Context
+        import android.view.LayoutInflater
+        import android.view.View
+        import android.view.ViewGroup
+        import android.widget.BaseAdapter
+        import android.widget.ImageButton
+        import android.widget.TextView
+        import $PACKAGE_NAME.R
+        import $PACKAGE_NAME.models.AccountProfile
+
+        class AccountsAdapter(
+            private val ctx: Context,
+            private val items: MutableList<AccountProfile>,
+            private val onOpen: (AccountProfile) -> Unit,
+            private val onDelete: (AccountProfile) -> Unit
+        ) : BaseAdapter() {
+
+            override fun getCount(): Int = items.size
+
+            override fun getItem(position: Int): Any = items[position]
+
+            override fun getItemId(position: Int): Long = items[position].id.toLong()
+
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
+                val v = convertView ?: LayoutInflater.from(ctx)
+                    .inflate(R.layout.item_account, parent, false)
+
+                val txtName = v.findViewById<TextView>(R.id.tvAccountName)
+                val txtType = v.findViewById<TextView>(R.id.tvAccountType)
+                val btnDelete = v.findViewById<ImageButton>(R.id.btnDeleteAccount)
+
+                val item = items[position]
+                txtName.text = item.name
+                txtType.text = if (item.type == "M3U") "M3U" else "Xtream"
+
+                v.setOnClickListener {
+                    onOpen(item)
+                }
+
+                btnDelete.setOnClickListener {
+                    onDelete(item)
+                }
+
+                return v
+            }
+
+            fun update(newItems: List<AccountProfile>) {
+                items.clear()
+                items.addAll(newItems)
+                notifyDataSetChanged()
+            }
+        }
+        EOF
+
+        # --- LOGIN ACTIVITY (ŞIK, BUTONLU HESAP TİPİ + KARTLI HESAPLAR) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -543,19 +609,25 @@ jobs:
         import android.widget.*
         import androidx.appcompat.app.AlertDialog
         import androidx.appcompat.app.AppCompatActivity
+        import androidx.core.content.ContextCompat
         import com.google.android.gms.ads.AdView
+        import $PACKAGE_NAME.adapters.AccountsAdapter
         import $PACKAGE_NAME.models.AccountProfile
         import $PACKAGE_NAME.utils.AdsHelper
         import $PACKAGE_NAME.utils.Prefs
 
         class LoginActivity : AppCompatActivity() {
+
+            private var isXtream = true
+            private var accountsAdapter: AccountsAdapter? = null
+
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_login)
 
                 val prefs = Prefs(this)
 
-                // ✅ Reklam başlat
+                // Reklam
                 AdsHelper.init(this)
                 val adTop = findViewById<AdView>(R.id.adViewTopLogin)
                 AdsHelper.loadBanner(adTop)
@@ -569,38 +641,76 @@ jobs:
 
                 val layoutXtream = findViewById<View>(R.id.layoutXtream)
                 val layoutM3u = findViewById<View>(R.id.layoutM3u)
-                val rgType = findViewById<RadioGroup>(R.id.rgType)
-                val rbXtream = findViewById<RadioButton>(R.id.rbXtream)
-                val rbM3u = findViewById<RadioButton>(R.id.rbM3u)
+
+                val cardXtream = findViewById<View>(R.id.cardXtream)
+                val cardM3u = findViewById<View>(R.id.cardM3u)
+                val tvXtream = findViewById<TextView>(R.id.tvXtream)
+                val tvM3u = findViewById<TextView>(R.id.tvM3u)
+
                 val btnAdd = findViewById<Button>(R.id.btnAddAccount)
                 val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
 
-                rbXtream.isChecked = true
-                layoutXtream.visibility = View.VISIBLE
-                layoutM3u.visibility = View.GONE
-
-                rgType.setOnCheckedChangeListener { _, checkedId ->
-                    if (checkedId == R.id.rbXtream) {
+                fun updateTypeUI() {
+                    if (isXtream) {
                         layoutXtream.visibility = View.VISIBLE
                         layoutM3u.visibility = View.GONE
+
+                        cardXtream.background = ContextCompat.getDrawable(this, R.drawable.bg_header_card)
+                        cardM3u.background = ContextCompat.getDrawable(this, R.drawable.bg_input_dark)
+
+                        tvXtream.setTextColor(ContextCompat.getColor(this, R.color.white))
+                        tvM3u.setTextColor(ContextCompat.getColor(this, R.color.white))
                     } else {
                         layoutXtream.visibility = View.GONE
                         layoutM3u.visibility = View.VISIBLE
+
+                        cardM3u.background = ContextCompat.getDrawable(this, R.drawable.bg_header_card)
+                        cardXtream.background = ContextCompat.getDrawable(this, R.drawable.bg_input_dark)
+
+                        tvXtream.setTextColor(ContextCompat.getColor(this, R.color.white))
+                        tvM3u.setTextColor(ContextCompat.getColor(this, R.color.white))
                     }
                 }
 
+                cardXtream.setOnClickListener {
+                    isXtream = true
+                    updateTypeUI()
+                }
+
+                cardM3u.setOnClickListener {
+                    isXtream = false
+                    updateTypeUI()
+                }
+
+                updateTypeUI()
+
                 fun refreshList() {
-                    val accounts: List<AccountProfile> = prefs.getAccounts()
-                    val labels = accounts.map { acc ->
-                        val tag = if (acc.type == "M3U") "M3U" else "Xtream"
-                        acc.name + "  •  " + tag
+                    val accounts: MutableList<AccountProfile> = prefs.getAccounts().toMutableList()
+
+                    if (accountsAdapter == null) {
+                        accountsAdapter = AccountsAdapter(
+                            this,
+                            accounts,
+                            onOpen = { acc ->
+                                prefs.setActive(acc.id)
+                                startActivity(Intent(this, ContentActivity::class.java))
+                            },
+                            onDelete = { acc ->
+                                AlertDialog.Builder(this)
+                                    .setTitle("Hesabı Sil")
+                                    .setMessage("\"" + acc.name + "\" hesabını silmek istiyor musun?")
+                                    .setPositiveButton("Evet") { _, _ ->
+                                        prefs.deleteAccount(acc.id)
+                                        refreshList()
+                                    }
+                                    .setNegativeButton("Hayır", null)
+                                    .show()
+                            }
+                        )
+                        lvAccounts.adapter = accountsAdapter
+                    } else {
+                        accountsAdapter?.update(accounts)
                     }
-                    val adapter = ArrayAdapter(
-                        this,
-                        android.R.layout.simple_list_item_1,
-                        labels
-                    )
-                    lvAccounts.adapter = adapter
                 }
 
                 refreshList()
@@ -609,7 +719,7 @@ jobs:
                     val name = etName.text.toString().trim()
                     val finalName = if (name.isNotEmpty()) name else "Hesap"
 
-                    if (rbXtream.isChecked) {
+                    if (isXtream) {
                         val d = etDns.text.toString().trim()
                         val u = etUser.text.toString().trim()
                         val p = etPass.text.toString().trim()
@@ -631,38 +741,11 @@ jobs:
 
                     refreshList()
                 }
-
-                lvAccounts.setOnItemClickListener { _, _, position, _ ->
-                    val accounts = prefs.getAccounts()
-                    if (position in accounts.indices) {
-                        val acc = accounts[position]
-                        prefs.setActive(acc.id)
-                        startActivity(Intent(this, ContentActivity::class.java))
-                    }
-                }
-
-                lvAccounts.setOnItemLongClickListener { _, _, position, _ ->
-                    val accounts = prefs.getAccounts()
-                    if (position in accounts.indices) {
-                        val acc = accounts[position]
-                        AlertDialog.Builder(this)
-                            .setTitle("Hesabı Sil")
-                            .setMessage("\"" + acc.name + "\" hesabını silmek istiyor musun?")
-                            .setPositiveButton("Evet") { _, _ ->
-                                prefs.deleteAccount(acc.id)
-                                Toast.makeText(this, "Hesap silindi.", Toast.LENGTH_SHORT).show()
-                                refreshList()
-                            }
-                            .setNegativeButton("Hayır", null)
-                            .show()
-                    }
-                    true
-                }
             }
         }
         EOF
 
-        # --- DASHBOARD (aynı) ---
+        # --- DASHBOARD ---
         cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
         package $PACKAGE_NAME
 
@@ -698,7 +781,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (üst + alt banner + geçiş reklamı) ---
+        # --- CONTENT ACTIVITY (2 BANNER + GEÇİŞ REKLAMI) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -759,7 +842,6 @@ jobs:
 
                 prefs = Prefs(this)
 
-                // ✅ Reklamlar
                 AdsHelper.init(this)
                 val adTop = findViewById<AdView>(R.id.adViewTopContent)
                 val adBottom = findViewById<AdView>(R.id.adViewBottomContent)
@@ -816,7 +898,7 @@ jobs:
                             else -> {
                                 Toast.makeText(
                                     this,
-                                    "M3U hesabında sadece Canlı TV listesi gösterilir.",
+                                    "M3U hesabında yalnızca Canlı TV listesi gösterilir.",
                                     Toast.LENGTH_SHORT
                                 ).show()
                                 false
@@ -1249,7 +1331,7 @@ jobs:
         }
         EOF
 
-        # --- SERIES DETAIL (aynı) ---
+        # --- SERIES DETAIL (AYNI) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1434,11 +1516,10 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (kare icon + 3 mod, sensörle yatay) ---
+        # --- PLAYER ACTIVITY (Başta dikey, sensöre göre otomatik dönsün, kare ikonlu 3 mod) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
-        import android.content.pm.ActivityInfo
         import android.os.Bundle
         import android.view.View
         import android.view.WindowManager
@@ -1460,8 +1541,8 @@ jobs:
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
 
-                // Sensöre göre yatay (ön kamerayı aşan full alan için)
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                // ✨ Başlangıçta dikey açılır; kullanıcı telefonu çevirince
+                // sistem sensöre göre otomatik yataya döner (orientation kilidi yok)
 
                 window.setFlags(
                     WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -1531,7 +1612,7 @@ jobs:
             private fun applyResizeMode(pv: PlayerView) {
                 when (currentMode) {
                     0 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    1 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL   // kenarları kesip tam doldurur, ön kamerayı da kaplar
+                    1 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL   // çerçevesiz full, ön kamerayı bile kaplar
                     else -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 }
             }
@@ -1546,7 +1627,7 @@ jobs:
 
         # --- LAYOUTLAR ---
 
-        # Login (üstte banner)
+        # Login: Şık, butonlu hesap tipi + kartlı hesap listesi
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -1582,37 +1663,63 @@ jobs:
                 android:textSize="14sp"
                 android:layout_marginBottom="4dp"/>
 
-            <RadioGroup
-                android:id="@+id/rgType"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="12dp">
 
-                <RadioButton
-                    android:id="@+id/rbXtream"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Xtream"
-                    android:textColor="@color/white"/>
+                <LinearLayout
+                    android:id="@+id/cardXtream"
+                    android:layout_width="0dp"
+                    android:layout_height="60dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:background="@drawable/bg_header_card"
+                    android:layout_marginRight="6dp">
 
-                <RadioButton
-                    android:id="@+id/rbM3u"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="M3U"
-                    android:textColor="@color/white"
-                    android:layout_marginLeft="16dp"/>
-            </RadioGroup>
+                    <TextView
+                        android:id="@+id/tvXtream"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Xtream"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardM3u"
+                    android:layout_width="0dp"
+                    android:layout_height="60dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:background="@drawable/bg_input_dark"
+                    android:layout_marginLeft="6dp">
+
+                    <TextView
+                        android:id="@+id/tvM3u"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="M3U"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"/>
+                </LinearLayout>
+            </LinearLayout>
 
             <EditText
                 android:id="@+id/etName"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:hint="Hesap Adı (ör: Salon TV)"
-                android:background="@drawable/bg_input"
+                android:background="@drawable/bg_input_dark"
                 android:padding="10dp"
-                android:textColor="@color/black"
+                android:textColor="@color/white"
                 android:textColorHint="@color/gray_800"
                 android:layout_marginBottom="8dp"/>
 
@@ -1627,9 +1734,9 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:hint="DNS: http://ip:port"
-                    android:background="@drawable/bg_input"
+                    android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
-                    android:textColor="@color/black"
+                    android:textColor="@color/white"
                     android:textColorHint="@color/gray_800"
                     android:layout_marginBottom="8dp"/>
 
@@ -1638,9 +1745,9 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:hint="Kullanıcı"
-                    android:background="@drawable/bg_input"
+                    android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
-                    android:textColor="@color/black"
+                    android:textColor="@color/white"
                     android:textColorHint="@color/gray_800"
                     android:layout_marginBottom="8dp"/>
 
@@ -1650,9 +1757,9 @@ jobs:
                     android:layout_height="48dp"
                     android:hint="Şifre"
                     android:inputType="textPassword"
-                    android:background="@drawable/bg_input"
+                    android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
-                    android:textColor="@color/black"
+                    android:textColor="@color/white"
                     android:textColorHint="@color/gray_800"
                     android:layout_marginBottom="8dp"/>
             </LinearLayout>
@@ -1669,9 +1776,9 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:hint="M3U Linki"
-                    android:background="@drawable/bg_input"
+                    android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
-                    android:textColor="@color/black"
+                    android:textColor="@color/white"
                     android:textColorHint="@color/gray_800"
                     android:layout_marginBottom="8dp"/>
             </LinearLayout>
@@ -1689,7 +1796,7 @@ jobs:
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Kayıtlı Hesaplar (dokun → aç, uzun bas → sil)"
+                android:text="Kayıtlı Hesaplar"
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:layout_marginBottom="4dp"/>
@@ -1699,8 +1806,8 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:divider="@color/gray_800"
-                android:dividerHeight="1dp"/>
+                android:divider="@android:color/transparent"
+                android:dividerHeight="8dp"/>
         </LinearLayout>
         EOF
 
@@ -1876,6 +1983,50 @@ jobs:
         </LinearLayout>
         EOF
 
+        # Kayıtlı hesap kartı
+        cat <<EOF > app/src/main/res/layout/item_account.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/bg_account_card"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvAccountName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hesap Adı"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp"/>
+
+                <TextView
+                    android:id="@+id/tvAccountType"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Xtream"
+                    android:textColor="@color/accent_green"
+                    android:textSize="12sp"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnDeleteAccount"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_menu_delete"
+                android:tint="@color/error_red"/>
+        </LinearLayout>
+        EOF
+
         # Series detail
         cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -1922,7 +2073,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player (altta kare ikonlu buton)
+        # Player
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -1964,7 +2115,6 @@ jobs:
                 android:label="@string/app_name"
                 android:usesCleartextTraffic="true">
 
-                <!-- AdMob App ID -->
                 <meta-data
                     android:name="com.google.android.gms.ads.APPLICATION_ID"
                     android:value="@string/admob_app_id" />
@@ -1986,7 +2136,7 @@ jobs:
         </manifest>
         EOF
 
-    - name: 4. Gradle Derleme
+    - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.0'
