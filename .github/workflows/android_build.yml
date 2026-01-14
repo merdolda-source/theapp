@@ -19,7 +19,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Xtream + Kategorili + Drawer + BottomNav + Renkler)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Xtream + M3U + Kategorili + Modern Drawer + BottomNav)
       run: |
         set -e
         APP_NAME="ErdinPlayer"
@@ -78,7 +78,7 @@ jobs:
                 minSdk 24
                 targetSdk 33
                 versionCode 1
-                versionName "1.1.0"
+                versionName "1.2.0"
             }
 
             signingConfigs {
@@ -164,6 +164,21 @@ jobs:
         </shape>
         EOF
 
+        cat <<EOF > app/src/main/res/drawable/bg_header_card.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <corners android:radius="16dp"/>
+            <gradient
+                android:startColor="@color/bordo"
+                android:endColor="@color/gray_800"
+                android:angle="135"/>
+            <padding
+                android:left="12dp"
+                android:top="12dp"
+                android:right="12dp"
+                android:bottom="12dp"/>
+        </shape>
+        EOF
+
         # --- BOTTOM NAV MENU ---
         cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
         <menu xmlns:android="http://schemas.android.com/apk/res/android">
@@ -182,38 +197,55 @@ jobs:
         </menu>
         EOF
 
-        # --- NAV HEADER (Xtream bitiş süresi için) ---
+        # --- NAV HEADER (Modern kart + Xtream bitiş / M3U info) ---
         cat <<EOF > app/src/main/res/layout/nav_header.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp"
-            android:background="@color/gray_800">
+            android:padding="12dp"
+            android:background="@color/bg_dark">
 
-            <TextView
-                android:id="@+id/tvHeaderUser"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Kullanıcı: -"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                android:textSize="16sp" />
+                android:orientation="vertical"
+                android:background="@drawable/bg_header_card">
 
-            <TextView
-                android:id="@+id/tvHeaderExpire"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Bitiş: -"
-                android:textColor="@color/accent_green"
-                android:textSize="14sp"
-                android:layout_marginTop="4dp" />
+                <TextView
+                    android:id="@+id/tvHeaderUser"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Kullanıcı: -"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/tvHeaderExpire"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bitiş: -"
+                    android:textColor="@color/accent_green"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
         </LinearLayout>
         EOF
 
-        # --- MODELLER (Kategori + Stream + Episode) ---
+        # --- MODELLER (Account + Kategori + Stream + Episode) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
+
+        data class AccountProfile(
+            val id: Int,
+            val name: String,
+            val type: String, // "XTREAM" veya "M3U"
+            val dns: String?,
+            val user: String?,
+            val pass: String?,
+            val m3u: String?
+        )
 
         data class Category(
             val category_id: String,
@@ -225,7 +257,8 @@ jobs:
             val stream_id: String?,
             val series_id: String?,
             val container_extension: String?,
-            val category_id: String?
+            val category_id: String?,
+            val full_url: String? // M3U için direkt URL
         )
 
         data class EpisodeItem(
@@ -237,26 +270,107 @@ jobs:
         )
         EOF
 
-        # --- UTILS (Prefs) ---
+        # --- UTILS (Prefs + Çoklu Hesap) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
         import android.content.Context
+        import $PACKAGE_NAME.models.AccountProfile
+        import org.json.JSONArray
+        import org.json.JSONObject
 
         class Prefs(ctx: Context) {
             private val p = ctx.getSharedPreferences("EP_Prefs", 0)
 
-            fun save(dns: String, u: String, ps: String) {
-                p.edit()
-                    .putString("dns", dns)
-                    .putString("u", u)
-                    .putString("p", ps)
-                    .apply()
+            private fun loadArray(): JSONArray {
+                val s = p.getString("accounts_json", "[]") ?: "[]"
+                return JSONArray(s)
             }
 
-            fun getDns(): String = p.getString("dns", "") ?: ""
-            fun getUser(): String = p.getString("u", "") ?: ""
-            fun getPass(): String = p.getString("p", "") ?: ""
+            private fun saveArray(arr: JSONArray) {
+                p.edit().putString("accounts_json", arr.toString()).apply()
+            }
+
+            fun createXtreamAccount(name: String, dns: String, u: String, ps: String): Int {
+                val id = p.getInt("next_id", 1)
+                val obj = JSONObject()
+                obj.put("id", id)
+                obj.put("name", name)
+                obj.put("type", "XTREAM")
+                obj.put("dns", dns)
+                obj.put("user", u)
+                obj.put("pass", ps)
+                obj.put("m3u", "")
+
+                val arr = loadArray()
+                arr.put(obj)
+                saveArray(arr)
+
+                p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
+                return id
+            }
+
+            fun createM3uAccount(name: String, m3u: String): Int {
+                val id = p.getInt("next_id", 1)
+                val obj = JSONObject()
+                obj.put("id", id)
+                obj.put("name", name)
+                obj.put("type", "M3U")
+                obj.put("dns", "")
+                obj.put("user", "")
+                obj.put("pass", "")
+                obj.put("m3u", m3u)
+
+                val arr = loadArray()
+                arr.put(obj)
+                saveArray(arr)
+
+                p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
+                return id
+            }
+
+            fun getAccounts(): List<AccountProfile> {
+                val arr = loadArray()
+                val list = ArrayList<AccountProfile>()
+                var i = 0
+                while (i < arr.length()) {
+                    val o = arr.optJSONObject(i)
+                    if (o != null) {
+                        val id = o.optInt("id", 0)
+                        val name = o.optString("name", "Hesap " + i)
+                        val type = o.optString("type", "XTREAM")
+                        val dns = o.optString("dns", null)
+                        val user = o.optString("user", null)
+                        val pass = o.optString("pass", null)
+                        val m3u = o.optString("m3u", null)
+                        list.add(AccountProfile(id, name, type, dns, user, pass, m3u))
+                    }
+                    i++
+                }
+                return list
+            }
+
+            fun setActive(id: Int) {
+                p.edit().putInt("active_id", id).apply()
+            }
+
+            fun getActive(): AccountProfile? {
+                val all = getAccounts()
+                if (all.isEmpty()) return null
+                val activeId = p.getInt("active_id", -1)
+                if (activeId <= 0) return all[0]
+                return all.find { it.id == activeId } ?: all[0]
+            }
+
+            // Eski fonksiyonlar (uyumluluk için, aktif XTREAM hesabına göre)
+            fun save(dns: String, u: String, ps: String) {
+                val name = if (u.isNotEmpty()) u else "Xtream"
+                createXtreamAccount(name, dns, u, ps)
+            }
+
+            fun getDns(): String = getActive()?.dns ?: ""
+            fun getUser(): String = getActive()?.user ?: ""
+            fun getPass(): String = getActive()?.pass ?: ""
         }
         EOF
 
@@ -297,16 +411,16 @@ jobs:
         }
         EOF
 
-        # --- LOGIN ACTIVITY ---
+        # --- LOGIN ACTIVITY (Xtream + M3U + Çoklu Hesap) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
         import android.content.Intent
         import android.os.Bundle
-        import android.widget.Button
-        import android.widget.EditText
-        import android.widget.Toast
+        import android.view.View
+        import android.widget.*
         import androidx.appcompat.app.AppCompatActivity
+        import $PACKAGE_NAME.models.AccountProfile
         import $PACKAGE_NAME.utils.Prefs
 
         class LoginActivity : AppCompatActivity() {
@@ -315,24 +429,84 @@ jobs:
                 setContentView(R.layout.activity_login)
 
                 val prefs = Prefs(this)
-                val eD = findViewById<EditText>(R.id.etDns)
-                val eU = findViewById<EditText>(R.id.etUser)
-                val eP = findViewById<EditText>(R.id.etPass)
 
-                eD.setText(prefs.getDns())
-                eU.setText(prefs.getUser())
-                eP.setText(prefs.getPass())
+                val etName = findViewById<EditText>(R.id.etName)
+                val etDns = findViewById<EditText>(R.id.etDns)
+                val etUser = findViewById<EditText>(R.id.etUser)
+                val etPass = findViewById<EditText>(R.id.etPass)
+                val etM3u = findViewById<EditText>(R.id.etM3u)
 
-                findViewById<Button>(R.id.btnLogin).setOnClickListener {
-                    val d = eD.text.toString().trim()
-                    val u = eU.text.toString().trim()
-                    val p = eP.text.toString().trim()
+                val layoutXtream = findViewById<View>(R.id.layoutXtream)
+                val layoutM3u = findViewById<View>(R.id.layoutM3u)
+                val rgType = findViewById<RadioGroup>(R.id.rgType)
+                val rbXtream = findViewById<RadioButton>(R.id.rbXtream)
+                val rbM3u = findViewById<RadioButton>(R.id.rbM3u)
+                val btnAdd = findViewById<Button>(R.id.btnAddAccount)
+                val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
 
-                    if (d.isNotEmpty() && u.isNotEmpty()) {
-                        prefs.save(d, u, p)
-                        startActivity(Intent(this, ContentActivity::class.java))
+                // Varsayılan: Xtream
+                rbXtream.isChecked = true
+                layoutXtream.visibility = View.VISIBLE
+                layoutM3u.visibility = View.GONE
+
+                rgType.setOnCheckedChangeListener { _, checkedId ->
+                    if (checkedId == R.id.rbXtream) {
+                        layoutXtream.visibility = View.VISIBLE
+                        layoutM3u.visibility = View.GONE
                     } else {
-                        Toast.makeText(this, "Bilgileri eksiksiz girin!", Toast.LENGTH_SHORT).show()
+                        layoutXtream.visibility = View.GONE
+                        layoutM3u.visibility = View.VISIBLE
+                    }
+                }
+
+                fun refreshList() {
+                    val accounts: List<AccountProfile> = prefs.getAccounts()
+                    val labels = accounts.map { acc ->
+                        val tag = if (acc.type == "M3U") "M3U" else "Xtream"
+                        acc.name + "  •  " + tag
+                    }
+                    val adapter = ArrayAdapter(
+                        this,
+                        android.R.layout.simple_list_item_1,
+                        labels
+                    )
+                    lvAccounts.adapter = adapter
+                }
+
+                refreshList()
+
+                btnAdd.setOnClickListener {
+                    val name = etName.text.toString().trim().ifEmpty { "Hesap" }
+
+                    if (rbXtream.isChecked) {
+                        val d = etDns.text.toString().trim()
+                        val u = etUser.text.toString().trim()
+                        val p = etPass.text.toString().trim()
+                        if (d.isEmpty() || u.isEmpty()) {
+                            Toast.makeText(this, "Xtream için DNS ve kullanıcı zorunlu.", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+                        prefs.createXtreamAccount(name, d, u, p)
+                        Toast.makeText(this, "Xtream hesabı eklendi.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val m = etM3u.text.toString().trim()
+                        if (m.isEmpty()) {
+                            Toast.makeText(this, "M3U linki boş olamaz.", Toast.LENGTH_SHORT).show()
+                            return@setOnClickListener
+                        }
+                        prefs.createM3uAccount(name, m)
+                        Toast.makeText(this, "M3U hesabı eklendi.", Toast.LENGTH_SHORT).show()
+                    }
+
+                    refreshList()
+                }
+
+                lvAccounts.setOnItemClickListener { _, _, position, _ ->
+                    val accounts = prefs.getAccounts()
+                    if (position in accounts.indices) {
+                        val acc = accounts[position]
+                        prefs.setActive(acc.id)
+                        startActivity(Intent(this, ContentActivity::class.java))
                     }
                 }
             }
@@ -357,7 +531,7 @@ jobs:
 
                 val prefs = Prefs(this)
                 val tvInfo = findViewById<TextView>(R.id.tvInfo)
-                tvInfo.text = "AKTİF KULLANICI: " + prefs.getUser()
+                tvInfo.text = "AKTİF KULLANICI: " + (prefs.getActive()?.name ?: "-")
 
                 fun go(mode: String) {
                     val i = Intent(this, ContentActivity::class.java)
@@ -373,7 +547,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (BOTTOM NAV + KATEGORİLER + DRAWER + HESAP BİTİŞ SÜRESİ) ---
+        # --- CONTENT ACTIVITY (BOTTOM NAV + KATEGORİLER + DRAWER + HESAP BİTİŞ + M3U MODU) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -383,6 +557,7 @@ jobs:
         import android.view.View
         import android.widget.ProgressBar
         import android.widget.TextView
+        import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
         import androidx.core.view.GravityCompat
         import androidx.drawerlayout.widget.DrawerLayout
@@ -399,6 +574,7 @@ jobs:
         import java.util.Date
         import java.util.Locale
         import $PACKAGE_NAME.adapters.GridAdapter
+        import $PACKAGE_NAME.models.AccountProfile
         import $PACKAGE_NAME.models.Category
         import $PACKAGE_NAME.models.StreamItem
         import $PACKAGE_NAME.utils.Prefs
@@ -421,6 +597,9 @@ jobs:
             private var categories: List<Category> = emptyList()
             private var streams: List<StreamItem> = emptyList()
 
+            private var activeAcc: AccountProfile? = null
+            private var accountType: String = "XTREAM"
+
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_content)
@@ -438,7 +617,7 @@ jobs:
                 // Liste: tek sütun, ALT ALTA (mobil uyumlu)
                 rv.layoutManager = LinearLayoutManager(this)
 
-                // Drawer header (kullanıcı + bitiş tarihi)
+                // Drawer header (kullanıcı + bitiş tarihi / M3U info)
                 val headerView = navView.getHeaderView(0)
                 headerUser = headerView.findViewById(R.id.tvHeaderUser)
                 headerExpire = headerView.findViewById(R.id.tvHeaderExpire)
@@ -460,12 +639,43 @@ jobs:
                     }
                 }
 
+                activeAcc = prefs.getActive()
+                if (activeAcc == null) {
+                    tvStatus.text = "Kayıtlı hesap bulunamadı. Önce giriş ekranından hesap ekleyin."
+                    tvStatus.visibility = View.VISIBLE
+                    return
+                }
+                accountType = activeAcc?.type ?: "XTREAM"
+
                 bottomNav.setOnItemSelectedListener { item ->
-                    when (item.itemId) {
-                        R.id.nav_live -> { loadMode("LIVE"); true }
-                        R.id.nav_vod -> { loadMode("VOD"); true }
-                        R.id.nav_series -> { loadMode("SERIES"); true }
-                        else -> false
+                    if (accountType == "M3U") {
+                        when (item.itemId) {
+                            R.id.nav_live -> {
+                                loadMode("LIVE")
+                                true
+                            }
+                            else -> {
+                                Toast.makeText(
+                                    this,
+                                    "M3U hesabında sadece Canlı TV listesi gösterilir.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                false
+                            }
+                        }
+                    } else {
+                        when (item.itemId) {
+                            R.id.nav_live -> {
+                                loadMode("LIVE"); true
+                            }
+                            R.id.nav_vod -> {
+                                loadMode("VOD"); true
+                            }
+                            R.id.nav_series -> {
+                                loadMode("SERIES"); true
+                            }
+                            else -> false
+                        }
                     }
                 }
 
@@ -475,8 +685,8 @@ jobs:
             }
 
             private fun loadMode(mode: String) {
-                currentMode = mode
-                tvHeader.text = when (mode) {
+                currentMode = if (accountType == "M3U") "LIVE" else mode
+                tvHeader.text = when (currentMode) {
                     "VOD" -> "☰ Filmler"
                     "SERIES" -> "☰ Diziler"
                     else -> "☰ Canlı TV"
@@ -485,69 +695,187 @@ jobs:
             }
 
             private fun fetchCategoriesAndStreams() {
-                val dnsRaw = prefs.getDns().trim()
-                val user = prefs.getUser().trim()
-                val pass = prefs.getPass().trim()
-
-                if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                    tvStatus.text = "DNS / kullanıcı / şifre boş. Giriş ekranına dönün."
+                val acc = activeAcc
+                if (acc == null) {
+                    tvStatus.text = "Aktif hesap yok."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
 
-                val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
-                val base = dns + "/player_api.php?username=" + user + "&password=" + pass
+                if (acc.type == "M3U") {
+                    val m3uUrl = acc.m3u?.trim() ?: ""
+                    if (m3uUrl.isEmpty()) {
+                        tvStatus.text = "Bu M3U hesabında link bulunamadı."
+                        tvStatus.visibility = View.VISIBLE
+                        return
+                    }
 
-                val catAction = when (currentMode) {
-                    "VOD" -> "get_vod_categories"
-                    "SERIES" -> "get_series_categories"
-                    else -> "get_live_categories"
-                }
+                    pb.visibility = View.VISIBLE
+                    tvStatus.visibility = View.GONE
 
-                val streamsAction = when (currentMode) {
-                    "VOD" -> "get_vod_streams"
-                    "SERIES" -> "get_series"
-                    else -> "get_live_streams"
-                }
+                    Thread {
+                        try {
+                            val result = fetchM3u(m3uUrl)
+                            val cats = result.first
+                            val streamsList = result.second
 
-                val catUrl = base + "&action=" + catAction
-                val streamsUrl = base + "&action=" + streamsAction
+                            runOnUiThread {
+                                pb.visibility = View.GONE
+                                categories = cats
+                                streams = streamsList
 
-                pb.visibility = View.VISIBLE
-                tvStatus.visibility = View.GONE
+                                headerUser.text = "Hesap: " + acc.name
+                                headerExpire.text = "M3U Playlist"
 
-                Thread {
-                    try {
-                        val acc = fetchAccountInfo(base)
-                        val fetchedCategories = fetchCategories(catUrl)
-                        val fetchedStreams = fetchStreams(streamsUrl)
-
-                        runOnUiThread {
-                            pb.visibility = View.GONE
-                            categories = fetchedCategories
-                            streams = fetchedStreams
-
-                            val userName = acc.first ?: prefs.getUser()
-                            val expText = formatExp(acc.second)
-                            headerUser.text = "Kullanıcı: " + userName
-                            headerExpire.text = "Bitiş: " + expText
-
-                            populateDrawerCategories()
-                            if (categories.isNotEmpty()) {
-                                filterAndShow(categories[0].category_id)
-                            } else {
-                                filterAndShow(null)
+                                populateDrawerCategories()
+                                if (categories.isNotEmpty()) {
+                                    filterAndShow(categories[0].category_id)
+                                } else {
+                                    filterAndShow(null)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            runOnUiThread {
+                                pb.visibility = View.GONE
+                                tvStatus.text = "M3U okunamadı: " + (e.message ?: "bilinmeyen hata")
+                                tvStatus.visibility = View.VISIBLE
                             }
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        runOnUiThread {
-                            pb.visibility = View.GONE
-                            tvStatus.text = "Veriler alınamadı: " + (e.message ?: "bilinmeyen hata")
-                            tvStatus.visibility = View.VISIBLE
-                        }
+                    }.start()
+                } else {
+                    val dnsRaw = acc.dns?.trim() ?: ""
+                    val user = acc.user?.trim() ?: ""
+                    val pass = acc.pass?.trim() ?: ""
+
+                    if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
+                        tvStatus.text = "DNS / kullanıcı / şifre boş. Giriş ekranına dönün."
+                        tvStatus.visibility = View.VISIBLE
+                        return
                     }
-                }.start()
+
+                    val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+                    val base = dns + "/player_api.php?username=" + user + "&password=" + pass
+
+                    val catAction = when (currentMode) {
+                        "VOD" -> "get_vod_categories"
+                        "SERIES" -> "get_series_categories"
+                        else -> "get_live_categories"
+                    }
+
+                    val streamsAction = when (currentMode) {
+                        "VOD" -> "get_vod_streams"
+                        "SERIES" -> "get_series"
+                        else -> "get_live_streams"
+                    }
+
+                    val catUrl = base + "&action=" + catAction
+                    val streamsUrl = base + "&action=" + streamsAction
+
+                    pb.visibility = View.VISIBLE
+                    tvStatus.visibility = View.GONE
+
+                    Thread {
+                        try {
+                            val accInfo = fetchAccountInfo(base)
+                            val fetchedCategories = fetchCategories(catUrl)
+                            val fetchedStreams = fetchStreams(streamsUrl)
+
+                            runOnUiThread {
+                                pb.visibility = View.GONE
+                                categories = fetchedCategories
+                                streams = fetchedStreams
+
+                                val nameToShow = if (acc.name.isNotEmpty()) acc.name else (accInfo.first ?: user)
+                                val expText = formatExp(accInfo.second)
+
+                                headerUser.text = "Kullanıcı: " + nameToShow
+                                headerExpire.text = "Bitiş: " + expText
+
+                                populateDrawerCategories()
+                                if (categories.isNotEmpty()) {
+                                    filterAndShow(categories[0].category_id)
+                                } else {
+                                    filterAndShow(null)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            runOnUiThread {
+                                pb.visibility = View.GONE
+                                tvStatus.text = "Veriler alınamadı: " + (e.message ?: "bilinmeyen hata")
+                                tvStatus.visibility = View.VISIBLE
+                            }
+                        }
+                    }.start()
+                }
+            }
+
+            private fun fetchM3u(urlStr: String): Pair<List<Category>, List<StreamItem>> {
+                val categoriesMap = LinkedHashMap<String, Category>()
+                val streamsList = ArrayList<StreamItem>()
+
+                val url = URL(urlStr)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.connectTimeout = 10000
+                conn.readTimeout = 20000
+                conn.requestMethod = "GET"
+
+                val code = conn.responseCode
+                if (code != HttpURLConnection.HTTP_OK) {
+                    return Pair(emptyList(), emptyList())
+                }
+
+                val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                val lines = body.split("\n")
+
+                var currentName = ""
+                var currentGroup = "Genel"
+
+                for (raw in lines) {
+                    val line = raw.trim()
+                    if (line.startsWith("#EXTINF", ignoreCase = true)) {
+                        var name = ""
+                        var group = "Genel"
+
+                        val groupIndex = line.indexOf("group-title=\"")
+                        if (groupIndex >= 0) {
+                            val start = groupIndex + "group-title=\"".length
+                            val end = line.indexOf("\"", startIndex = start)
+                            if (end > start) {
+                                group = line.substring(start, end)
+                            }
+                        }
+
+                        val commaIndex = line.lastIndexOf(',')
+                        if (commaIndex >= 0 && commaIndex < line.length - 1) {
+                            name = line.substring(commaIndex + 1).trim()
+                        }
+
+                        currentName = if (name.isNotEmpty()) name else "Kanal"
+                        currentGroup = if (group.isNotEmpty()) group else "Genel"
+                    } else if (line.isNotEmpty() && !line.startsWith("#")) {
+                        val urlPlay = line
+                        val groupId = currentGroup.ifEmpty { "Genel" }
+
+                        val cat = categoriesMap.getOrPut(groupId) {
+                            Category(groupId, groupId)
+                        }
+
+                        streamsList.add(
+                            StreamItem(
+                                name = currentName,
+                                stream_id = null,
+                                series_id = null,
+                                container_extension = null,
+                                category_id = cat.category_id,
+                                full_url = urlPlay
+                            )
+                        )
+                    }
+                }
+
+                return Pair(categoriesMap.values.toList(), streamsList)
             }
 
             private fun fetchAccountInfo(baseUrl: String): Pair<String?, String?> {
@@ -648,7 +976,8 @@ jobs:
                             stream_id = streamId,
                             series_id = seriesId,
                             container_extension = ext,
-                            category_id = catId
+                            category_id = catId,
+                            full_url = null
                         )
                     )
                     i++
@@ -677,41 +1006,50 @@ jobs:
                     streams.filter { it.category_id == categoryId }
                 }
 
-                val dnsRaw = prefs.getDns().trim()
-                val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
-                val user = prefs.getUser().trim()
-                val pass = prefs.getPass().trim()
+                val acc = activeAcc ?: return
 
                 rv.adapter = GridAdapter(filtered) { item ->
-                    if (currentMode == "SERIES") {
-                        val itn = Intent(this, SeriesDetailActivity::class.java)
-                        itn.putExtra("SERIES_ID", item.series_id ?: "")
-                        itn.putExtra("SERIES_NAME", item.name)
+                    if (acc.type == "M3U") {
+                        val url = item.full_url ?: return@GridAdapter
+                        val itn = Intent(this, PlayerActivity::class.java)
+                        itn.putExtra("URL", url)
                         startActivity(itn)
                     } else {
-                        val path = if (currentMode == "LIVE") "live" else "movie"
-                        val ext = if (currentMode == "LIVE") {
-                            ".ts"
+                        if (currentMode == "SERIES") {
+                            val itn = Intent(this, SeriesDetailActivity::class.java)
+                            itn.putExtra("SERIES_ID", item.series_id ?: "")
+                            itn.putExtra("SERIES_NAME", item.name)
+                            startActivity(itn)
                         } else {
-                            if (item.container_extension != null && item.container_extension.length > 0) {
-                                "." + item.container_extension
-                            } else {
-                                ".mp4"
-                            }
-                        }
-                        val id = item.stream_id ?: ""
-                        val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
+                            val dnsRaw = acc.dns?.trim() ?: ""
+                            val user = acc.user?.trim() ?: ""
+                            val pass = acc.pass?.trim() ?: ""
+                            val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
 
-                        val itn = Intent(this, PlayerActivity::class.java)
-                        itn.putExtra("URL", playUrl)
-                        startActivity(itn)
+                            val path = if (currentMode == "LIVE") "live" else "movie"
+                            val ext = if (currentMode == "LIVE") {
+                                ".ts"
+                            } else {
+                                if (item.container_extension != null && item.container_extension.length > 0) {
+                                    "." + item.container_extension
+                                } else {
+                                    ".mp4"
+                                }
+                            }
+                            val id = item.stream_id ?: ""
+                            val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
+
+                            val itn = Intent(this, PlayerActivity::class.java)
+                            itn.putExtra("URL", playUrl)
+                            startActivity(itn)
+                        }
                     }
                 }
             }
         }
         EOF
 
-        # --- SERIES DETAIL ACTIVITY (GERÇEK BÖLÜMLER, RENKLİ) ---
+        # --- SERIES DETAIL ACTIVITY (Xtream gerçek bölümler, M3U kullanmaz) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -941,14 +1279,13 @@ jobs:
 
         # --- LAYOUTLAR ---
 
-        # Login
+        # Login (Xtream + M3U + Hesap listesi)
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:gravity="center"
-            android:padding="24dp"
+            android:padding="16dp"
             android:background="@color/bg_dark">
 
             <TextView
@@ -959,50 +1296,135 @@ jobs:
                 android:textColor="@color/accent_green"
                 android:textStyle="bold"
                 android:textSize="24sp"
-                android:layout_marginBottom="24dp"/>
-
-            <EditText
-                android:id="@+id/etDns"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:hint="DNS: http://ip:port"
-                android:background="@drawable/bg_input"
-                android:padding="10dp"
-                android:textColor="@color/black"
-                android:textColorHint="@color/gray_800"
                 android:layout_marginBottom="12dp"/>
 
-            <EditText
-                android:id="@+id/etUser"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:hint="Kullanıcı"
-                android:background="@drawable/bg_input"
-                android:padding="10dp"
-                android:textColor="@color/black"
-                android:textColorHint="@color/gray_800"
-                android:layout_marginBottom="12dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hesap Tipi"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp"/>
+
+            <RadioGroup
+                android:id="@+id/rgType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <RadioButton
+                    android:id="@+id/rbXtream"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Xtream"
+                    android:textColor="@color/white"/>
+
+                <RadioButton
+                    android:id="@+id/rbM3u"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="M3U"
+                    android:textColor="@color/white"
+                    android:layout_marginLeft="16dp"/>
+            </RadioGroup>
 
             <EditText
-                android:id="@+id/etPass"
+                android:id="@+id/etName"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:hint="Şifre"
-                android:inputType="textPassword"
+                android:hint="Hesap Adı (ör: Salon TV)"
                 android:background="@drawable/bg_input"
                 android:padding="10dp"
                 android:textColor="@color/black"
                 android:textColorHint="@color/gray_800"
-                android:layout_marginBottom="20dp"/>
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:id="@+id/layoutXtream"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <EditText
+                    android:id="@+id/etDns"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:hint="DNS: http://ip:port"
+                    android:background="@drawable/bg_input"
+                    android:padding="10dp"
+                    android:textColor="@color/black"
+                    android:textColorHint="@color/gray_800"
+                    android:layout_marginBottom="8dp"/>
+
+                <EditText
+                    android:id="@+id/etUser"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:hint="Kullanıcı"
+                    android:background="@drawable/bg_input"
+                    android:padding="10dp"
+                    android:textColor="@color/black"
+                    android:textColorHint="@color/gray_800"
+                    android:layout_marginBottom="8dp"/>
+
+                <EditText
+                    android:id="@+id/etPass"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:hint="Şifre"
+                    android:inputType="textPassword"
+                    android:background="@drawable/bg_input"
+                    android:padding="10dp"
+                    android:textColor="@color/black"
+                    android:textColorHint="@color/gray_800"
+                    android:layout_marginBottom="8dp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutM3u"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <EditText
+                    android:id="@+id/etM3u"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:hint="M3U Linki"
+                    android:background="@drawable/bg_input"
+                    android:padding="10dp"
+                    android:textColor="@color/black"
+                    android:textColorHint="@color/gray_800"
+                    android:layout_marginBottom="8dp"/>
+            </LinearLayout>
 
             <Button
-                android:id="@+id/btnLogin"
+                android:id="@+id/btnAddAccount"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:text="GİRİŞ YAP"
+                android:text="HESAP EKLE"
                 android:textStyle="bold"
                 android:textColor="@color/black"
-                android:background="@color/accent_green"/>
+                android:background="@color/accent_green"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Kayıtlı Hesaplar"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp"/>
+
+            <ListView
+                android:id="@+id/lvAccounts"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:divider="@color/gray_800"
+                android:dividerHeight="1dp"/>
         </LinearLayout>
         EOF
 
@@ -1055,7 +1477,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Content (Drawer + BottomNav + TEK SÜTUN LİSTE)
+        # Content (Modern Drawer + BottomNav + TEK SÜTUN LİSTE)
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
