@@ -11,7 +11,9 @@ jobs:
 
     env:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}   # storepass
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}                   # örn: erdin_alias
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}             # keypass (farklıysa)
 
     steps:
     - name: 1. Depo Çekme
@@ -29,9 +31,12 @@ jobs:
         APP_NAME="ErdinPlayer"
         PACKAGE_NAME="com.erdin.player"
         PATH_NAME="com/erdin/player"
-        # Şifre secrets'ten gelirse onu kullan, yoksa erdin123
-        PASS="${ANDROID_KEYSTORE_PASSWORD:-erdin123}"
-        
+
+        # Keystore şifreleri (store + key)
+        STORE_PASS="${ANDROID_KEYSTORE_PASSWORD:-erdin123}"
+        KEY_PASS="${ANDROID_KEY_PASSWORD:-$STORE_PASS}"
+        ALIAS="${ANDROID_KEY_ALIAS:-erdin_alias}"
+
         echo "🚀 ErdinPlayer Pro Projesi Üretiliyor..."
 
         # Klasör Yapısı
@@ -52,21 +57,31 @@ jobs:
         # İKON
         wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://www.freepnglogos.com/uploads/512x512-logo-png/512x512-logo-download-anarchy-png-image-transparent-png-31.png"
 
-        # KEYSTORE (Secrets varsa onu kullan, yoksa eskisi gibi üret)
+        # KEYSTORE (Secrets varsa onu kullan, yoksa yeni üret)
         if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
           echo "🔐 Keystore secrets'ten alınıyor..."
           mkdir -p app
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > app/keystore.jks
+          # base64 içindeki satır sonlarını temizleyip decode et
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 --decode > app/keystore.jks
+
+          # Keystore şifresi doğru mu (storepass) kontrol et
+          if ! keytool -list -keystore app/keystore.jks -storepass "$STORE_PASS" >/dev/null 2>&1 ; then
+            echo "❌ Keystore okunamadı. ANDROID_KEYSTORE_PASSWORD yanlış veya base64 bozuk olabilir."
+            exit 1
+          fi
+
+          echo "✅ Keystore decode OK"
         else
           echo "🔐 ANDROID_KEYSTORE_BASE64 bulunamadı, geçici keystore oluşturuluyor..."
+          mkdir -p app
           keytool -genkey -v \
             -keystore app/keystore.jks \
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
-            -alias key0 \
-            -storepass "$PASS" \
-            -keypass "$PASS" \
+            -alias "$ALIAS" \
+            -storepass "$STORE_PASS" \
+            -keypass "$KEY_PASS" \
             -dname "CN=Erdin, O=ErdinMedia, C=TR"
         fi
 
@@ -112,9 +127,9 @@ jobs:
             signingConfigs {
                 release {
                     storeFile file("keystore.jks")
-                    storePassword "$PASS"
-                    keyAlias "key0"
-                    keyPassword "$PASS"
+                    storePassword "$STORE_PASS"
+                    keyAlias "$ALIAS"
+                    keyPassword "$KEY_PASS"
                 }
             }
 
@@ -202,7 +217,7 @@ jobs:
         EOF
 
         cat <<EOF > app/src/main/res/drawable/bg_input_dark.xml
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+        <shape xmlns:android="http://schemas.android.com/apapk/res/android">
             <solid android:color="@color/gray_800"/>
             <corners android:radius="12dp"/>
             <stroke android:width="1dp" android:color="@color/bordo"/>
@@ -814,7 +829,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (banner + geçiş reklamı) ---
+        # --- CONTENT ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1365,7 +1380,7 @@ jobs:
         }
         EOF
 
-        # --- SERIES DETAIL (aynı) ---
+        # --- SERIES DETAIL ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1550,7 +1565,7 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (double tap + yüzde gösterimleri + tam cutout full) ---
+        # --- PLAYER ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1818,7 +1833,7 @@ jobs:
 
         # --- LAYOUTLAR ---
 
-        # Login: inputType ve hint renkleri güncellendi
+        # Login
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -2063,7 +2078,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Content (üst + alt banner)
+        # Content
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -2276,7 +2291,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player layout: overlay'ler + bilgi yazıları
+        # Player layout
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
