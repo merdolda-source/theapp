@@ -134,7 +134,8 @@ jobs:
             <color name="black">#000000</color>
             <color name="gray_800">#1C1C1E</color>
             <color name="error_red">#FF5252</color>
-            <color name="drawer_bg">#0B0D10</color>
+            <!-- Drawer'ı biraz daha koyu/morumsu ton -->
+            <color name="drawer_bg">#111320</color>
         </resources>
         EOF
 
@@ -144,6 +145,14 @@ jobs:
                 <item name="android:windowBackground">@color/bg_dark</item>
                 <item name="android:textColor">@color/white</item>
                 <item name="colorAccent">@color/accent_green</item>
+                <!-- AlertDialog buton renklerini kontrol için -->
+                <item name="alertDialogTheme">@style/ErdinAlertDialog</item>
+            </style>
+
+            <style name="ErdinAlertDialog" parent="@style/ThemeOverlay.AppCompat.Dialog.Alert">
+                <item name="android:background">@color/gray_800</item>
+                <item name="android:textColorPrimary">@color/white</item>
+                <item name="android:textColor">@color/white</item>
             </style>
         </resources>
         EOF
@@ -431,7 +440,7 @@ jobs:
         }
         EOF
 
-        # --- LOGIN ACTIVITY ---
+        # --- LOGIN ACTIVITY (DİALOG BUTON RENKLERİ DÜZELTİLDİ) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -530,16 +539,25 @@ jobs:
                     val accounts = prefs.getAccounts()
                     if (position in accounts.indices) {
                         val acc = accounts[position]
-                        AlertDialog.Builder(this)
+                        val dialog = AlertDialog.Builder(this)
                             .setTitle("Hesabı Sil")
                             .setMessage("\"" + acc.name + "\" hesabını silmek istiyor musun?")
-                            .setPositiveButton("Sil") { _, _ ->
+                            .setPositiveButton("EVET") { _, _ ->
                                 prefs.deleteAccount(acc.id)
                                 Toast.makeText(this, "Hesap silindi.", Toast.LENGTH_SHORT).show()
                                 refreshList()
                             }
-                            .setNegativeButton("İptal", null)
-                            .show()
+                            .setNegativeButton("HAYIR", null)
+                            .create()
+
+                        dialog.setOnShowListener {
+                            val positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                            val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                            positive?.setTextColor(getColor(R.color.accent_green))
+                            negative?.setTextColor(getColor(R.color.white))
+                        }
+
+                        dialog.show()
                     }
                     true
                 }
@@ -583,7 +601,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (AKICI SCROLL OPTİMİZASYONU EKLENDİ) ---
+        # --- CONTENT ACTIVITY (AKICI SCROLL) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -650,11 +668,10 @@ jobs:
                 tvStatus = findViewById(R.id.tvStatus)
                 pb = findViewById(R.id.pbLoading)
 
-                // ✅ AKICI SCROLL / KOPUKLUK ÖNLEME
+                // AKICI KAYDIRMA
                 rv.setHasFixedSize(true)
                 rv.itemAnimator = null
                 rv.setItemViewCacheSize(32)
-
                 val lm = LinearLayoutManager(this)
                 lm.isItemPrefetchEnabled = true
                 lm.initialPrefetchItemCount = 8
@@ -692,10 +709,7 @@ jobs:
                 bottomNav.setOnItemSelectedListener { item ->
                     if (accountType == "M3U") {
                         when (item.itemId) {
-                            R.id.nav_live -> {
-                                loadMode("LIVE")
-                                true
-                            }
+                            R.id.nav_live -> { loadMode("LIVE"); true }
                             else -> {
                                 Toast.makeText(this, "M3U hesabında sadece Canlı TV listesi gösterilir.", Toast.LENGTH_SHORT).show()
                                 false
@@ -963,7 +977,12 @@ jobs:
                 var i = 0
                 while (i < arr.length()) {
                     val obj = arr.getJSONObject(i)
-                    list.add(Category(obj.optString("category_id", ""), obj.optString("category_name", "Kategori " + i)))
+                    list.add(
+                        Category(
+                            obj.optString("category_id", ""),
+                            obj.optString("category_name", "Kategori " + i)
+                        )
+                    )
                     i++
                 }
                 return list
@@ -1223,7 +1242,7 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (KEEP_SCREEN_ON EKLENDİ) ---
+        # --- PLAYER ACTIVITY (AUTO ROTATE KAPALI, BUTON İLE MOD + ÇIKIŞ) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1231,6 +1250,7 @@ jobs:
         import android.os.Bundle
         import android.view.View
         import android.view.WindowManager
+        import android.widget.Button
         import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
         import androidx.media3.common.MediaItem
@@ -1248,9 +1268,10 @@ jobs:
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
 
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                // Artık kanala girince otomatik yatay yapma, cihazı çevirince dönecek
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
 
-                // ✅ EKRAN KAPANMASIN
+                // Ekran kapanmasın
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
                 window.setFlags(
@@ -1275,17 +1296,33 @@ jobs:
                 }
 
                 val pv = findViewById<PlayerView>(R.id.pvMain)
+                val btnFit = findViewById<Button>(R.id.btnFit)
+                val btnFill = findViewById<Button>(R.id.btnFill)
+                val btnZoom = findViewById<Button>(R.id.btnZoom)
+                val btnExit = findViewById<Button>(R.id.btnExitPlayer)
+
                 applyResizeMode(pv)
 
-                pv.setOnClickListener {
-                    currentMode = (currentMode + 1) % 3
+                btnFit.setOnClickListener {
+                    currentMode = 0
                     applyResizeMode(pv)
-                    val modeText = when (currentMode) {
-                        0 -> "Kare (Fit)"
-                        1 -> "Full (Fill)"
-                        else -> "Zoom Full"
-                    }
-                    Toast.makeText(this, "Görüntü modu: " + modeText, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Görüntü modu: Kare (Fit)", Toast.LENGTH_SHORT).show()
+                }
+
+                btnFill.setOnClickListener {
+                    currentMode = 1
+                    applyResizeMode(pv)
+                    Toast.makeText(this, "Görüntü modu: Full (Fill)", Toast.LENGTH_SHORT).show()
+                }
+
+                btnZoom.setOnClickListener {
+                    currentMode = 2
+                    applyResizeMode(pv)
+                    Toast.makeText(this, "Görüntü modu: Zoom Full", Toast.LENGTH_SHORT).show()
+                }
+
+                btnExit.setOnClickListener {
+                    finish()
                 }
 
                 try {
@@ -1677,6 +1714,7 @@ jobs:
         </LinearLayout>
         EOF
 
+        # PLAYER LAYOUT: BUTONLU MOD + ÇIKIŞ
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -1687,6 +1725,46 @@ jobs:
                 android:id="@+id/pvMain"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="8dp"
+                android:layout_gravity="top|end"
+                android:background="#66000000">
+
+                <Button
+                    android:id="@+id/btnFit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="KARE"
+                    android:textSize="12sp"/>
+
+                <Button
+                    android:id="@+id/btnFill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FULL"
+                    android:textSize="12sp"
+                    android:layout_marginLeft="4dp"/>
+
+                <Button
+                    android:id="@+id/btnZoom"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ZOOM"
+                    android:textSize="12sp"
+                    android:layout_marginLeft="4dp"/>
+
+                <Button
+                    android:id="@+id/btnExitPlayer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ÇIKIŞ"
+                    android:textSize="12sp"
+                    android:layout_marginLeft="4dp"/>
+            </LinearLayout>
         </FrameLayout>
         EOF
 
