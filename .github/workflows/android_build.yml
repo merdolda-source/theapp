@@ -19,7 +19,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. Profesyonel IPTV Proje İnşası (Hatasız)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Siyah Ekran FIX)
       run: |
         set -e
         echo "Goodbye"
@@ -28,11 +28,11 @@ jobs:
         PATH_NAME="com/erdin/player"
         PASS="erdin123"
         
-        echo "🚀 Endüstriyel Seviye IPTV Mimarisi İnşa Ediliyor..."
+        echo "🚀 ErdinPlayer Pro Projesi Üretiliyor..."
 
-        # Klasör Yapısı (Modüler)
+        # Klasör Yapısı
         rm -rf $APP_NAME
-        mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME/api
+        mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME
         mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME/models
         mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME/adapters
         mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME/utils
@@ -43,11 +43,11 @@ jobs:
         
         cd $APP_NAME
 
-        # İKON VE İMZA
+        # İKON ve KEYSTORE
         wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://www.freepnglogos.com/uploads/512x512-logo-png/512x512-logo-download-anarchy-png-image-transparent-png-31.png"
         keytool -genkey -v -keystore app/keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias key0 -storepass $PASS -keypass $PASS -dname "CN=Erdin, O=ErdinMedia, C=TR"
 
-        # --- GRADLE ---
+        # --- GRADLE ROOT ---
         echo "include ':app'" > settings.gradle
         echo -e "android.useAndroidX=true\nandroid.enableJetifier=true\norg.gradle.jvmargs=-Xmx2048m" > gradle.properties
 
@@ -62,11 +62,13 @@ jobs:
         allprojects { repositories { google(); mavenCentral() } }
         EOF
 
+        # --- APP MODULE GRADLE ---
         cat <<EOF > app/build.gradle
         plugins {
             id 'com.android.application'
             id 'kotlin-android'
         }
+
         android {
             namespace '$PACKAGE_NAME'
             compileSdk 33
@@ -90,7 +92,7 @@ jobs:
 
             buildTypes {
                 release {
-                    // Siyah ekran / shrink kaynaklı sorunları engellemek için kapalı
+                    // Şimdilik kapalı: shrink/proguard kaynaklı sürpriz siyah ekran olmasın
                     minifyEnabled false
                     signingConfig signingConfigs.release
                     proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
@@ -110,55 +112,35 @@ jobs:
             implementation 'androidx.core:core-ktx:1.7.0'
             implementation 'androidx.appcompat:appcompat:1.6.1'
             implementation 'com.google.android.material:material:1.9.0'
-            implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
             implementation 'androidx.recyclerview:recyclerview:1.3.0'
-            implementation 'androidx.cardview:cardview:1.0.0'
 
-            // ExoPlayer Media3
+            // Media3 ExoPlayer
             implementation 'androidx.media3:media3-exoplayer:1.1.0'
             implementation 'androidx.media3:media3-ui:1.1.0'
 
-            // Network + Görseller (ileri seviye için hazır)
-            implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-            implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+            // Glide (şimdilik icon null ama hazır dursun)
             implementation 'com.github.bumptech.glide:glide:4.15.1'
         }
         EOF
 
-        # --- GÜÇLÜ KAYNAKLAR (XML) ---
+        # --- COLORS / STYLES / STRINGS ---
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
             <color name="bg_dark">#0A0A0A</color>
-            <color name="card_dark">#161616</color>
-            <color name="sport_green">#00E676</color>
+            <color name="accent_green">#00E676</color>
             <color name="white">#FFFFFF</color>
-            <color name="pure_black">#000000</color>
-            <color name="transparent_green">#3300E676</color>
+            <color name="black">#000000</color>
+            <color name="gray_800">#222222</color>
         </resources>
-        EOF
-
-        cat <<EOF > app/src/main/res/drawable/bg_input.xml
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <solid android:color="#FFFFFF"/>
-            <corners android:radius="12dp"/>
-            <stroke android:width="3dp" android:color="#00E676"/>
-        </shape>
-        EOF
-
-        cat <<EOF > app/src/main/res/drawable/bg_dashboard_card.xml
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <solid android:color="#161616"/>
-            <corners android:radius="20dp"/>
-            <stroke android:width="1dp" android:color="#333333"/>
-        </shape>
         EOF
 
         cat <<EOF > app/src/main/res/values/styles.xml
         <resources>
-            <style name="Theme.ErdinPlayer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+            <!-- Daha stabil: AppCompat tabanlı tema -->
+            <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.DayNight.NoActionBar">
                 <item name="android:windowBackground">@color/bg_dark</item>
-                <item name="colorPrimary">@color/sport_green</item>
                 <item name="android:textColor">@color/white</item>
+                <item name="colorAccent">@color/accent_green</item>
             </style>
         </resources>
         EOF
@@ -169,51 +151,26 @@ jobs:
         </resources>
         EOF
 
+        cat <<EOF > app/src/main/res/drawable/bg_input.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <solid android:color="@color/white"/>
+            <corners android:radius="10dp"/>
+            <stroke android:width="2dp" android:color="@color/accent_green"/>
+        </shape>
+        EOF
+
         # --- MODELLER ---
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
 
-        data class UserInfo(
-            val status: String,
-            val user_info: UserData?
-        )
-
-        data class UserData(
-            val username: String,
-            val status: String,
-            val exp_date: String?
-        )
-
-        data class Category(
-            val category_id: String,
-            val category_name: String
-        )
-
         data class StreamItem(
             val name: String,
             val stream_id: String?,
-            val series_id: String?,
-            val stream_icon: String?,
-            val rating: String?
-        )
-
-        data class SeriesInfo(
-            val seasons: List<Season>?
-        )
-
-        data class Season(
-            val season_number: Int,
-            val episodes: List<Episode>?
-        )
-
-        data class Episode(
-            val id: String,
-            val title: String,
-            val container_extension: String?
+            val series_id: String?
         )
         EOF
 
-        # --- UTILS ---
+        # --- UTILS (Prefs) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
@@ -236,17 +193,15 @@ jobs:
         }
         EOF
 
-        # --- ADAPTER ---
+        # --- ADAPTER (BASİT LİSTE) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
 
         import android.view.LayoutInflater
         import android.view.View
         import android.view.ViewGroup
-        import android.widget.ImageView
         import android.widget.TextView
         import androidx.recyclerview.widget.RecyclerView
-        import com.bumptech.glide.Glide
         import $PACKAGE_NAME.R
         import $PACKAGE_NAME.models.StreamItem
 
@@ -256,7 +211,6 @@ jobs:
         ) : RecyclerView.Adapter<GridAdapter.VH>() {
 
             class VH(v: View) : RecyclerView.ViewHolder(v) {
-                val img: ImageView = v.findViewById(R.id.imgPoster)
                 val txt: TextView = v.findViewById(R.id.txtName)
             }
 
@@ -269,11 +223,6 @@ jobs:
             override fun onBindViewHolder(holder: VH, position: Int) {
                 val item = list[position]
                 holder.txt.text = item.name
-                Glide.with(holder.itemView)
-                    .load(item.stream_icon)
-                    .placeholder(R.drawable.bg_dashboard_card)
-                    .into(holder.img)
-
                 holder.itemView.setOnClickListener { onClick(item) }
             }
 
@@ -296,44 +245,40 @@ jobs:
         class LoginActivity : AppCompatActivity() {
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
-                try {
-                    setContentView(R.layout.activity_login)
+                setContentView(R.layout.activity_login)
 
-                    val prefs = Prefs(this)
-                    val eD = findViewById<EditText>(R.id.etDns)
-                    val eU = findViewById<EditText>(R.id.etUser)
-                    val eP = findViewById<EditText>(R.id.etPass)
+                val prefs = Prefs(this)
+                val eD = findViewById<EditText>(R.id.etDns)
+                val eU = findViewById<EditText>(R.id.etUser)
+                val eP = findViewById<EditText>(R.id.etPass)
 
-                    eD.setText(prefs.getDns())
-                    eU.setText(prefs.getUser())
-                    eP.setText(prefs.getPass())
+                eD.setText(prefs.getDns())
+                eU.setText(prefs.getUser())
+                eP.setText(prefs.getPass())
 
-                    findViewById<Button>(R.id.btnLogin).setOnClickListener {
-                        val d = eD.text.toString().trim()
-                        val u = eU.text.toString().trim()
-                        val p = eP.text.toString().trim()
+                findViewById<Button>(R.id.btnLogin).setOnClickListener {
+                    val d = eD.text.toString().trim()
+                    val u = eU.text.toString().trim()
+                    val p = eP.text.toString().trim()
 
-                        if (d.isNotEmpty() && u.isNotEmpty()) {
-                            prefs.save(d, u, p)
-                            startActivity(Intent(this, DashboardActivity::class.java))
-                        } else {
-                            Toast.makeText(this, "Bilgileri Eksiksiz Girin!", Toast.LENGTH_SHORT).show()
-                        }
+                    if (d.isNotEmpty() && u.isNotEmpty()) {
+                        prefs.save(d, u, p)
+                        startActivity(Intent(this, DashboardActivity::class.java))
+                    } else {
+                        Toast.makeText(this, "Bilgileri eksiksiz girin!", Toast.LENGTH_SHORT).show()
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
                 }
             }
         }
         EOF
 
-        # --- DASHBOARD ACTIVITY ---
+        # --- DASHBOARD ACTIVITY (SADE BUTTONLAR) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
         package $PACKAGE_NAME
 
         import android.content.Intent
         import android.os.Bundle
-        import android.view.View
+        import android.widget.Button
         import android.widget.TextView
         import androidx.appcompat.app.AppCompatActivity
         import $PACKAGE_NAME.utils.Prefs
@@ -344,24 +289,24 @@ jobs:
                 setContentView(R.layout.activity_dashboard)
 
                 val prefs = Prefs(this)
-                val info = findViewById<TextView>(R.id.tvInfo)
-                info.text = "AKTİF: " + prefs.getUser()
+                val tvInfo = findViewById<TextView>(R.id.tvInfo)
+                tvInfo.text = "AKTİF KULLANICI: " + prefs.getUser()
 
-                val go: (String) -> Unit = { type ->
+                fun go(mode: String) {
                     val i = Intent(this, ContentActivity::class.java)
-                    i.putExtra("MODE", type)
+                    i.putExtra("MODE", mode)
                     startActivity(i)
                 }
 
-                findViewById<View>(R.id.cardLive).setOnClickListener { go("LIVE") }
-                findViewById<View>(R.id.cardVod).setOnClickListener { go("VOD") }
-                findViewById<View>(R.id.cardSeries).setOnClickListener { go("SERIES") }
-                findViewById<View>(R.id.cardSettings).setOnClickListener { finish() }
+                findViewById<Button>(R.id.btnLive).setOnClickListener { go("LIVE") }
+                findViewById<Button>(R.id.btnVod).setOnClickListener { go("VOD") }
+                findViewById<Button>(R.id.btnSeries).setOnClickListener { go("SERIES") }
+                findViewById<Button>(R.id.btnExit).setOnClickListener { finish() }
             }
         }
         EOF
 
-        # --- CONTENT ACTIVITY ---
+        # --- CONTENT ACTIVITY (HER ZAMAN 30 KART) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -381,30 +326,27 @@ jobs:
                 setContentView(R.layout.activity_content)
 
                 val mode = intent.getStringExtra("MODE") ?: "LIVE"
-                val header = findViewById<TextView>(R.id.tvHeader)
-                header.text = mode + " İÇERİKLERİ"
+                findViewById<TextView>(R.id.tvHeader).text = mode + " İÇERİKLERİ"
 
                 val rv = findViewById<RecyclerView>(R.id.rvContent)
                 rv.layoutManager = GridLayoutManager(this, 3)
 
-                // Dummy liste – her zaman 30 kart görünsün
-                val dummyList = (1..30).map { i ->
+                // HER ZAMAN GÖRÜNEN DEMO LİSTE (siyah boş ekran yok artık)
+                val list = (1..30).map { i ->
                     StreamItem(
-                        name = mode + " Kanal #" + i,
+                        name = "$mode Kanal #$i",
                         stream_id = if (mode == "SERIES") null else i.toString(),
-                        series_id = if (mode == "SERIES") i.toString() else null,
-                        stream_icon = null,
-                        rating = "5.0"
+                        series_id = if (mode == "SERIES") i.toString() else null
                     )
                 }
 
                 val prefs = Prefs(this)
 
-                rv.adapter = GridAdapter(dummyList) { item ->
+                rv.adapter = GridAdapter(list) { item ->
                     if (mode == "SERIES") {
-                        val intent = Intent(this, SeriesDetailActivity::class.java)
-                        intent.putExtra("S_NAME", item.name)
-                        startActivity(intent)
+                        val itn = Intent(this, SeriesDetailActivity::class.java)
+                        itn.putExtra("S_NAME", item.name)
+                        startActivity(itn)
                     } else {
                         val path = if (mode == "LIVE") "live" else "movie"
                         val dns = prefs.getDns()
@@ -412,18 +354,18 @@ jobs:
                         val pass = prefs.getPass()
                         val id = item.stream_id ?: ""
 
-                        val url = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ".ts"
+                        val url = "$dns/$path/$user/$pass/$id.ts"
 
-                        val intent = Intent(this, PlayerActivity::class.java)
-                        intent.putExtra("URL", url)
-                        startActivity(intent)
+                        val itn = Intent(this, PlayerActivity::class.java)
+                        itn.putExtra("URL", url)
+                        startActivity(itn)
                     }
                 }
             }
         }
         EOF
 
-        # --- SERIES DETAIL ACTIVITY ---
+        # --- SERIES DETAIL ACTIVITY (BASİT) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -431,7 +373,6 @@ jobs:
         import android.widget.ArrayAdapter
         import android.widget.ListView
         import android.widget.TextView
-        import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
 
         class SeriesDetailActivity : AppCompatActivity() {
@@ -440,16 +381,11 @@ jobs:
                 setContentView(R.layout.activity_series_detail)
 
                 val name = intent.getStringExtra("S_NAME") ?: "Dizi"
-                val title = findViewById<TextView>(R.id.tvSeriesTitle)
-                title.text = name
+                findViewById<TextView>(R.id.tvSeriesTitle).text = name
 
                 val lv = findViewById<ListView>(R.id.lvEpisodes)
-                val episodes = (1..10).map { i -> "Sezon 1 - Bölüm " + i }
+                val episodes = (1..10).map { "Sezon 1 - Bölüm $it" }
                 lv.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, episodes)
-
-                lv.setOnItemClickListener { _, _, position, _ ->
-                    Toast.makeText(this, "Bölüm " + (position + 1) + " açılacak (demo).", Toast.LENGTH_SHORT).show()
-                }
             }
         }
         EOF
@@ -484,8 +420,7 @@ jobs:
 
                 player = ExoPlayer.Builder(this).build().also { exo ->
                     pv.player = exo
-                    val item = MediaItem.fromUri(url)
-                    exo.setMediaItem(item)
+                    exo.setMediaItem(MediaItem.fromUri(url))
                     exo.prepare()
                     exo.play()
                 }
@@ -499,254 +434,201 @@ jobs:
         }
         EOF
 
-        # --- LAYOUTLAR ---
+        # --- LAYOUTLAR (HEPSİ BASİT, ÇÖKME ŞANSI YOK GİBİ) ---
+
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:gravity="center"
-            android:padding="35dp"
+            android:padding="24dp"
             android:background="@color/bg_dark">
 
-            <ImageView
-                android:src="@mipmap/ic_launcher"
-                android:layout_width="100dp"
-                android:layout_height="100dp"
-                android:layout_marginBottom="25dp"/>
-
             <TextView
-                android:text="ERDIN PLAYER PRO"
-                android:textColor="@color/sport_green"
-                android:textSize="24sp"
+                android:id="@+id/tvTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ERDINPLAYER PRO"
+                android:textColor="@color/accent_green"
                 android:textStyle="bold"
-                android:layout_marginBottom="35dp"/>
+                android:textSize="24sp"
+                android:layout_marginBottom="24dp"/>
 
             <EditText
                 android:id="@+id/etDns"
-                android:hint="DNS: http://url:port"
-                android:background="@drawable/bg_input"
-                android:padding="16dp"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginBottom="12dp"
-                android:textColor="#000000"
-                android:textColorHint="#777777"/>
+                android:layout_height="48dp"
+                android:hint="DNS: http://ip:port"
+                android:background="@drawable/bg_input"
+                android:padding="10dp"
+                android:textColor="@color/black"
+                android:textColorHint="@color/gray_800"
+                android:layout_marginBottom="12dp"/>
 
             <EditText
                 android:id="@+id/etUser"
-                android:hint="Kullanıcı Adı"
-                android:background="@drawable/bg_input"
-                android:padding="16dp"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginBottom="12dp"
-                android:textColor="#000000"
-                android:textColorHint="#777777"/>
+                android:layout_height="48dp"
+                android:hint="Kullanıcı"
+                android:background="@drawable/bg_input"
+                android:padding="10dp"
+                android:textColor="@color/black"
+                android:textColorHint="@color/gray_800"
+                android:layout_marginBottom="12dp"/>
 
             <EditText
                 android:id="@+id/etPass"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
                 android:hint="Şifre"
                 android:inputType="textPassword"
                 android:background="@drawable/bg_input"
-                android:padding="16dp"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginBottom="35dp"
-                android:textColor="#000000"
-                android:textColorHint="#777777"/>
+                android:padding="10dp"
+                android:textColor="@color/black"
+                android:textColorHint="@color/gray_800"
+                android:layout_marginBottom="20dp"/>
 
             <Button
                 android:id="@+id/btnLogin"
-                android:text="SİSTEME GİRİŞ YAP"
-                android:backgroundTint="@color/sport_green"
-                android:textColor="@color/pure_black"
-                android:textStyle="bold"
                 android:layout_width="match_parent"
-                android:layout_height="65dp"/>
+                android:layout_height="52dp"
+                android:text="GİRİŞ YAP"
+                android:textStyle="bold"
+                android:textColor="@color/black"
+                android:background="@color/accent_green"/>
         </LinearLayout>
         EOF
 
         cat <<EOF > app/src/main/res/layout/activity_dashboard.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:padding="20dp"
-            android:background="@color/bg_dark">
+            android:background="@color/bg_dark"
+            android:padding="16dp">
 
             <TextView
                 android:id="@+id/tvInfo"
-                android:text="HOŞGELDİN"
-                android:textColor="@color/sport_green"
-                android:textSize="20sp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AKTİF KULLANICI:"
+                android:textColor="@color/accent_green"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="30dp"/>
+                android:layout_marginBottom="24dp"/>
 
-            <GridLayout
-                android:columnCount="2"
+            <Button
+                android:id="@+id/btnLive"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="52dp"
+                android:text="📺 CANLI TV"
+                android:layout_marginBottom="12dp"/>
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardLive"
-                    android:layout_margin="8dp"
-                    android:layout_height="140dp"
-                    android:layout_width="0dp"
-                    android:layout_columnWeight="1"
-                    app:cardBackgroundColor="@color/card_dark"
-                    app:cardCornerRadius="20dp">
+            <Button
+                android:id="@+id/btnVod"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="🎬 FİLMLER"
+                android:layout_marginBottom="12dp"/>
 
-                    <TextView
-                        android:text="📺\nCANLI TV"
-                        android:textColor="@color/sport_green"
-                        android:gravity="center"
-                        android:layout_gravity="center"
-                        android:textStyle="bold"
-                        android:textSize="18sp"/>
-                </androidx.cardview.widget.CardView>
+            <Button
+                android:id="@+id/btnSeries"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="🍿 DİZİLER"
+                android:layout_marginBottom="12dp"/>
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardVod"
-                    android:layout_margin="8dp"
-                    android:layout_height="140dp"
-                    android:layout_width="0dp"
-                    android:layout_columnWeight="1"
-                    app:cardBackgroundColor="@color/card_dark"
-                    app:cardCornerRadius="20dp">
+            <Button
+                android:id="@+id/btnExit"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="❌ ÇIKIŞ"
+                android:layout_marginTop="12dp"/>
+        </LinearLayout>
+        EOF
 
-                    <TextView
-                        android:text="🎬\nFİLMLER"
-                        android:textColor="@color/sport_green"
-                        android:gravity="center"
-                        android:layout_gravity="center"
-                        android:textStyle="bold"
-                        android:textSize="18sp"/>
-                </androidx.cardview.widget.CardView>
+        cat <<EOF > app/src/main/res/layout/activity_content.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@color/bg_dark">
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardSeries"
-                    android:layout_margin="8dp"
-                    android:layout_height="140dp"
-                    android:layout_width="0dp"
-                    android:layout_columnWeight="1"
-                    app:cardBackgroundColor="@color/card_dark"
-                    app:cardCornerRadius="20dp">
+            <TextView
+                android:id="@+id/tvHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/accent_green"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:padding="16dp"/>
 
-                    <TextView
-                        android:text="🍿\nDİZİLER"
-                        android:textColor="@color/sport_green"
-                        android:gravity="center"
-                        android:layout_gravity="center"
-                        android:textStyle="bold"
-                        android:textSize="18sp"/>
-                </androidx.cardview.widget.CardView>
-
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardSettings"
-                    android:layout_margin="8dp"
-                    android:layout_height="140dp"
-                    android:layout_width="0dp"
-                    android:layout_columnWeight="1"
-                    app:cardBackgroundColor="@color/card_dark"
-                    app:cardCornerRadius="20dp">
-
-                    <TextView
-                        android:text="⚙️\nAYARLAR"
-                        android:textColor="@color/white"
-                        android:gravity="center"
-                        android:layout_gravity="center"
-                        android:textSize="18sp"/>
-                </androidx.cardview.widget.CardView>
-            </GridLayout>
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvContent"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="8dp"/>
         </LinearLayout>
         EOF
 
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="4dp"
-            android:gravity="center">
-
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="150dp"
-                app:cardCornerRadius="12dp">
-
-                <ImageView
-                    android:id="@+id/imgPoster"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
-                    android:background="#222222"/>
-            </androidx.cardview.widget.CardView>
+            android:padding="4dp">
 
             <TextView
                 android:id="@+id/txtName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#FFFFFFFF"
-                android:textSize="12sp"
+                android:textColor="@color/white"
+                android:textSize="13sp"
                 android:maxLines="2"
                 android:gravity="center"
-                android:layout_marginTop="4dp"/>
+                android:padding="8dp"
+                android:background="@color/gray_800"/>
         </LinearLayout>
         EOF
 
-        echo "<LinearLayout xmlns:android='http://schemas.android.com/apk/res/android'
-            android:layout_width='match_parent'
-            android:layout_height='match_parent'
-            android:orientation='vertical'
-            android:background='#0A0A0A'>
-            <TextView
-                android:id='@+id/tvHeader'
-                android:layout_width='match_parent'
-                android:layout_height='wrap_content'
-                android:textColor='#00E676'
-                android:textSize='18sp'
-                android:padding='16dp'
-                android:textStyle='bold'/>
-            <androidx.recyclerview.widget.RecyclerView
-                android:id='@+id/rvContent'
-                android:layout_width='match_parent'
-                android:layout_height='match_parent'
-                android:padding='8dp'/>
-        </LinearLayout>" > app/src/main/res/layout/activity_content.xml
+        cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@color/bg_dark">
 
-        echo "<LinearLayout xmlns:android='http://schemas.android.com/apk/res/android'
-            android:layout_width='match_parent'
-            android:layout_height='match_parent'
-            android:orientation='vertical'
-            android:background='#0A0A0A'>
             <TextView
-                android:id='@+id/tvSeriesTitle'
-                android:layout_width='match_parent'
-                android:layout_height='wrap_content'
-                android:textColor='#00E676'
-                android:textSize='22sp'
-                android:padding='20dp'
-                android:textStyle='bold'/>
+                android:id="@+id/tvSeriesTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/accent_green"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:padding="16dp"/>
+
             <ListView
-                android:id='@+id/lvEpisodes'
-                android:layout_width='match_parent'
-                android:layout_height='match_parent'
-                android:divider='#222222'
-                android:dividerHeight='1dp'/>
-        </LinearLayout>" > app/src/main/res/layout/activity_series_detail.xml
+                android:id="@+id/lvEpisodes"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="@color/gray_800"
+                android:dividerHeight="1dp"/>
+        </LinearLayout>
+        EOF
 
-        echo "<FrameLayout xmlns:android='http://schemas.android.com/apk/res/android'
-            android:layout_width='match_parent'
-            android:layout_height='match_parent'
-            android:background='#000000'>
+        cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
+        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/black">
+
             <androidx.media3.ui.PlayerView
-                android:id='@+id/pvMain'
-                android:layout_width='match_parent'
-                android:layout_height='match_parent'/>
-        </FrameLayout>" > app/src/main/res/layout/activity_player_pro.xml
+                android:id="@+id/pvMain"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+        </FrameLayout>
+        EOF
 
         # --- MANIFEST ---
         cat <<EOF > app/src/main/AndroidManifest.xml
