@@ -29,9 +29,9 @@ jobs:
         
         echo "🚀 ErdinPlayer Pro Projesi Üretiliyor..."
 
-        # ------------------------------------------------------------------
-        # KLASÖR YAPISI (ROOT)
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
+        # KLASÖR YAPISI
+        # ------------------------------------------------------------
         rm -rf "$APP_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME/models"
@@ -45,19 +45,19 @@ jobs:
         mkdir -p "$APP_NAME/app/src/main/res/color"
 
         cd "$APP_NAME"
-
-        # Güvenlik: içeriden de oluştur (varsa sorun olmaz)
+        mkdir -p app
         mkdir -p app/src/main/res/color
+        mkdir -p app/src/main/res/drawable
 
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         # İKON ve KEYSTORE
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://www.freepnglogos.com/uploads/512x512-logo-png/512x512-logo-download-anarchy-png-image-transparent-png-31.png"
         keytool -genkey -v -keystore app/keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias key0 -storepass "$PASS" -keypass "$PASS" -dname "CN=Erdin, O=ErdinMedia, C=TR"
 
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         # ROOT GRADLE
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         cat <<EOF > settings.gradle
         include ':app'
         EOF
@@ -88,10 +88,9 @@ jobs:
         }
         EOF
 
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         # APP MODULE GRADLE
-        # ------------------------------------------------------------------
-        mkdir -p app
+        # ------------------------------------------------------------
         cat <<EOF > app/build.gradle
         plugins {
             id 'com.android.application'
@@ -142,23 +141,20 @@ jobs:
             implementation 'com.google.android.material:material:1.9.0'
             implementation 'androidx.recyclerview:recyclerview:1.3.0'
 
-            // DrawerLayout
             implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
 
-            // Media3 ExoPlayer + HLS + DASH
             implementation 'androidx.media3:media3-exoplayer:1.1.0'
             implementation 'androidx.media3:media3-ui:1.1.0'
             implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
             implementation 'androidx.media3:media3-exoplayer-dash:1.1.0'
 
-            // Glide (istersen icon için kullanırsın)
             implementation 'com.github.bumptech.glide:glide:4.15.1'
         }
         EOF
 
-        # ------------------------------------------------------------------
-        # RENKLER / SELECTOR'LER
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
+        # RENKLER ve SELECTORLER
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
             <color name="bg_dark">#050608</color>
@@ -199,9 +195,22 @@ jobs:
         </selector>
         EOF
 
-        # ------------------------------------------------------------------
-        # STYLES / STRINGS / DRAWABLES
-        # ------------------------------------------------------------------
+        # Kare / Full / Zoom iconu (fullscreen kare ikonu)
+        cat <<EOF > app/src/main/res/drawable/ic_aspect.xml
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="24dp"
+            android:height="24dp"
+            android:viewportWidth="24"
+            android:viewportHeight="24">
+            <path
+                android:fillColor="@color/white"
+                android:pathData="M5,5h6v2H7v4H5V5zm8,0h6v6h-2V7h-4V5zm-8,8h2v4h4v2H5v-6zm12,0h2v6h-6v-2h4v-4z"/>
+        </vector>
+        EOF
+
+        # ------------------------------------------------------------
+        # STYLES / STRINGS / DRAWABLE
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/res/values/styles.xml
         <resources>
             <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.DayNight.NoActionBar">
@@ -241,9 +250,9 @@ jobs:
         </shape>
         EOF
 
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         # BOTTOM NAV MENU
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
         <menu xmlns:android="http://schemas.android.com/apk/res/android">
             <item
@@ -261,9 +270,9 @@ jobs:
         </menu>
         EOF
 
-        # ------------------------------------------------------------------
-        # NAV HEADER (YAN MENÜ BAŞLIK)
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
+        # NAV HEADER (YAN MENÜ)
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/res/layout/nav_header.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -299,16 +308,16 @@ jobs:
         </LinearLayout>
         EOF
 
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         # MODELLER
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
 
         data class AccountProfile(
             val id: Int,
             val name: String,
-            val type: String, // "XTREAM" veya "M3U"
+            val type: String,
             val dns: String?,
             val user: String?,
             val pass: String?,
@@ -326,9 +335,9 @@ jobs:
             val series_id: String?,
             val container_extension: String?,
             val category_id: String?,
-            val full_url: String?,   // M3U için direkt URL
-            val referer: String?,    // M3U için Referer
-            val origin: String?      // M3U için Origin
+            val full_url: String?,
+            val referer: String?,
+            val origin: String?
         )
 
         data class EpisodeItem(
@@ -340,9 +349,9 @@ jobs:
         )
         EOF
 
-        # ------------------------------------------------------------------
-        # PREFS (ÇOKLU HESAP + AKTİF HESAP + SİLME)
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
+        # PREFS (ÇOKLU HESAP)
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
@@ -455,7 +464,6 @@ jobs:
                 return all.find { it.id == activeId } ?: all[0]
             }
 
-            // Eski fonksiyonlar (uyumluluk için, aktif XTREAM hesabına göre)
             fun save(dns: String, u: String, ps: String) {
                 val name = if (u.isNotEmpty()) u else "Xtream"
                 createXtreamAccount(name, dns, u, ps)
@@ -467,9 +475,9 @@ jobs:
         }
         EOF
 
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         # GRID ADAPTER
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
 
@@ -506,9 +514,9 @@ jobs:
         }
         EOF
 
-        # ------------------------------------------------------------------
-        # LOGIN ACTIVITY (BUTONLU XTREAM / M3U SEÇİMİ)
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
+        # LOGIN (BUTONLU XTREAM / M3U)
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -615,6 +623,8 @@ jobs:
                             Toast.makeText(this, "M3U linki boş olamaz.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
+                        // Burada output=ts/mpegts/hls/m3u8 fark etmiyor,
+                        // Exo URL'den otomatik algılıyor, hepsi destekleniyor.
                         prefs.createM3uAccount(finalName, m)
                         Toast.makeText(this, "M3U hesabı eklendi.", Toast.LENGTH_SHORT).show()
                     }
@@ -661,9 +671,9 @@ jobs:
         }
         EOF
 
-        # ------------------------------------------------------------------
-        # DASHBOARD (OPSİYONEL)
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
+        # DASHBOARD
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
         package $PACKAGE_NAME
 
@@ -699,9 +709,9 @@ jobs:
         }
         EOF
 
-        # ------------------------------------------------------------------
-        # CONTENT ACTIVITY (YAN MENÜ + GELİŞMİŞ M3U GRUPLAMA + HESAPTAN ÇIKIŞ)
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
+        # CONTENT ACTIVITY (YAN MENÜ, M3U GRUPLAMA, HESAPTAN ÇIKIŞ)
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1017,7 +1027,6 @@ jobs:
                         var name = ""
                         var group = "Genel"
 
-                        // group-title / group_title / tvg-group yakala
                         for (re in groupRegexes) {
                             val m = re.find(line)
                             if (m != null) {
@@ -1031,7 +1040,6 @@ jobs:
                             name = line.substring(commaIndex + 1).trim()
                         }
 
-                        // Grup yoksa: "GRUP - Kanal" / "GRUP | Kanal" şeklinden yakala
                         if (group == "Genel" && name.contains(" - ")) {
                             val parts = name.split(" - ", limit = 2)
                             if (parts.size == 2) {
@@ -1075,7 +1083,7 @@ jobs:
                                 series_id = null,
                                 container_extension = null,
                                 category_id = cat.category_id,
-                                full_url = urlPlay,
+                                full_url = urlPlay,   // ts / mpegts / hls / m3u8 hepsi desteklenir
                                 referer = currentRef,
                                 origin = currentOrg
                             )
@@ -1271,9 +1279,9 @@ jobs:
         }
         EOF
 
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         # SERIES DETAIL ACTIVITY
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1458,9 +1466,9 @@ jobs:
         }
         EOF
 
-        # ------------------------------------------------------------------
-        # PLAYER ACTIVITY (GERÇEK FULLSCREEN + BUTONLU KARE/FULL/ZOOM)
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
+        # PLAYER ACTIVITY (3 MOD, KARE İKON, ÖN KAMERA ÇENTİĞİ DAHİL FULL)
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1468,7 +1476,7 @@ jobs:
         import android.os.Bundle
         import android.view.View
         import android.view.WindowManager
-        import android.widget.Button
+        import android.widget.ImageButton
         import androidx.appcompat.app.AppCompatActivity
         import androidx.media3.common.MediaItem
         import androidx.media3.datasource.DefaultHttpDataSource
@@ -1480,12 +1488,12 @@ jobs:
         class PlayerActivity : AppCompatActivity() {
 
             private var player: ExoPlayer? = null
-            private var currentMode: Int = 0
+            private var currentMode: Int = 0  // 0: fit, 1: fill, 2: zoom
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
 
-                // Çentik dahil tam ekran
+                // Tam ekran + ön kamera çentiği dahil
                 window.setFlags(
                     WindowManager.LayoutParams.FLAG_FULLSCREEN,
                     WindowManager.LayoutParams.FLAG_FULLSCREEN
@@ -1514,10 +1522,11 @@ jobs:
                 }
 
                 val pv = findViewById<PlayerView>(R.id.pvMain)
-                val btnAspect = findViewById<Button>(R.id.btnAspect)
+                val btnAspect = findViewById<ImageButton>(R.id.btnAspect)
 
                 applyResizeMode(pv)
 
+                // Kare ikonuna basınca mod değişsin (fit / fill / zoom)
                 btnAspect.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
                     applyResizeMode(pv)
@@ -1558,9 +1567,9 @@ jobs:
 
             private fun applyResizeMode(pv: PlayerView) {
                 when (currentMode) {
-                    0 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT   // Kare / standart
-                    1 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL  // Ekranı doldur
-                    else -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM // Zoom full
+                    0 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT    // kare / normal
+                    1 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL   // ekranı doldur
+                    else -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM // zoom full
                 }
             }
 
@@ -1572,11 +1581,11 @@ jobs:
         }
         EOF
 
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
         # LAYOUTLAR
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
 
-        # LOGIN LAYOUT (BUTONLU TİP SEÇİMİ)
+        # LOGIN
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -1724,7 +1733,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # DASHBOARD LAYOUT
+        # DASHBOARD
         cat <<EOF > app/src/main/res/layout/activity_dashboard.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -1773,7 +1782,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # CONTENT LAYOUT + YAN MENÜ TEMASI
+        # CONTENT + DRAWER
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -1880,7 +1889,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # SERIES DETAIL LAYOUT
+        # SERIES DETAIL
         cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -1926,7 +1935,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # PLAYER LAYOUT (ALTTA KARE BUTON)
+        # PLAYER (ALTA KARE ICON BUTTON)
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -1946,21 +1955,20 @@ jobs:
                 android:layout_gravity="bottom"
                 android:padding="12dp">
 
-                <Button
+                <ImageButton
                     android:id="@+id/btnAspect"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:text="▢"
-                    android:textSize="20sp"
-                    android:background="@color/gray_800"
-                    android:textColor="@color/white"/>
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_aspect"
+                    android:contentDescription="@string/app_name"/>
             </LinearLayout>
         </FrameLayout>
         EOF
 
-        # ------------------------------------------------------------------
-        # ANDROID MANIFEST (PLAYER ROTASYONDA YENİDEN BAŞLATMAZ)
-        # ------------------------------------------------------------------
+        # ------------------------------------------------------------
+        # MANIFEST (Player configChanges ile yeniden başlamaz)
+        # ------------------------------------------------------------
         cat <<EOF > app/src/main/AndroidManifest.xml
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
