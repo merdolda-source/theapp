@@ -339,7 +339,7 @@ jobs:
         }
         EOF
 
-        # --- DASHBOARD ACTIVITY (dursun) ---
+        # --- DASHBOARD ACTIVITY (opsiyonel, dursun) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
         package $PACKAGE_NAME
 
@@ -1006,13 +1006,13 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Dashboard (dursun)
+        # Dashboard (opsiyonel, dursun)
         cat <<EOF > app/src/main/res/layout/activity_dashboard.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:background="@color:bg_dark"
+            android:background="@color/bg_dark"
             android:padding="16dp">
 
             <TextView
@@ -1067,15 +1067,15 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:background="@color:bg_dark">
+                android:background="@color/bg_dark">
 
                 <TextView
                     android:id="@+id/tvHeader"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="☰ Canlı TV"
-                    android:textColor="@color:white"
-                    android:background="@color:bordo"
+                    android:textColor="@color/white"
+                    android:background="@color/bordo"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:padding="16dp"/>
@@ -1094,7 +1094,7 @@ jobs:
                     android:id="@+id/tvStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color:error_red"
+                    android:textColor="@color/error_red"
                     android:textSize="14sp"
                     android:padding="8dp"
                     android:visibility="gone"/>
@@ -1110,7 +1110,7 @@ jobs:
                     android:id="@+id/bottomNav"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@color:gray_800"
+                    android:background="@color/gray_800"
                     app:menu="@menu/bottom_nav_menu" />
             </LinearLayout>
 
@@ -1119,7 +1119,7 @@ jobs:
                 android:layout_width="260dp"
                 android:layout_height="match_parent"
                 android:layout_gravity="start"
-                android:background="@color:bg_dark"
+                android:background="@color/bg_dark"
                 app:headerLayout="@layout/nav_header" />
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
@@ -1136,20 +1136,20 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:background="@color:gray_800"
+                android:background="@color/gray_800"
                 android:padding="10dp">
 
                 <View
                     android:layout_width="4dp"
                     android:layout_height="match_parent"
-                    android:background="@color:bordo" />
+                    android:background="@color/bordo" />
 
                 <TextView
                     android:id="@+id/txtName"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textColor="@color:white"
+                    android:textColor="@color/white"
                     android:textSize="14sp"
                     android:maxLines="2"
                     android:ellipsize="end"
@@ -1165,14 +1165,14 @@ jobs:
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:background="@color:bg_dark">
+            android:background="@color/bg_dark">
 
             <TextView
                 android:id="@+id/tvSeriesTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color:white"
-                android:background="@color:bordo"
+                android:textColor="@color/white"
+                android:background="@color/bordo"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:padding="16dp"/>
@@ -1191,7 +1191,7 @@ jobs:
                 android:id="@+id/tvSeriesStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color:error_red"
+                android:textColor="@color/error_red"
                 android:textSize="14sp"
                 android:padding="8dp"
                 android:visibility="gone"/>
@@ -1200,7 +1200,7 @@ jobs:
                 android:id="@+id/lvEpisodes"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:divider="@color:gray_800"
+                android:divider="@color/gray_800"
                 android:dividerHeight="1dp"/>
         </LinearLayout>
         EOF
@@ -1210,7 +1210,7 @@ jobs:
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color:black">
+            android:background="@color/black">
 
             <androidx.media3.ui.PlayerView
                 android:id="@+id/pvMain"
