@@ -19,7 +19,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Xtream + M3U + Kategorili + Drawer + 3 Mod Player + AdMob)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Xtream + M3U + Kategorili + Modern Drawer + 3 Mod Player)
       run: |
         set -e
         APP_NAME="ErdinPlayer"
@@ -50,11 +50,7 @@ jobs:
 
         # --- GRADLE ROOT ---
         echo "include ':app'" > settings.gradle
-        cat <<EOF > gradle.properties
-        android.useAndroidX=true
-        android.enableJetifier=true
-        org.gradle.jvmargs=-Xmx2048m
-        EOF
+        echo -e "android.useAndroidX=true\nandroid.enableJetifier=true\norg.gradle.jvmargs=-Xmx2048m" > gradle.properties
 
         cat <<EOF > build.gradle
         buildscript {
@@ -83,7 +79,7 @@ jobs:
                 minSdk 24
                 targetSdk 34
                 versionCode 1
-                versionName "1.5.0"
+                versionName "1.4.0"
             }
 
             signingConfigs {
@@ -113,10 +109,12 @@ jobs:
         }
 
         dependencies {
-            implementation 'androidx.core:core-ktx:1.7.0'
+            implementation 'androidx.core:core-ktx:1.10.1'
             implementation 'androidx.appcompat:appcompat:1.6.1'
-            implementation 'com.google.android.material:material:1.9.0'
-            implementation 'androidx.recyclerview:recyclerview:1.3.0'
+            implementation 'com.google.android.material:material:1.11.0'
+            implementation 'androidx.recyclerview:recyclerview:1.3.2'
+
+            // DrawerLayout
             implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
 
             // Media3 ExoPlayer + HLS + DASH
@@ -127,9 +125,6 @@ jobs:
 
             // Glide
             implementation 'com.github.bumptech.glide:glide:4.15.1'
-
-            // Google AdMob (Banner + Interstitial) - webkit 1.11 ile SDK 34 istiyor
-            implementation 'com.google.android.gms:play-services-ads:23.3.0'
         }
         EOF
 
@@ -142,8 +137,18 @@ jobs:
             <color name="white">#FFFFFF</color>
             <color name="black">#000000</color>
             <color name="gray_800">#1C1C1E</color>
+            <color name="error_red">#FF5252</color>
             <color name="drawer_bg">#0B0D10</color>
+            <color name="nav_item_normal">#B3FFFFFF</color>
+            <color name="nav_item_checked">#FFFFFFFF</color>
         </resources>
+        EOF
+
+        cat <<EOF > app/src/main/res/color/nav_item_text.xml
+        <selector xmlns:android="http://schemas.android.com/apk/res/android">
+            <item android:color="@color/nav_item_checked" android:state_checked="true"/>
+            <item android:color="@color/nav_item_normal"/>
+        </selector>
         EOF
 
         cat <<EOF > app/src/main/res/values/styles.xml
@@ -159,7 +164,6 @@ jobs:
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">ErdinPlayer Pro</string>
-            <string name="aspect_toggle">Görüntü modu</string>
         </resources>
         EOF
 
@@ -184,27 +188,6 @@ jobs:
                 android:right="12dp"
                 android:bottom="12dp"/>
         </shape>
-        EOF
-
-        # Yan menü text rengi (seçili / normal)
-        cat <<EOF > app/src/main/res/color/nav_item_text.xml
-        <selector xmlns:android="http://schemas.android.com/apk/res/android">
-            <item android:state_checked="true" android:color="@color/accent_green"/>
-            <item android:color="@color/white"/>
-        </selector>
-        EOF
-
-        # --- ASPECT ICON (eski kare stil) ---
-        cat <<EOF > app/src/main/res/drawable/ic_aspect_toggle.xml
-        <vector xmlns:android="http://schemas.android.com/apk/res/android"
-            android:width="24dp"
-            android:height="24dp"
-            android:viewportWidth="24"
-            android:viewportHeight="24">
-            <path
-                android:fillColor="#FFFFFFFF"
-                android:pathData="M4,7v10h16V7H4zM6,9h12v6H6V9z"/>
-        </vector>
         EOF
 
         # --- BOTTOM NAV MENU ---
@@ -268,7 +251,7 @@ jobs:
         data class AccountProfile(
             val id: Int,
             val name: String,
-            val type: String, // "XTREAM" veya "M3U"
+            val type: String,
             val dns: String?,
             val user: String?,
             val pass: String?,
@@ -286,9 +269,9 @@ jobs:
             val series_id: String?,
             val container_extension: String?,
             val category_id: String?,
-            val full_url: String?,   // M3U için direkt URL
-            val referer: String?,    // M3U için Referer
-            val origin: String?      // M3U için Origin
+            val full_url: String?,
+            val referer: String?,
+            val origin: String?
         )
 
         data class EpisodeItem(
@@ -413,6 +396,11 @@ jobs:
                 return all.find { it.id == activeId } ?: all[0]
             }
 
+            fun save(dns: String, u: String, ps: String) {
+                val name = if (u.isNotEmpty()) u else "Xtream"
+                createXtreamAccount(name, dns, u, ps)
+            }
+
             fun getDns(): String = getActive()?.dns ?: ""
             fun getUser(): String = getActive()?.user ?: ""
             fun getPass(): String = getActive()?.pass ?: ""
@@ -456,7 +444,7 @@ jobs:
         }
         EOF
 
-        # --- LOGIN ACTIVITY (Button’lu tip seçim + light dialog) ---
+        # --- LOGIN ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -484,40 +472,25 @@ jobs:
 
                 val layoutXtream = findViewById<View>(R.id.layoutXtream)
                 val layoutM3u = findViewById<View>(R.id.layoutM3u)
-
-                val btnTypeXtream = findViewById<Button>(R.id.btnTypeXtream)
-                val btnTypeM3u = findViewById<Button>(R.id.btnTypeM3u)
-
+                val rgType = findViewById<RadioGroup>(R.id.rgType)
+                val rbXtream = findViewById<RadioButton>(R.id.rbXtream)
+                val rbM3u = findViewById<RadioButton>(R.id.rbM3u)
                 val btnAdd = findViewById<Button>(R.id.btnAddAccount)
                 val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
 
-                var currentType = "XTREAM"
+                rbXtream.isChecked = true
+                layoutXtream.visibility = View.VISIBLE
+                layoutM3u.visibility = View.GONE
 
-                fun updateTypeButtons() {
-                    if (currentType == "XTREAM") {
+                rgType.setOnCheckedChangeListener { _, checkedId ->
+                    if (checkedId == R.id.rbXtream) {
                         layoutXtream.visibility = View.VISIBLE
                         layoutM3u.visibility = View.GONE
-                        btnTypeXtream.setBackgroundColor(resources.getColor(R.color.accent_green))
-                        btnTypeM3u.setBackgroundColor(resources.getColor(R.color.gray_800))
                     } else {
                         layoutXtream.visibility = View.GONE
                         layoutM3u.visibility = View.VISIBLE
-                        btnTypeXtream.setBackgroundColor(resources.getColor(R.color.gray_800))
-                        btnTypeM3u.setBackgroundColor(resources.getColor(R.color.accent_green))
                     }
                 }
-
-                btnTypeXtream.setOnClickListener {
-                    currentType = "XTREAM"
-                    updateTypeButtons()
-                }
-
-                btnTypeM3u.setOnClickListener {
-                    currentType = "M3U"
-                    updateTypeButtons()
-                }
-
-                updateTypeButtons()
 
                 fun refreshList() {
                     val accounts: List<AccountProfile> = prefs.getAccounts()
@@ -539,7 +512,7 @@ jobs:
                     val name = etName.text.toString().trim()
                     val finalName = if (name.isNotEmpty()) name else "Hesap"
 
-                    if (currentType == "XTREAM") {
+                    if (rbXtream.isChecked) {
                         val d = etDns.text.toString().trim()
                         val u = etUser.text.toString().trim()
                         val p = etPass.text.toString().trim()
@@ -575,7 +548,7 @@ jobs:
                     val accounts = prefs.getAccounts()
                     if (position in accounts.indices) {
                         val acc = accounts[position]
-                        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
+                        AlertDialog.Builder(this)
                             .setTitle("Hesabı Sil")
                             .setMessage("\"" + acc.name + "\" hesabını silmek istiyor musun?")
                             .setPositiveButton("Evet") { _, _ ->
@@ -592,7 +565,7 @@ jobs:
         }
         EOF
 
-        # --- DASHBOARD (opsiyonel, istersen kullan) ---
+        # --- DASHBOARD (opsiyonel) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
         package $PACKAGE_NAME
 
@@ -628,7 +601,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (M3U gelişmiş grup + AdMob Banner + Interstitial) ---
+        # --- CONTENT ACTIVITY (HEADER CRASH FIXLI) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -660,16 +633,6 @@ jobs:
         import $PACKAGE_NAME.models.StreamItem
         import $PACKAGE_NAME.utils.Prefs
 
-        // AdMob
-        import com.google.android.gms.ads.AdRequest
-        import com.google.android.gms.ads.AdView
-        import com.google.android.gms.ads.MobileAds
-        import com.google.android.gms.ads.FullScreenContentCallback
-        import com.google.android.gms.ads.AdError
-        import com.google.android.gms.ads.interstitial.InterstitialAd
-        import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
-        import com.google.android.gms.ads.LoadAdError
-
         class ContentActivity : AppCompatActivity() {
 
             private lateinit var prefs: Prefs
@@ -691,21 +654,6 @@ jobs:
             private var activeAcc: AccountProfile? = null
             private var accountType: String = "XTREAM"
 
-            // AdMob değişkenleri
-            companion object {
-                // 🔁 Buradan değiştirebilirsin
-                const val LAUNCH_AD_INTERVAL = 2    // Liste açılışında: her 2 seferde bir reklam
-                const val CHANNEL_AD_INTERVAL = 4   // Kanal geçişi: her 4 tıklamada bir reklam
-
-                private var launchCount = 0
-                private var channelClickCount = 0
-
-                const val BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
-                const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
-            }
-
-            private var interstitial: InterstitialAd? = null
-
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_content)
@@ -722,6 +670,9 @@ jobs:
 
                 rv.layoutManager = LinearLayoutManager(this)
 
+                if (navView.headerCount == 0) {
+                    navView.inflateHeaderView(R.layout.nav_header)
+                }
                 val headerView = navView.getHeaderView(0)
                 headerUser = headerView.findViewById(R.id.tvHeaderUser)
                 headerExpire = headerView.findViewById(R.id.tvHeaderExpire)
@@ -751,10 +702,6 @@ jobs:
                 }
                 accountType = activeAcc?.type ?: "XTREAM"
 
-                // AdMob init + banner + interstitial
-                MobileAds.initialize(this) { }
-                prepareAds()
-
                 bottomNav.setOnItemSelectedListener { item ->
                     if (accountType == "M3U") {
                         when (item.itemId) {
@@ -773,9 +720,15 @@ jobs:
                         }
                     } else {
                         when (item.itemId) {
-                            R.id.nav_live -> { loadMode("LIVE"); true }
-                            R.id.nav_vod -> { loadMode("VOD"); true }
-                            R.id.nav_series -> { loadMode("SERIES"); true }
+                            R.id.nav_live -> {
+                                loadMode("LIVE"); true
+                            }
+                            R.id.nav_vod -> {
+                                loadMode("VOD"); true
+                            }
+                            R.id.nav_series -> {
+                                loadMode("SERIES"); true
+                            }
                             else -> false
                         }
                     }
@@ -783,70 +736,6 @@ jobs:
 
                 bottomNav.selectedItemId = R.id.nav_live
                 loadMode("LIVE")
-
-                // Açılış reklamı kontrolü
-                showLaunchAdIfNeeded()
-            }
-
-            private fun prepareAds() {
-                val adView = findViewById<AdView>(R.id.adView)
-                val adRequest = AdRequest.Builder().build()
-                adView.adUnitId = BANNER_AD_UNIT_ID
-                adView.loadAd(adRequest)
-
-                loadInterstitial()
-            }
-
-            private fun loadInterstitial() {
-                val request = AdRequest.Builder().build()
-                InterstitialAd.load(
-                    this,
-                    INTERSTITIAL_AD_UNIT_ID,
-                    request,
-                    object : InterstitialAdLoadCallback() {
-                        override fun onAdLoaded(ad: InterstitialAd) {
-                            interstitial = ad
-                        }
-
-                        override fun onAdFailedToLoad(error: LoadAdError) {
-                            interstitial = null
-                        }
-                    }
-                )
-            }
-
-            private fun showInterstitial() {
-                val ad = interstitial
-                if (ad != null) {
-                    ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-                        override fun onAdDismissedFullScreenContent() {
-                            interstitial = null
-                            loadInterstitial()
-                        }
-
-                        override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                            interstitial = null
-                            loadInterstitial()
-                        }
-                    }
-                    ad.show(this)
-                } else {
-                    loadInterstitial()
-                }
-            }
-
-            private fun showLaunchAdIfNeeded() {
-                launchCount++
-                if (LAUNCH_AD_INTERVAL > 0 && launchCount % LAUNCH_AD_INTERVAL == 0) {
-                    showInterstitial()
-                }
-            }
-
-            private fun showChannelAdIfNeeded() {
-                channelClickCount++
-                if (CHANNEL_AD_INTERVAL > 0 && channelClickCount % CHANNEL_AD_INTERVAL == 0) {
-                    showInterstitial()
-                }
             }
 
             private fun loadMode(mode: String) {
@@ -1009,22 +898,12 @@ jobs:
                         var name = ""
                         var group = "Genel"
 
-                        // group-title / group_title / tvg-group / tvg_group vs.
-                        val keys = arrayOf(
-                            "group-title=\"",
-                            "group_title=\"",
-                            "tvg-group=\"",
-                            "tvg_group=\""
-                        )
-                        for (k in keys) {
-                            val idx = line.indexOf(k)
-                            if (idx >= 0) {
-                                val start = idx + k.length
-                                val end = line.indexOf("\"", startIndex = start)
-                                if (end > start) {
-                                    group = line.substring(start, end)
-                                    break
-                                }
+                        val groupIndex = line.indexOf("group-title=\"")
+                        if (groupIndex >= 0) {
+                            val start = groupIndex + "group-title=\"".length
+                            val end = line.indexOf("\"", startIndex = start)
+                            if (end > start) {
+                                group = line.substring(start, end)
                             }
                         }
 
@@ -1209,9 +1088,6 @@ jobs:
                 val acc = activeAcc ?: return
 
                 rv.adapter = GridAdapter(filtered) { item ->
-                    // Kanal tıklamalarında interstitial kontrolü
-                    showChannelAdIfNeeded()
-
                     if (acc.type == "M3U") {
                         val url = item.full_url
                         if (url.isNullOrEmpty()) {
@@ -1389,11 +1265,7 @@ jobs:
                                 tvStatus.visibility = View.GONE
                                 val labels = ArrayList<String>()
                                 for (ep in episodes) {
-                                    labels.add(
-                                        "S" + ep.seasonNumber +
-                                                "E" + ep.episodeNumber +
-                                                " - " + ep.title
-                                    )
+                                    labels.add("S" + ep.seasonNumber + "E" + ep.episodeNumber + " - " + ep.title)
                                 }
                                 val adapter = ArrayAdapter(
                                     this,
@@ -1445,16 +1317,14 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (kare icon alt, 3 mod, sensorLandscape, full cutout) ---
+        # --- PLAYER ACTIVITY (3 MOD) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
         import android.content.pm.ActivityInfo
-        import android.os.Build
         import android.os.Bundle
         import android.view.View
         import android.view.WindowManager
-        import android.widget.ImageButton
         import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
         import androidx.media3.common.MediaItem
@@ -1472,28 +1342,16 @@ jobs:
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
 
-                // Yatay mod (sensorLandscape: normal / ters yatay)
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
-                // Fullscreen + notch üstü
                 window.setFlags(
                     WindowManager.LayoutParams.FLAG_FULLSCREEN,
                     WindowManager.LayoutParams.FLAG_FULLSCREEN
                 )
                 window.decorView.systemUiVisibility =
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
                     View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    val params = window.attributes
-                    params.layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                    window.attributes = params
-                }
 
                 setContentView(R.layout.activity_player_pro)
 
@@ -1508,11 +1366,9 @@ jobs:
                 }
 
                 val pv = findViewById<PlayerView>(R.id.pvMain)
-                val btnAspect = findViewById<ImageButton>(R.id.btnAspect)
-
                 applyResizeMode(pv)
 
-                btnAspect.setOnClickListener {
+                pv.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
                     applyResizeMode(pv)
                 }
@@ -1553,9 +1409,9 @@ jobs:
 
             private fun applyResizeMode(pv: PlayerView) {
                 when (currentMode) {
-                    0 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT   // kare
-                    1 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL  // full
-                    else -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM // zoom full
+                    0 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    1 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+                    else -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 }
             }
 
@@ -1588,31 +1444,36 @@ jobs:
                 android:textSize="24sp"
                 android:layout_marginBottom="12dp"/>
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hesap Tipi"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp"/>
+
+            <RadioGroup
+                android:id="@+id/rgType"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_marginBottom="8dp">
 
-                <Button
-                    android:id="@+id/btnTypeXtream"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
+                <RadioButton
+                    android:id="@+id/rbXtream"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:text="Xtream"
-                    android:textColor="@color/white"
-                    android:background="@color/gray_800"/>
+                    android:textColor="@color/white"/>
 
-                <Button
-                    android:id="@+id/btnTypeM3u"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
+                <RadioButton
+                    android:id="@+id/rbM3u"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:text="M3U"
                     android:textColor="@color/white"
-                    android:background="@color/gray_800"
-                    android:layout_marginLeft="8dp"/>
-            </LinearLayout>
+                    android:layout_marginLeft="16dp"/>
+            </RadioGroup>
 
             <EditText
                 android:id="@+id/etName"
@@ -1762,11 +1623,10 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Content + Banner alt + Drawer renkler
+        # Content
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
-            xmlns:ads="http://schemas.android.com/apk/res-auto"
             android:id="@+id/drawerLayout"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
@@ -1802,7 +1662,7 @@ jobs:
                     android:id="@+id/tvStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@android:color/holo_red_light"
+                    android:textColor="@color/error_red"
                     android:textSize="14sp"
                     android:padding="8dp"
                     android:visibility="gone"/>
@@ -1814,19 +1674,13 @@ jobs:
                     android:layout_weight="1"
                     android:padding="8dp"/>
 
-                <com.google.android.gms.ads.AdView
-                    android:id="@+id/adView"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    ads:adSize="BANNER"
-                    ads:adUnitId="ca-app-pub-3940256099942544/6300978111" />
-
                 <com.google.android.material.bottomnavigation.BottomNavigationView
                     android:id="@+id/bottomNav"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@color/gray_800"
+                    app:itemTextColor="@color/nav_item_text"
+                    app:itemIconTint="@color/nav_item_text"
                     app:menu="@menu/bottom_nav_menu" />
             </LinearLayout>
 
@@ -1836,9 +1690,7 @@ jobs:
                 android:layout_height="match_parent"
                 android:layout_gravity="start"
                 android:background="@color/drawer_bg"
-                app:headerLayout="@layout/nav_header"
-                app:itemTextColor="@color/nav_item_text"
-                app:itemIconTint="@color/nav_item_text" />
+                app:headerLayout="@layout/nav_header" />
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
 
@@ -1909,7 +1761,7 @@ jobs:
                 android:id="@+id/tvSeriesStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@android:color/holo_red_light"
+                android:textColor="@color/error_red"
                 android:textSize="14sp"
                 android:padding="8dp"
                 android:visibility="gone"/>
@@ -1923,7 +1775,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player (altta kare icon)
+        # Player
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -1934,16 +1786,6 @@ jobs:
                 android:id="@+id/pvMain"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
-
-            <ImageButton
-                android:id="@+id/btnAspect"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="bottom|center_horizontal"
-                android:layout_marginBottom="16dp"
-                android:background="@android:color/transparent"
-                android:src="@drawable/ic_aspect_toggle"
-                android:contentDescription="@string/aspect_toggle"/>
         </FrameLayout>
         EOF
 
@@ -1951,16 +1793,12 @@ jobs:
         cat <<EOF > app/src/main/AndroidManifest.xml
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
+
             <application
                 android:theme="@style/Theme.ErdinPlayer"
                 android:icon="@mipmap/ic_launcher"
                 android:label="@string/app_name"
                 android:usesCleartextTraffic="true">
-
-                <!-- AdMob App ID (test) -->
-                <meta-data
-                    android:name="com.google.android.gms.ads.APPLICATION_ID"
-                    android:value="ca-app-pub-3940256099942544~3347511713" />
 
                 <activity
                     android:name=".LoginActivity"
@@ -1974,16 +1812,12 @@ jobs:
                 <activity android:name=".DashboardActivity" />
                 <activity android:name=".ContentActivity" />
                 <activity android:name=".SeriesDetailActivity" />
-
-                <activity
-                    android:name=".PlayerActivity"
-                    android:screenOrientation="sensorLandscape"
-                    android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout" />
+                <activity android:name=".PlayerActivity" />
             </application>
         </manifest>
         EOF
 
-    - name: 4. Gradle Kur ve Cache
+    - name: 4. Gradle Derleme
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.2'
