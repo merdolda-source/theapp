@@ -19,7 +19,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Xtream Gerçek İçerik)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Kategorili + Seriler Gerçek)
       run: |
         set -e
         APP_NAME="ErdinPlayer"
@@ -39,6 +39,7 @@ jobs:
         mkdir -p $APP_NAME/app/src/main/res/values
         mkdir -p $APP_NAME/app/src/main/res/drawable
         mkdir -p $APP_NAME/app/src/main/res/mipmap-hdpi
+        mkdir -p $APP_NAME/app/src/main/res/menu
         
         cd $APP_NAME
 
@@ -91,7 +92,7 @@ jobs:
 
             buildTypes {
                 release {
-                    // Proguard kapalı: sürpriz siyah ekran yok
+                    // Proguard kapalı: sürpriz siyah ekran olmasın
                     minifyEnabled false
                     signingConfig signingConfigs.release
                     proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
@@ -112,6 +113,9 @@ jobs:
             implementation 'androidx.appcompat:appcompat:1.6.1'
             implementation 'com.google.android.material:material:1.9.0'
             implementation 'androidx.recyclerview:recyclerview:1.3.0'
+
+            // DrawerLayout
+            implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
 
             // Media3 ExoPlayer
             implementation 'androidx.media3:media3-exoplayer:1.1.0'
@@ -158,14 +162,46 @@ jobs:
         </shape>
         EOF
 
-        # --- MODELLER (Xtream için) ---
+        # --- BOTTOM NAV MENU ---
+        cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
+        <menu xmlns:android="http://schemas.android.com/apk/res/android">
+            <item
+                android:id="@+id/nav_live"
+                android:icon="@android:drawable/ic_media_play"
+                android:title="Canlı TV" />
+            <item
+                android:id="@+id/nav_vod"
+                android:icon="@android:drawable/ic_menu_slideshow"
+                android:title="Filmler" />
+            <item
+                android:id="@+id/nav_series"
+                android:icon="@android:drawable/ic_menu_agenda"
+                android:title="Diziler" />
+        </menu>
+        EOF
+
+        # --- MODELLER (Kategori + Stream + Episode) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
+
+        data class Category(
+            val category_id: String,
+            val category_name: String
+        )
 
         data class StreamItem(
             val name: String,
             val stream_id: String?,
             val series_id: String?,
+            val container_extension: String?,
+            val category_id: String?
+        )
+
+        data class EpisodeItem(
+            val id: String,
+            val title: String,
+            val seasonNumber: Int,
+            val episodeNumber: Int,
             val container_extension: String?
         )
         EOF
@@ -263,7 +299,7 @@ jobs:
 
                     if (d.isNotEmpty() && u.isNotEmpty()) {
                         prefs.save(d, u, p)
-                        startActivity(Intent(this, DashboardActivity::class.java))
+                        startActivity(Intent(this, HomeActivity::class.java))
                     } else {
                         Toast.makeText(this, "Bilgileri eksiksiz girin!", Toast.LENGTH_SHORT).show()
                     }
@@ -272,87 +308,106 @@ jobs:
         }
         EOF
 
-        # --- DASHBOARD ACTIVITY ---
-        cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
+        # --- HOME ACTIVITY (BOTTOM NAV + DRAWER + KATEGORİLER + İÇERİK) ---
+        cat <<EOF > app/src/main/java/$PATH_NAME/HomeActivity.kt
         package $PACKAGE_NAME
 
         import android.content.Intent
         import android.os.Bundle
-        import android.widget.Button
-        import android.widget.TextView
-        import androidx.appcompat.app.AppCompatActivity
-        import $PACKAGE_NAME.utils.Prefs
-
-        class DashboardActivity : AppCompatActivity() {
-            override fun onCreate(savedInstanceState: Bundle?) {
-                super.onCreate(savedInstanceState)
-                setContentView(R.layout.activity_dashboard)
-
-                val prefs = Prefs(this)
-                val tvInfo = findViewById<TextView>(R.id.tvInfo)
-                tvInfo.text = "AKTİF KULLANICI: " + prefs.getUser()
-
-                fun go(mode: String) {
-                    val i = Intent(this, ContentActivity::class.java)
-                    i.putExtra("MODE", mode)
-                    startActivity(i)
-                }
-
-                findViewById<Button>(R.id.btnLive).setOnClickListener { go("LIVE") }
-                findViewById<Button>(R.id.btnVod).setOnClickListener { go("VOD") }
-                findViewById<Button>(R.id.btnSeries).setOnClickListener { go("SERIES") }
-                findViewById<Button>(R.id.btnExit).setOnClickListener { finish() }
-            }
-        }
-        EOF
-
-        # --- CONTENT ACTIVITY (XTREAM API ENTEGRASYON) ---
-        cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
-        package $PACKAGE_NAME
-
-        import android.content.Intent
-        import android.os.Bundle
+        import android.view.Menu
         import android.view.View
         import android.widget.ProgressBar
         import android.widget.TextView
         import androidx.appcompat.app.AppCompatActivity
+        import androidx.core.view.GravityCompat
+        import androidx.drawerlayout.widget.DrawerLayout
         import androidx.recyclerview.widget.GridLayoutManager
         import androidx.recyclerview.widget.RecyclerView
+        import com.google.android.material.bottomnavigation.BottomNavigationView
+        import com.google.android.material.navigation.NavigationView
         import org.json.JSONArray
+        import org.json.JSONObject
         import java.net.HttpURLConnection
         import java.net.URL
         import java.util.ArrayList
         import $PACKAGE_NAME.adapters.GridAdapter
+        import $PACKAGE_NAME.models.Category
         import $PACKAGE_NAME.models.StreamItem
         import $PACKAGE_NAME.utils.Prefs
 
-        class ContentActivity : AppCompatActivity() {
+        class HomeActivity : AppCompatActivity() {
 
             private lateinit var prefs: Prefs
+            private lateinit var drawer: DrawerLayout
+            private lateinit var navView: NavigationView
+            private lateinit var bottomNav: BottomNavigationView
             private lateinit var rv: RecyclerView
-            private lateinit var header: TextView
+            private lateinit var tvHeader: TextView
             private lateinit var tvStatus: TextView
             private lateinit var pb: ProgressBar
 
+            private var currentMode: String = "LIVE"
+            private var categories: List<Category> = emptyList()
+            private var streams: List<StreamItem> = emptyList()
+
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
-                setContentView(R.layout.activity_content)
+                setContentView(R.layout.activity_home)
 
                 prefs = Prefs(this)
-                val mode = intent.getStringExtra("MODE") ?: "LIVE"
 
-                header = findViewById(R.id.tvHeader)
+                drawer = findViewById(R.id.drawerLayout)
+                navView = findViewById(R.id.navView)
+                bottomNav = findViewById(R.id.bottomNav)
+                rv = findViewById(R.id.rvContent)
+                tvHeader = findViewById(R.id.tvHeader)
                 tvStatus = findViewById(R.id.tvStatus)
                 pb = findViewById(R.id.pbLoading)
-                rv = findViewById(R.id.rvContent)
 
-                header.text = mode + " İÇERİKLERİ"
                 rv.layoutManager = GridLayoutManager(this, 3)
 
-                loadData(mode)
+                tvHeader.setOnClickListener {
+                    drawer.openDrawer(GravityCompat.START)
+                }
+
+                navView.setNavigationItemSelectedListener { item ->
+                    val idx = item.itemId
+                    if (idx in categories.indices) {
+                        val cat = categories[idx]
+                        item.isChecked = true
+                        filterAndShow(cat.category_id)
+                        drawer.closeDrawer(GravityCompat.START)
+                        true
+                    } else {
+                        false
+                    }
+                }
+
+                bottomNav.setOnItemSelectedListener { item ->
+                    when (item.itemId) {
+                        R.id.nav_live -> { loadMode("LIVE"); true }
+                        R.id.nav_vod -> { loadMode("VOD"); true }
+                        R.id.nav_series -> { loadMode("SERIES"); true }
+                        else -> false
+                    }
+                }
+
+                // Açılışta LIVE seçili, ekran boş kalmasın
+                bottomNav.selectedItemId = R.id.nav_live
+                loadMode("LIVE")
             }
 
-            private fun loadData(mode: String) {
+            private fun loadMode(mode: String) {
+                currentMode = mode
+                tvHeader.text = when (mode) {
+                    "VOD" -> "☰ Filmler"
+                    "SERIES" -> "☰ Diziler"
+                    else -> "☰ Canlı TV"
+                }
+                fetchCategoriesAndStreams()
+            }
+
+            private fun fetchCategoriesAndStreams() {
                 val dnsRaw = prefs.getDns().trim()
                 val user = prefs.getUser().trim()
                 val pass = prefs.getPass().trim()
@@ -364,14 +419,236 @@ jobs:
                 }
 
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+                val base = dns + "/player_api.php?username=" + user + "&password=" + pass
 
-                val action = when (mode) {
+                val catAction = when (currentMode) {
+                    "VOD" -> "get_vod_categories"
+                    "SERIES" -> "get_series_categories"
+                    else -> "get_live_categories"
+                }
+
+                val streamsAction = when (currentMode) {
                     "VOD" -> "get_vod_streams"
                     "SERIES" -> "get_series"
                     else -> "get_live_streams"
                 }
 
-                val urlStr = dns + "/player_api.php?username=" + user + "&password=" + pass + "&action=" + action
+                val catUrl = base + "&action=" + catAction
+                val streamsUrl = base + "&action=" + streamsAction
+
+                pb.visibility = View.VISIBLE
+                tvStatus.visibility = View.GONE
+
+                Thread {
+                    try {
+                        val fetchedCategories = fetchCategories(catUrl)
+                        val fetchedStreams = fetchStreams(streamsUrl)
+
+                        runOnUiThread {
+                            pb.visibility = View.GONE
+                            categories = fetchedCategories
+                            streams = fetchedStreams
+
+                            populateDrawerCategories()
+                            if (categories.isNotEmpty()) {
+                                filterAndShow(categories[0].category_id)
+                            } else {
+                                filterAndShow(null)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        runOnUiThread {
+                            pb.visibility = View.GONE
+                            tvStatus.text = "Veriler alınamadı: " + (e.message ?: "bilinmeyen hata")
+                            tvStatus.visibility = View.VISIBLE
+                        }
+                    }
+                }.start()
+            }
+
+            private fun fetchCategories(urlStr: String): List<Category> {
+                val list = ArrayList<Category>()
+                val url = URL(urlStr)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.connectTimeout = 10000
+                conn.readTimeout = 15000
+                conn.requestMethod = "GET"
+
+                val code = conn.responseCode
+                if (code != HttpURLConnection.HTTP_OK) {
+                    return list
+                }
+
+                val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                val arr = JSONArray(body)
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val id = obj.optString("category_id", "")
+                    val name = obj.optString("category_name", "Kategori $i")
+                    list.add(Category(id, name))
+                }
+                return list
+            }
+
+            private fun fetchStreams(urlStr: String): List<StreamItem> {
+                val list = ArrayList<StreamItem>()
+                val url = URL(urlStr)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.connectTimeout = 10000
+                conn.readTimeout = 20000
+                conn.requestMethod = "GET"
+
+                val code = conn.responseCode
+                if (code != HttpURLConnection.HTTP_OK) {
+                    return list
+                }
+
+                val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                val arr = JSONArray(body)
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val name = obj.optString("name", "Bilinmeyen")
+                    val catId = obj.optString("category_id", "")
+                    val streamId = obj.optString("stream_id", null)
+                    val seriesId = obj.optString("series_id", null)
+                    val ext = obj.optString("container_extension", null)
+                    list.add(
+                        StreamItem(
+                            name = name,
+                            stream_id = streamId,
+                            series_id = seriesId,
+                            container_extension = ext,
+                            category_id = catId
+                        )
+                    )
+                }
+                return list
+            }
+
+            private fun populateDrawerCategories() {
+                val menu: Menu = navView.menu
+                menu.clear()
+                for ((index, cat) in categories.withIndex()) {
+                    val item = menu.add(0, index, 0, cat.category_name)
+                    item.isCheckable = true
+                    if (index == 0) {
+                        item.isChecked = true
+                    }
+                }
+            }
+
+            private fun filterAndShow(categoryId: String?) {
+                val filtered = if (categoryId.isNullOrEmpty()) {
+                    streams
+                } else {
+                    streams.filter { it.category_id == categoryId }
+                }
+
+                val dnsRaw = prefs.getDns().trim()
+                val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+                val user = prefs.getUser().trim()
+                val pass = prefs.getPass().trim()
+
+                rv.adapter = GridAdapter(filtered) { item ->
+                    if (currentMode == "SERIES") {
+                        val itn = Intent(this, SeriesDetailActivity::class.java)
+                        itn.putExtra("SERIES_ID", item.series_id ?: "")
+                        itn.putExtra("SERIES_NAME", item.name)
+                        startActivity(itn)
+                    } else {
+                        val path = if (currentMode == "LIVE") "live" else "movie"
+                        val ext = if (currentMode == "LIVE") {
+                            ".ts"
+                        } else {
+                            if (item.container_extension != null && item.container_extension.isNotEmpty()) {
+                                "." + item.container_extension
+                            } else {
+                                ".mp4"
+                            }
+                        }
+                        val id = item.stream_id ?: ""
+                        val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
+
+                        val itn = Intent(this, PlayerActivity::class.java)
+                        itn.putExtra("URL", playUrl)
+                        startActivity(itn)
+                    }
+                }
+            }
+        }
+        EOF
+
+        # --- SERIES DETAIL ACTIVITY (GERÇEK BÖLÜMLER) ---
+        cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
+        package $PACKAGE_NAME
+
+        import android.os.Bundle
+        import android.view.View
+        import android.widget.AdapterView
+        import android.widget.ArrayAdapter
+        import android.widget.ListView
+        import android.widget.ProgressBar
+        import android.widget.TextView
+        import androidx.appcompat.app.AppCompatActivity
+        import org.json.JSONObject
+        import java.net.HttpURLConnection
+        import java.net.URL
+        import java.util.ArrayList
+        import $PACKAGE_NAME.models.EpisodeItem
+        import $PACKAGE_NAME.utils.Prefs
+
+        class SeriesDetailActivity : AppCompatActivity() {
+
+            private lateinit var prefs: Prefs
+            private lateinit var tvTitle: TextView
+            private lateinit var tvStatus: TextView
+            private lateinit var pb: ProgressBar
+            private lateinit var lv: ListView
+
+            private val episodes = ArrayList<EpisodeItem>()
+
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_series_detail)
+
+                prefs = Prefs(this)
+
+                tvTitle = findViewById(R.id.tvSeriesTitle)
+                tvStatus = findViewById(R.id.tvSeriesStatus)
+                pb = findViewById(R.id.pbSeries)
+                lv = findViewById(R.id.lvEpisodes)
+
+                val seriesName = intent.getStringExtra("SERIES_NAME") ?: "Dizi"
+                val seriesId = intent.getStringExtra("SERIES_ID") ?: ""
+
+                tvTitle.text = seriesName
+
+                if (seriesId.isEmpty()) {
+                    tvStatus.text = "Geçersiz seri bilgisi."
+                    tvStatus.visibility = View.VISIBLE
+                    return
+                }
+
+                loadSeriesInfo(seriesId)
+            }
+
+            private fun loadSeriesInfo(seriesId: String) {
+                val dnsRaw = prefs.getDns().trim()
+                val user = prefs.getUser().trim()
+                val pass = prefs.getPass().trim()
+
+                if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
+                    tvStatus.text = "DNS / kullanıcı / şifre eksik."
+                    tvStatus.visibility = View.VISIBLE
+                    return
+                }
+
+                val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+                val urlStr = dns +
+                        "/player_api.php?username=" + user +
+                        "&password=" + pass +
+                        "&action=get_series_info&series_id=" + seriesId
 
                 pb.visibility = View.VISIBLE
                 tvStatus.visibility = View.GONE
@@ -381,86 +658,91 @@ jobs:
                         val url = URL(urlStr)
                         val conn = url.openConnection() as HttpURLConnection
                         conn.connectTimeout = 10000
-                        conn.readTimeout = 15000
+                        conn.readTimeout = 20000
                         conn.requestMethod = "GET"
 
                         val code = conn.responseCode
                         if (code != HttpURLConnection.HTTP_OK) {
-                            showError("Sunucu yanıtı: " + code)
+                            showError("Sunucu yanıtı: $code")
                             return@Thread
                         }
 
                         val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                        val arr = JSONArray(body)
+                        val obj = JSONObject(body)
+                        val episodesObj = obj.optJSONObject("episodes") ?: JSONObject()
 
-                        val items = ArrayList<StreamItem>()
-                        for (i in 0 until arr.length()) {
-                            val obj = arr.getJSONObject(i)
-                            val name = obj.optString("name", "Bilinmeyen")
-                            val streamId = if (mode == "SERIES") null else obj.optString("stream_id", null)
-                            val seriesId = if (mode == "SERIES") obj.optString("series_id", null) else null
-                            val ext = if (mode == "VOD") obj.optString("container_extension", null) else null
-                            items.add(
-                                StreamItem(
-                                    name = name,
-                                    stream_id = streamId,
-                                    series_id = seriesId,
-                                    container_extension = ext
-                                )
-                            )
-                        }
+                        episodes.clear()
+                        val keys = episodesObj.keys()
+                        while (keys.hasNext()) {
+                            val seasonKey = keys.next()
+                            val seasonNum = seasonKey.toIntOrNull() ?: 0
+                            val arr = episodesObj.optJSONArray(seasonKey) ?: continue
 
-                        if (items.isEmpty()) {
-                            // Tamamen boşsa kullanıcı anlasın diye basit dummy
-                            var i = 1
-                            while (i <= 10) {
-                                items.add(
-                                    StreamItem(
-                                        name = "Boş Liste Kanal " + i,
-                                        stream_id = i.toString(),
-                                        series_id = null,
-                                        container_extension = null
+                            for (i in 0 until arr.length()) {
+                                val epObj = arr.getJSONObject(i)
+                                val id = epObj.optString("id", "")
+                                val title = epObj.optString("title", "Bölüm $i")
+                                val epNum = epObj.optInt("episode_num", i + 1)
+                                val ext = epObj.optString("container_extension", "mp4")
+
+                                episodes.add(
+                                    EpisodeItem(
+                                        id = id,
+                                        title = title,
+                                        seasonNumber = seasonNum,
+                                        episodeNumber = epNum,
+                                        container_extension = ext
                                     )
                                 )
-                                i++
                             }
                         }
 
                         runOnUiThread {
                             pb.visibility = View.GONE
-                            tvStatus.visibility = View.GONE
-
-                            rv.adapter = GridAdapter(items) { item ->
-                                if (mode == "SERIES") {
-                                    val itn = Intent(this, SeriesDetailActivity::class.java)
-                                    itn.putExtra("S_NAME", item.name)
-                                    startActivity(itn)
-                                } else {
-                                    val path = if (mode == "LIVE") "live" else "movie"
-                                    val ext = if (mode == "LIVE") {
-                                        ".ts"
-                                    } else {
-                                        if (item.container_extension != null && item.container_extension.length > 0) {
-                                            "." + item.container_extension
-                                        } else {
-                                            ".mp4"
-                                        }
-                                    }
-
-                                    val id = item.stream_id ?: ""
-                                    val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
-
-                                    val itn = Intent(this, PlayerActivity::class.java)
-                                    itn.putExtra("URL", playUrl)
-                                    startActivity(itn)
+                            if (episodes.isEmpty()) {
+                                tvStatus.text = "Bu seri için bölüm bulunamadı."
+                                tvStatus.visibility = View.VISIBLE
+                            } else {
+                                tvStatus.visibility = View.GONE
+                                val labels = episodes.map {
+                                    "S${it.seasonNumber}E${it.episodeNumber} - ${it.title}"
                                 }
+                                val adapter = ArrayAdapter(
+                                    this,
+                                    android.R.layout.simple_list_item_1,
+                                    labels
+                                )
+                                lv.adapter = adapter
+
+                                lv.onItemClickListener =
+                                    AdapterView.OnItemClickListener { _, _, position, _ ->
+                                        playEpisode(episodes[position])
+                                    }
                             }
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        showError("İçerikler alınamadı: " + e.message)
+                        showError("Seri bilgisi alınamadı: " + (e.message ?: "bilinmeyen hata"))
                     }
                 }.start()
+            }
+
+            private fun playEpisode(ep: EpisodeItem) {
+                val dnsRaw = prefs.getDns().trim()
+                val user = prefs.getUser().trim()
+                val pass = prefs.getPass().trim()
+
+                val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+                val ext = if (ep.container_extension != null && ep.container_extension.isNotEmpty())
+                    ep.container_extension
+                else
+                    "mp4"
+
+                val url = "$dns/series/$user/$pass/${ep.id}.$ext"
+
+                val itn = android.content.Intent(this, PlayerActivity::class.java)
+                itn.putExtra("URL", url)
+                startActivity(itn)
             }
 
             private fun showError(msg: String) {
@@ -469,37 +751,6 @@ jobs:
                     tvStatus.text = msg
                     tvStatus.visibility = View.VISIBLE
                 }
-            }
-        }
-        EOF
-
-        # --- SERIES DETAIL ACTIVITY (şimdilik basit) ---
-        cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
-        package $PACKAGE_NAME
-
-        import android.os.Bundle
-        import android.widget.ArrayAdapter
-        import android.widget.ListView
-        import android.widget.TextView
-        import androidx.appcompat.app.AppCompatActivity
-
-        class SeriesDetailActivity : AppCompatActivity() {
-            override fun onCreate(savedInstanceState: Bundle?) {
-                super.onCreate(savedInstanceState)
-                setContentView(R.layout.activity_series_detail)
-
-                val name = intent.getStringExtra("S_NAME") ?: "Dizi"
-                val tvTitle = findViewById<TextView>(R.id.tvSeriesTitle)
-                tvTitle.text = name
-
-                val lv = findViewById<ListView>(R.id.lvEpisodes)
-                val episodes = ArrayList<String>()
-                var i = 1
-                while (i <= 10) {
-                    episodes.add("Sezon 1 - Bölüm " + i)
-                    i++
-                }
-                lv.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, episodes)
             }
         }
         EOF
@@ -551,6 +802,7 @@ jobs:
 
         # --- LAYOUTLAR ---
 
+        # Login
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -615,98 +867,74 @@ jobs:
         </LinearLayout>
         EOF
 
-        cat <<EOF > app/src/main/res/layout/activity_dashboard.xml
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        # Home (Bottom Nav + Drawer + Liste)
+        cat <<EOF > app/src/main/res/layout/activity_home.xml
+        <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/drawerLayout"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="@color/bg_dark"
-            android:padding="16dp">
+            android:layout_height="match_parent">
 
-            <TextView
-                android:id="@+id/tvInfo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="AKTİF KULLANICI:"
-                android:textColor="@color/accent_green"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="24dp"/>
-
-            <Button
-                android:id="@+id/btnLive"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="📺 CANLI TV"
-                android:layout_marginBottom="12dp"/>
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:background="@color/bg_dark">
 
-            <Button
-                android:id="@+id/btnVod"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="🎬 FİLMLER"
-                android:layout_marginBottom="12dp"/>
+                <TextView
+                    android:id="@+id/tvHeader"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="☰ Canlı TV"
+                    android:textColor="@color/accent_green"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:padding="16dp"/>
 
-            <Button
-                android:id="@+id/btnSeries"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="🍿 DİZİLER"
-                android:layout_marginBottom="12dp"/>
+                <ProgressBar
+                    android:id="@+id/pbLoading"
+                    style="?android:attr/progressBarStyleLarge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="4dp"
+                    android:visibility="gone"/>
 
-            <Button
-                android:id="@+id/btnExit"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="❌ ÇIKIŞ"
-                android:layout_marginTop="12dp"/>
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/error_red"
+                    android:textSize="14sp"
+                    android:padding="8dp"
+                    android:visibility="gone"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:padding="8dp"/>
+
+                <com.google.android.material.bottomnavigation.BottomNavigationView
+                    android:id="@+id/bottomNav"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/gray_800"
+                    app:menu="@menu/bottom_nav_menu" />
+            </LinearLayout>
+
+            <com.google.android.material.navigation.NavigationView
+                android:id="@+id/navView"
+                android:layout_width="260dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="start"
+                android:background="@color/bg_dark" />
+        </androidx.drawerlayout.widget.DrawerLayout>
         EOF
 
-        cat <<EOF > app/src/main/res/layout/activity_content.xml
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="@color/bg_dark">
-
-            <TextView
-                android:id="@+id/tvHeader"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/accent_green"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:padding="16dp"/>
-
-            <ProgressBar
-                android:id="@+id/pbLoading"
-                style="?android:attr/progressBarStyleLarge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp"
-                android:visibility="gone"/>
-
-            <TextView
-                android:id="@+id/tvStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/error_red"
-                android:textSize="14sp"
-                android:padding="8dp"
-                android:visibility="gone"/>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvContent"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:padding="8dp"/>
-        </LinearLayout>
-        EOF
-
+        # Grid item
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -727,6 +955,7 @@ jobs:
         </LinearLayout>
         EOF
 
+        # Series detail
         cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -743,6 +972,25 @@ jobs:
                 android:textStyle="bold"
                 android:padding="16dp"/>
 
+            <ProgressBar
+                android:id="@+id/pbSeries"
+                style="?android:attr/progressBarStyleLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/tvSeriesStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/error_red"
+                android:textSize="14sp"
+                android:padding="8dp"
+                android:visibility="gone"/>
+
             <ListView
                 android:id="@+id/lvEpisodes"
                 android:layout_width="match_parent"
@@ -752,6 +1000,7 @@ jobs:
         </LinearLayout>
         EOF
 
+        # Player
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -785,8 +1034,7 @@ jobs:
                     </intent-filter>
                 </activity>
 
-                <activity android:name=".DashboardActivity" />
-                <activity android:name=".ContentActivity" />
+                <activity android:name=".HomeActivity" />
                 <activity android:name=".SeriesDetailActivity" />
                 <activity android:name=".PlayerActivity" />
             </application>
