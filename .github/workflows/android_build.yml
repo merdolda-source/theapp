@@ -1272,7 +1272,7 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (Referer + Origin destekli) ---
+        # --- PLAYER ACTIVITY (Referer + Origin destekli, HATA DÜZELTİLMİŞ) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1313,21 +1313,20 @@ jobs:
                 val pv = findViewById<PlayerView>(R.id.pvMain)
 
                 try {
+                    // Header map'i: UA + Referer + Origin
+                    val headers = mutableMapOf<String, String>()
+                    headers["User-Agent"] = "Mozilla/5.0 (Android) ExoPlayer"
+                    if (ref.isNotEmpty()) {
+                        headers["Referer"] = ref
+                    }
+                    if (org.isNotEmpty()) {
+                        headers["Origin"] = org
+                    }
+
                     val httpFactory = DefaultHttpDataSource.Factory()
                         .setConnectTimeoutMs(15000)
                         .setReadTimeoutMs(30000)
-
-                    httpFactory.setDefaultRequestProperty(
-                        "User-Agent",
-                        "Mozilla/5.0 (Android) ExoPlayer"
-                    )
-
-                    if (ref.isNotEmpty()) {
-                        httpFactory.setDefaultRequestProperty("Referer", ref)
-                    }
-                    if (org.isNotEmpty()) {
-                        httpFactory.setDefaultRequestProperty("Origin", org)
-                    }
+                        .setDefaultRequestProperties(headers)
 
                     val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
 
