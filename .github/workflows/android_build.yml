@@ -1986,7 +1986,7 @@ jobs:
     - name: 4. Gradle Kur ve Cache
       uses: gradle/actions/setup-gradle@v3
       with:
-        gradle-version: '8.2.2'
+        gradle-version: '8.2'
 
     - name: 5. Build APK
       run: |
