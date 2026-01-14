@@ -571,7 +571,7 @@ jobs:
         }
         EOF
 
-        # --- DASHBOARD (opsiyonel, aynı bırakıyorum) ---
+        # --- DASHBOARD ---
         cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
         package $PACKAGE_NAME
 
@@ -607,7 +607,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (yan menüde Hesaptan Çıkış) ---
+        # --- CONTENT ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -696,7 +696,6 @@ jobs:
                     val id = item.itemId
                     when {
                         id == EXIT_ID -> {
-                            // HESAPTAN ÇIKIŞ: aktif hesabı temizle, Login'e dön
                             prefs.clearActive()
                             val i = Intent(this, LoginActivity::class.java)
                             i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -1289,7 +1288,7 @@ jobs:
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
 
-                // Kanal açılınca otomatik yatay ZORLAMA yok; cihazı çevirince döner
+                // Kanal açılınca otomatik yatay zorlamasın; cihazı çevirince döner
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
 
                 // Ekran kapanmasın + tam ekran
@@ -1322,7 +1321,6 @@ jobs:
 
                 applyResizeMode(pv)
 
-                // Tek ikon: her tıklamada mod değiştir
                 btnAspect.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
                     applyResizeMode(pv)
@@ -1747,7 +1745,7 @@ jobs:
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="@android:color/transparent"
-                android:src="@android:drawable/ic_media_fullscreen"
+                android:src="@android:drawable/ic_menu_view"
                 android:contentDescription="Görüntü Modu"
                 android:layout_gravity="top|end"
                 android:padding="4dp"
