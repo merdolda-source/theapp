@@ -115,7 +115,7 @@ jobs:
 
             implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
 
-            # Media3 ExoPlayer + HLS + DASH
+            // Media3 ExoPlayer + HLS + DASH
             implementation 'androidx.media3:media3-exoplayer:1.1.0'
             implementation 'androidx.media3:media3-ui:1.1.0'
             implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
@@ -434,7 +434,7 @@ jobs:
         }
         EOF
 
-        # --- LOGIN ACTIVITY (FIX: ${acc.name} kaldırıldı) ---
+        # --- LOGIN ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
