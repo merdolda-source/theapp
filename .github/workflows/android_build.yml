@@ -163,14 +163,13 @@ jobs:
         </resources>
         EOF
 
-        # strings.xml (zorunlu değil ama temiz dursun)
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">ErdinPlayer Pro</string>
         </resources>
         EOF
 
-        # --- MODELLER VE API (Xtream uyumlu) ---
+        # --- MODELLER ---
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
 
@@ -237,7 +236,7 @@ jobs:
         }
         EOF
 
-        # --- ADAPTERS (MODERN RECYCLERVIEW) ---
+        # --- ADAPTER ---
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
 
@@ -282,9 +281,7 @@ jobs:
         }
         EOF
 
-        # --- KOTLIN AKTİVİTELER (FULL LOGIC) ---
-        
-        # 1. LOGIN ACTIVITY
+        # --- LOGIN ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -330,7 +327,7 @@ jobs:
         }
         EOF
 
-        # 2. DASHBOARD ACTIVITY
+        # --- DASHBOARD ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
         package $PACKAGE_NAME
 
@@ -364,7 +361,7 @@ jobs:
         }
         EOF
 
-        # 3. CONTENT ACTIVITY (LİSTELEME) – DUMMY LISTE GARANTİ
+        # --- CONTENT ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -390,7 +387,7 @@ jobs:
                 val rv = findViewById<RecyclerView>(R.id.rvContent)
                 rv.layoutManager = GridLayoutManager(this, 3)
 
-                // Şimdilik güvenli dummy liste (görüntü garanti)
+                // Dummy liste – her zaman 30 kart görünsün
                 val dummyList = (1..30).map { i ->
                     StreamItem(
                         name = mode + " Kanal #" + i,
@@ -415,7 +412,6 @@ jobs:
                         val pass = prefs.getPass()
                         val id = item.stream_id ?: ""
 
-                        // Xtream Codes uyumlu URL
                         val url = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ".ts"
 
                         val intent = Intent(this, PlayerActivity::class.java)
@@ -427,7 +423,7 @@ jobs:
         }
         EOF
 
-        # 4. SERIES DETAIL ACTIVITY (DİZİ BÖLÜMLERİ)
+        # --- SERIES DETAIL ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -458,7 +454,7 @@ jobs:
         }
         EOF
 
-        # 5. PLAYER ACTIVITY
+        # --- PLAYER ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -503,7 +499,7 @@ jobs:
         }
         EOF
 
-        # --- TASARIM XML'LERİ (FULL) ---
+        # --- LAYOUTLAR ---
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -701,7 +697,6 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Content activity layout
         echo "<LinearLayout xmlns:android='http://schemas.android.com/apk/res/android'
             android:layout_width='match_parent'
             android:layout_height='match_parent'
@@ -722,7 +717,6 @@ jobs:
                 android:padding='8dp'/>
         </LinearLayout>" > app/src/main/res/layout/activity_content.xml
 
-        # Series detail layout
         echo "<LinearLayout xmlns:android='http://schemas.android.com/apk/res/android'
             android:layout_width='match_parent'
             android:layout_height='match_parent'
@@ -744,7 +738,6 @@ jobs:
                 android:dividerHeight='1dp'/>
         </LinearLayout>" > app/src/main/res/layout/activity_series_detail.xml
 
-        # Player layout
         echo "<FrameLayout xmlns:android='http://schemas.android.com/apk/res/android'
             android:layout_width='match_parent'
             android:layout_height='match_parent'
@@ -793,8 +786,20 @@ jobs:
         cd ErdinPlayer
         gradle assembleRelease --no-daemon
 
-    - name: 6. APK Sunucuya Yükle
+    - name: 6. APK'yi GitHub Artifact Olarak Yükle
+      id: upload_apk
       uses: actions/upload-artifact@v4
       with:
         name: ErdinPlayer-Pro-Ultra
         path: ErdinPlayer/app/build/outputs/apk/release/*.apk
+
+    - name: 7. Artifact URL'ini Göster
+      run: |
+        echo "====================================="
+        echo " 📦 APK Artifact URL (GitHub):"
+        echo "${{ steps.upload_apk.outputs.artifact-url }}"
+        echo "====================================="
+
+        echo "### ErdinPlayer Pro APK" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
