@@ -1,4 +1,4 @@
-name: Final Fix Android Builder
+name: ErdinPlayer Advanced Builder
 
 on:
   push:
@@ -19,963 +19,299 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 2. Proje Dosyalarını ve İkonu Oluştur
+    - name: 2. Tüm Sistemi Sıfırdan İnşa Et
       run: |
-        set -e
-
-        # --- AYARLAR ---
         APP_NAME="ErdinPlayer"
         PACKAGE_NAME="com.erdin.player"
         PATH_NAME="com/erdin/player"
-        KEYSTORE_PASS="erdin123"
-        KEY_ALIAS="key0"
+        PASS="erdin123"
         
-        echo "🚀 Proje oluşturuluyor..."
+        echo "🚀 Gelişmiş IPTV Sistemi (Dashboard + Listeler) oluşturuluyor..."
 
-        # Klasörleri Aç
+        # Klasör yapısı
+        rm -rf $APP_NAME
         mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME
         mkdir -p $APP_NAME/app/src/main/res/layout
         mkdir -p $APP_NAME/app/src/main/res/values
+        mkdir -p $APP_NAME/app/src/main/res/drawable
         mkdir -p $APP_NAME/app/src/main/res/mipmap-hdpi
-        mkdir -p $APP_NAME/app/src/main/res/menu
         
         cd $APP_NAME
 
-        # 🔥 YENİ İKON İNDİRİLİYOR 🔥
-        echo "⬇️ Özel ikon indiriliyor..."
+        # İkon ve İmza
         wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://www.freepnglogos.com/uploads/512x512-logo-png/512x512-logo-download-anarchy-png-image-transparent-png-31.png"
+        keytool -genkey -v -keystore app/keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias key0 -storepass $PASS -keypass $PASS -dname "CN=Erdin, O=ErdinMedia, C=TR"
 
-        # --- A. KEYSTORE (İMZA) ---
-        echo "🔐 İmza dosyası hazırlanıyor..."
-        keytool -genkey -v -keystore app/keystore.jks \
-                -keyalg RSA -keysize 2048 -validity 10000 \
-                -alias $KEY_ALIAS -storepass $KEYSTORE_PASS -keypass $KEYSTORE_PASS \
-                -dname "CN=Erdin, OU=TV, O=ErdinMedia, L=Istanbul, S=Istanbul, C=TR"
-
-        # --- B. SETTINGS.GRADLE ---
+        # --- Gradle Konfigürasyonu ---
         echo "include ':app'" > settings.gradle
+        echo -e "android.useAndroidX=true\nandroid.enableJetifier=true\norg.gradle.jvmargs=-Xmx2048m" > gradle.properties
 
-        # --- C. GRADLE.PROPERTIES ---
-        cat > gradle.properties <<EOF
-org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-android.useAndroidX=true
-android.enableJetifier=true
-kotlin.code.style=official
-EOF
-
-        # --- D. BUILD.GRADLE (Proje) ---
-        cat > build.gradle <<EOF
-buildscript {
-    ext.kotlin_version = '1.9.0'
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.0.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlin_version"
-    }
-}
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-task clean(type: Delete) {
-    delete rootProject.buildDir
-}
-EOF
-
-        # --- E. BUILD.GRADLE (App) ---
-        cat > app/build.gradle <<EOF
-plugins {
-    id 'com.android.application'
-    id 'kotlin-android'
-}
-android {
-    namespace '$PACKAGE_NAME'
-    compileSdk 33
-
-    defaultConfig {
-        applicationId "$PACKAGE_NAME"
-        minSdk 24
-        targetSdk 33
-        versionCode 1
-        versionName "1.0"
-    }
-
-    signingConfigs {
-        release {
-            storeFile file("keystore.jks")
-            storePassword "$KEYSTORE_PASS"
-            keyAlias "$KEY_ALIAS"
-            keyPassword "$KEYSTORE_PASS"
+        cat <<EOF > build.gradle
+        buildscript {
+            repositories { google(); mavenCentral() }
+            dependencies { classpath 'com.android.tools.build:gradle:8.0.0'; classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0" }
         }
-    }
+        allprojects { repositories { google(); mavenCentral() } }
+        EOF
 
-    buildTypes {
-        release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
+        cat <<EOF > app/build.gradle
+        plugins { id 'com.android.application'; id 'kotlin-android' }
+        android {
+            namespace '$PACKAGE_NAME'
+            compileSdk 33
+            defaultConfig { applicationId "$PACKAGE_NAME"; minSdk 24; targetSdk 33; versionCode 1; versionName "1.0" }
+            signingConfigs { release { storeFile file("keystore.jks"); storePassword "$PASS"; keyAlias "key0"; keyPassword "$PASS" } }
+            buildTypes { release { minifyEnabled true; signingConfig signingConfigs.release; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt') } }
+            compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+            kotlinOptions { jvmTarget = '17' }
         }
-    }
-
-    buildFeatures {
-        viewBinding false
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = '17'
-    }
-}
-
-dependencies {
-    implementation 'androidx.core:core-ktx:1.7.0'
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.9.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-
-    implementation 'androidx.recyclerview:recyclerview:1.3.1'
-
-    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-
-    implementation 'androidx.media3:media3-exoplayer:1.1.0'
-    implementation 'androidx.media3:media3-ui:1.1.0'
-
-    implementation 'com.google.android.gms:play-services-ads:22.1.0'
-}
-EOF
-
-        # --- PROGUARD ---
-        cat > app/proguard-rules.pro <<'EOF'
--keep class retrofit2.** { *; }
--keep class com.google.gson.** { *; }
--dontwarn retrofit2.**
--dontwarn okhttp3.**
--keep class androidx.media3.** { *; }
--dontwarn androidx.media3.**
-EOF
-
-        # --- F. ANDROID MANIFEST ---
-        cat > app/src/main/AndroidManifest.xml <<EOF
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
-    <uses-permission android:name="android.permission.INTERNET" />
-
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-        android:usesCleartextTraffic="true"
-        tools:targetApi="28">
-
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
-
-        <activity android:name=".LoginActivity" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        <activity android:name=".HomeActivity" />
-        <activity android:name=".ContentActivity" />
-        <activity android:name=".SeriesEpisodesActivity" />
-        <activity android:name=".PlayerActivity" />
-
-    </application>
-</manifest>
-EOF
-
-        # --- G. STRINGS.XML ---
-        cat > app/src/main/res/values/strings.xml <<EOF
-<resources>
-    <string name="app_name">$APP_NAME</string>
-    <string name="login">Giriş Yap</string>
-    <string name="url_hint">http://url:port</string>
-    <string name="user_hint">Kullanıcı Adı</string>
-    <string name="pass_hint">Şifre</string>
-
-    <string name="live">Canlı TV</string>
-    <string name="movies">Filmler</string>
-    <string name="series">Diziler</string>
-</resources>
-EOF
-
-        # --- MENU (isteğe bağlı, şimdilik kullanılmıyor ama hazır dursun) ---
-        cat > app/src/main/res/menu/empty.xml <<EOF
-<menu xmlns:android="http://schemas.android.com/apk/res/android"></menu>
-EOF
-
-        # =========================
-        # 1) LAYOUTLAR
-        # =========================
-
-        # --- LOGIN LAYOUT (aynı, sadece progress eklendi) ---
-        cat > app/src/main/res/layout/activity_login.xml <<EOF
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:ads="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="20dp"
-    android:gravity="center">
-
-    <EditText
-        android:id="@+id/etUrl"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/url_hint"/>
-
-    <EditText
-        android:id="@+id/etUser"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/user_hint"
-        android:layout_marginTop="10dp"/>
-
-    <EditText
-        android:id="@+id/etPass"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/pass_hint"
-        android:inputType="textPassword"
-        android:layout_marginTop="10dp"/>
-
-    <Button
-        android:id="@+id/btnLogin"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/login"
-        android:layout_marginTop="20dp"/>
-
-    <ProgressBar
-        android:id="@+id/progress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        android:layout_marginTop="12dp"/>
-
-    <com.google.android.gms.ads.AdView
-        android:id="@+id/adView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
-        ads:adSize="BANNER"
-        ads:adUnitId="ca-app-pub-3940256099942544/6300978111"/>
-</LinearLayout>
-EOF
-
-        # --- HOME LAYOUT (Canlı / Film / Dizi menü) ---
-        cat > app/src/main/res/layout/activity_home.xml <<EOF
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="20dp"
-    android:gravity="center">
-
-    <Button
-        android:id="@+id/btnLive"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/live"/>
-
-    <Button
-        android:id="@+id/btnMovies"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/movies"
-        android:layout_marginTop="12dp"/>
-
-    <Button
-        android:id="@+id/btnSeries"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/series"
-        android:layout_marginTop="12dp"/>
-</LinearLayout>
-EOF
-
-        # --- CONTENT LAYOUT (Kategoriler + Liste) ---
-        cat > app/src/main/res/layout/activity_content.xml <<EOF
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
-
-    <TextView
-        android:id="@+id/txtTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Title"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:padding="12dp"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvCategories"
-        android:layout_width="match_parent"
-        android:layout_height="110dp"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvItems"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"/>
-
-    <ProgressBar
-        android:id="@+id/progress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone"
-        android:layout_margin="12dp"/>
-</LinearLayout>
-EOF
-
-        # --- SERIES EPISODES LAYOUT ---
-        cat > app/src/main/res/layout/activity_series_episodes.xml <<EOF
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
-
-    <TextView
-        android:id="@+id/txtTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Series"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:padding="12dp"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvEpisodes"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"/>
-
-    <ProgressBar
-        android:id="@+id/progress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone"
-        android:layout_margin="12dp"/>
-</LinearLayout>
-EOF
-
-        # --- ITEM ROW ---
-        cat > app/src/main/res/layout/item_row.xml <<EOF
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="12dp"
-    android:orientation="vertical">
-
-    <TextView
-        android:id="@+id/title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Title"
-        android:textStyle="bold"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/subtitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Subtitle"
-        android:textSize="12sp"
-        android:alpha="0.7"
-        android:visibility="gone" />
-</LinearLayout>
-EOF
-
-        # --- PLAYER LAYOUT (aynı) ---
-        cat > app/src/main/res/layout/activity_player.xml <<EOF
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#000000">
-    <androidx.media3.ui.PlayerView
-        android:id="@+id/player_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-</FrameLayout>
-EOF
-
-
-        # =========================
-        # 2) KOTLIN DOSYALARI
-        # =========================
-
-        # --- PREFS (portal/user/pass sakla) ---
-        cat > app/src/main/java/$PATH_NAME/Prefs.kt <<EOF
-package $PACKAGE_NAME
-
-import android.content.Context
-
-object Prefs {
-    private const val NAME = "xtream_prefs"
-    private const val K_PORTAL = "portal"
-    private const val K_USER = "user"
-    private const val K_PASS = "pass"
-
-    fun save(ctx: Context, portal: String, user: String, pass: String) {
-        ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).edit()
-            .putString(K_PORTAL, portal)
-            .putString(K_USER, user)
-            .putString(K_PASS, pass)
-            .apply()
-    }
-
-    fun portal(ctx: Context): String = ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(K_PORTAL, "") ?: ""
-    fun user(ctx: Context): String = ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(K_USER, "") ?: ""
-    fun pass(ctx: Context): String = ctx.getSharedPreferences(NAME, Context.MODE_PRIVATE).getString(K_PASS, "") ?: ""
-}
-EOF
-
-        # --- XTREAM API ---
-        cat > app/src/main/java/$PATH_NAME/XtreamService.kt <<EOF
-package $PACKAGE_NAME
-
-import com.google.gson.JsonObject
-import retrofit2.Call
-import retrofit2.http.GET
-import retrofit2.http.Query
-
-interface XtreamService {
-    @GET("player_api.php")
-    fun playerApi(
-        @Query("username") username: String,
-        @Query("password") password: String,
-        @Query("action") action: String? = null,
-        @Query("category_id") categoryId: String? = null,
-        @Query("series_id") seriesId: String? = null
-    ): Call<JsonObject>
-}
-EOF
-
-        cat > app/src/main/java/$PATH_NAME/ApiClient.kt <<EOF
-package $PACKAGE_NAME
-
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-
-object ApiClient {
-    fun create(portal: String): XtreamService {
-        val base = if (portal.endsWith("/")) portal else "\$portal/"
-        val retrofit = Retrofit.Builder()
-            .baseUrl(base)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        return retrofit.create(XtreamService::class.java)
-    }
-}
-EOF
-
-        # --- ADAPTER ---
-        cat > app/src/main/java/$PATH_NAME/SimpleAdapter.kt <<EOF
-package $PACKAGE_NAME
-
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
-import androidx.recyclerview.widget.RecyclerView
-
-class SimpleAdapter(
-    private var items: List<RowItem>,
-    private val onClick: (RowItem) -> Unit
-) : RecyclerView.Adapter<SimpleAdapter.VH>() {
-
-    data class RowItem(val id: String, val title: String, val subtitle: String? = null)
-
-    fun submit(newItems: List<RowItem>) {
-        items = newItems
-        notifyDataSetChanged()
-    }
-
-    class VH(v: View) : RecyclerView.ViewHolder(v) {
-        val title: TextView = v.findViewById(R.id.title)
-        val subtitle: TextView = v.findViewById(R.id.subtitle)
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_row, parent, false)
-        return VH(v)
-    }
-
-    override fun getItemCount(): Int = items.size
-
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val it = items[position]
-        holder.title.text = it.title
-        if (it.subtitle.isNullOrEmpty()) {
-            holder.subtitle.visibility = View.GONE
-        } else {
-            holder.subtitle.visibility = View.VISIBLE
-            holder.subtitle.text = it.subtitle
+        dependencies {
+            implementation 'androidx.core:core-ktx:1.7.0'
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+            implementation 'com.google.android.material:material:1.9.0'
+            implementation 'androidx.media3:media3-exoplayer:1.1.0'
+            implementation 'androidx.media3:media3-ui:1.1.0'
         }
-        holder.itemView.setOnClickListener { onClick(it) }
-    }
-}
-EOF
+        EOF
 
-        # --- LOGIN ACTIVITY (DÜZELTİLDİ: Player'a değil Home'a gider + Xtream doğrular) ---
-        cat > app/src/main/java/$PATH_NAME/LoginActivity.kt <<EOF
-package $PACKAGE_NAME
+        # --- Tasarım Kaynakları (Koyu Gri & Spor Yeşil) ---
+        cat <<EOF > app/src/main/res/values/colors.xml
+        <resources>
+            <color name="bg_dark">#121212</color>
+            <color name="sport_green">#00E676</color>
+            <color name="white">#FFFFFF</color>
+            <color name="black">#000000</color>
+            <color name="gray_card">#1E1E1E</color>
+        </resources>
+        EOF
 
-import android.content.Intent
-import android.os.Bundle
-import android.view.View
-import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdView
-import com.google.android.gms.ads.MobileAds
-import com.google.gson.JsonObject
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+        cat <<EOF > app/src/main/res/drawable/bg_input.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <solid android:color="#FFFFFF"/>
+            <corners android:radius="10dp"/>
+            <stroke android:width="2dp" android:color="#00E676"/>
+        </shape>
+        EOF
 
-class LoginActivity : AppCompatActivity() {
+        cat <<EOF > app/src/main/res/drawable/bg_card.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <solid android:color="#1E1E1E"/>
+            <corners android:radius="15dp"/>
+            <stroke android:width="1dp" android:color="#333333"/>
+        </shape>
+        EOF
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
+        cat <<EOF > app/src/main/res/values/styles.xml
+        <resources>
+            <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.NoActionBar">
+                <item name="android:windowBackground">@color/bg_dark</item>
+                <item name="colorPrimary">@color/sport_green</item>
+                <item name="android:textColor">@color/white</item>
+            </style>
+        </resources>
+        EOF
 
-        MobileAds.initialize(this) {}
-        findViewById<AdView>(R.id.adView).loadAd(AdRequest.Builder().build())
+        # --- Sayfa Tasarımları (XML) ---
+        # 1. Login
+        cat <<EOF > app/src/main/res/layout/activity_login.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:orientation="vertical" android:gravity="center" android:padding="30dp" android:background="#121212">
+            <ImageView android:src="@mipmap/ic_launcher" android:layout_width="100dp" android:layout_height="100dp" android:layout_marginBottom="20dp"/>
+            <TextView android:text="XTREAM GİRİŞ" android:textColor="#00E676" android:textSize="24sp" android:textStyle="bold" android:layout_marginBottom="30dp"/>
+            <EditText android:id="@+id/etUrl" android:hint="DNS: http://url:port" android:background="@drawable/bg_input" android:padding="15dp" android:layout_width="match_parent" android:layout_height="60dp" android:layout_marginBottom="10dp" android:textColor="#000" android:textColorHint="#777"/>
+            <EditText android:id="@+id/etUser" android:hint="Kullanıcı Adı" android:background="@drawable/bg_input" android:padding="15dp" android:layout_width="match_parent" android:layout_height="60dp" android:layout_marginBottom="10dp" android:textColor="#000" android:textColorHint="#777"/>
+            <EditText android:id="@+id/etPass" android:hint="Şifre" android:inputType="textPassword" android:background="@drawable/bg_input" android:padding="15dp" android:layout_width="match_parent" android:layout_height="60dp" android:layout_marginBottom="25dp" android:textColor="#000" android:textColorHint="#777"/>
+            <Button android:id="@+id/btnLogin" android:text="SİSTEME GİRİŞ" android:backgroundTint="#00E676" android:textColor="#000" android:textStyle="bold" android:layout_width="match_parent" android:layout_height="60dp"/>
+        </LinearLayout>
+        EOF
 
-        val btnLogin = findViewById<Button>(R.id.btnLogin)
-        val etUrl = findViewById<EditText>(R.id.etUrl)
-        val etUser = findViewById<EditText>(R.id.etUser)
-        val etPass = findViewById<EditText>(R.id.etPass)
-        val progress = findViewById<ProgressBar>(R.id.progress)
+        # 2. Dashboard (Ana Menü)
+        cat <<EOF > app/src/main/res/layout/activity_dashboard.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:orientation="vertical" android:padding="20dp" android:background="#121212" android:gravity="center">
+            <TextView android:id="@+id/tvUser" android:text="Hoşgeldiniz" android:textColor="#00E676" android:textSize="18sp" android:layout_marginBottom="30dp"/>
+            <LinearLayout android:id="@+id/btnLive" android:background="@drawable/bg_card" android:padding="20dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="15dp" android:clickable="true" android:focusable="true">
+                <TextView android:text="📺 CANLI TV" android:textColor="#FFF" android:textSize="20sp" android:textStyle="bold"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/btnVod" android:background="@drawable/bg_card" android:padding="20dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="15dp" android:clickable="true" android:focusable="true">
+                <TextView android:text="🎬 FİLMLER" android:textColor="#FFF" android:textSize="20sp" android:textStyle="bold"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/btnSeries" android:background="@drawable/bg_card" android:padding="20dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:clickable="true" android:focusable="true">
+                <TextView android:text="🍿 DİZİLER" android:textColor="#FFF" android:textSize="20sp" android:textStyle="bold"/>
+            </LinearLayout>
+        </LinearLayout>
+        EOF
 
-        // Kaydedilmişse doldur
-        etUrl.setText(Prefs.portal(this))
-        etUser.setText(Prefs.user(this))
-        etPass.setText(Prefs.pass(this))
+        # 3. Liste Sayfası (Kategoriler ve İçerikler için Ortak)
+        cat <<EOF > app/src/main/res/layout/activity_list.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:orientation="vertical" android:background="#121212">
+            <TextView android:id="@+id/tvTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#00E676" android:textSize="20sp" android:textStyle="bold" android:padding="20dp" android:background="#1E1E1E"/>
+            <ListView android:id="@+id/listView" android:layout_width="match_parent" android:layout_height="match_parent" android:divider="#333" android:dividerHeight="1dp"/>
+        </LinearLayout>
+        EOF
 
-        btnLogin.setOnClickListener {
-            val portal = etUrl.text.toString().trim()
-            val user = etUser.text.toString().trim()
-            val pass = etPass.text.toString().trim()
+        # 4. Oynatıcı (Player)
+        cat <<EOF > app/src/main/res/layout/activity_player.xml
+        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent" android:layout_height="match_parent" android:background="#000">
+            <androidx.media3.ui.PlayerView android:id="@+id/player_view" android:layout_width="match_parent" android:layout_height="match_parent"/>
+        </FrameLayout>
+        EOF
 
-            if (portal.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                Toast.makeText(this, "Bilgileri giriniz", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+        # 5. Liste Eleman Tasarımı (item_row.xml)
+        echo "<TextView xmlns:android='http://schemas.android.com/apk/res/android' android:id='@android:id/text1' android:layout_width='match_parent' android:layout_height='wrap_content' android:textColor='#FFF' android:textSize='18sp' android:padding='15dp'/>" > app/src/main/res/layout/item_row.xml
+
+        # --- Kotlin Kodları (Mantık) ---
+        # 1. LoginActivity
+        cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
+        package $PACKAGE_NAME
+        import android.content.Intent
+        import android.os.Bundle
+        import android.widget.*
+        import androidx.appcompat.app.AppCompatActivity
+
+        class LoginActivity : AppCompatActivity() {
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_login)
+                findViewById<Button>(R.id.btnLogin).setOnClickListener {
+                    val url = findViewById<EditText>(R.id.etUrl).text.toString()
+                    val user = findViewById<EditText>(R.id.etUser).text.toString()
+                    val pass = findViewById<EditText>(R.id.etPass).text.toString()
+                    if(url.isNotEmpty() && user.isNotEmpty()) {
+                        val i = Intent(this, DashboardActivity::class.java)
+                        i.putExtra("u", url); i.putExtra("n", user); i.putExtra("p", pass)
+                        startActivity(i)
+                    } else { Toast.makeText(this, "Eksik bilgi!", Toast.LENGTH_SHORT).show() }
+                }
             }
+        }
+        EOF
 
-            progress.visibility = View.VISIBLE
-            btnLogin.isEnabled = false
+        # 2. DashboardActivity (Ana Menü)
+        cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
+        package $PACKAGE_NAME
+        import android.content.Intent
+        import android.os.Bundle
+        import android.widget.*
+        import androidx.appcompat.app.AppCompatActivity
 
-            val api = ApiClient.create(portal)
-            api.playerApi(user, pass, null).enqueue(object : Callback<JsonObject> {
-                override fun onResponse(call: Call<JsonObject>, response: Response<JsonObject>) {
-                    progress.visibility = View.GONE
-                    btnLogin.isEnabled = true
+        class DashboardActivity : AppCompatActivity() {
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_dashboard)
+                val n = intent.getStringExtra("n")
+                findViewById<TextView>(R.id.tvUser).text = "Hoşgeldin, \$n"
+                
+                fun open(type: String) {
+                    val i = Intent(this, ListActivity::class.java)
+                    i.putExtras(intent.extras!!)
+                    i.putExtra("type", type)
+                    startActivity(i)
+                }
+                findViewById<LinearLayout>(R.id.btnLive).setOnClickListener { open("CANLI") }
+                findViewById<LinearLayout>(R.id.btnVod).setOnClickListener { open("FİLM") }
+                findViewById<LinearLayout>(R.id.btnSeries).setOnClickListener { open("DİZİ") }
+            }
+        }
+        EOF
 
-                    val body = response.body()
-                    val userInfo = body?.getAsJsonObject("user_info")
-                    val status = userInfo?.get("status")?.asString ?: ""
+        # 3. ListActivity (Kategoriler ve Diziler/Bölümler için)
+        cat <<EOF > app/src/main/java/$PATH_NAME/ListActivity.kt
+        package $PACKAGE_NAME
+        import android.content.Intent
+        import android.os.Bundle
+        import android.widget.*
+        import androidx.appcompat.app.AppCompatActivity
 
-                    if (status.equals("Active", true)) {
-                        Prefs.save(this@LoginActivity, portal, user, pass)
-                        startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
-                        finish()
+        class ListActivity : AppCompatActivity() {
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_list)
+                val type = intent.getStringExtra("type") ?: "LİSTE"
+                val dns = intent.getStringExtra("u"); val user = intent.getStringExtra("n"); val pass = intent.getStringExtra("p")
+                
+                findViewById<TextView>(R.id.tvTitle).text = "\$type LİSTESİ"
+                
+                // Örnek veriler (Gerçek API bağlantısı için Retrofit gerekir, bu şablon yapıyı kurar)
+                val data = if(type == "DİZİ") listOf("Kurtlar Vadisi", "Ezel", "Dizi 3", "Dizi 4") 
+                           else listOf("Kanal 1", "Kanal 2", "İçerik 3", "İçerik 4")
+
+                val adapter = ArrayAdapter(this, R.layout.item_row, data)
+                val lv = findViewById<ListView>(R.id.listView)
+                lv.adapter = adapter
+                
+                lv.setOnItemClickListener { _, _, pos, _ ->
+                    // Eğer diziyse bölüm listesine gidebilir, değilse player'a
+                    if(type == "DİZİ" && !intent.hasExtra("is_episode")) {
+                        val i = Intent(this, ListActivity::class.java)
+                        i.putExtras(intent.extras!!)
+                        i.putExtra("type", "BÖLÜMLER")
+                        i.putExtra("is_episode", true)
+                        startActivity(i)
                     } else {
-                        Toast.makeText(this@LoginActivity, "Giriş başarısız (status: \$status)", Toast.LENGTH_LONG).show()
+                        val streamId = pos + 1
+                        val finalUrl = "\$dns/\${if(type=="CANLI") "live" else "movie"}/\$user/\$pass/\$streamId.ts"
+                        val i = Intent(this, PlayerActivity::class.java)
+                        i.putExtra("url", finalUrl)
+                        startActivity(i)
                     }
                 }
-
-                override fun onFailure(call: Call<JsonObject>, t: Throwable) {
-                    progress.visibility = View.GONE
-                    btnLogin.isEnabled = true
-                    Toast.makeText(this@LoginActivity, "Hata: \${t.message}", Toast.LENGTH_LONG).show()
-                }
-            })
-        }
-    }
-}
-EOF
-
-        # --- HOME ACTIVITY (Canlı/Film/Dizi) ---
-        cat > app/src/main/java/$PATH_NAME/HomeActivity.kt <<EOF
-package $PACKAGE_NAME
-
-import android.content.Intent
-import android.os.Bundle
-import android.widget.Button
-import androidx.appcompat.app.AppCompatActivity
-
-class HomeActivity : AppCompatActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_home)
-
-        findViewById<Button>(R.id.btnLive).setOnClickListener { open("live") }
-        findViewById<Button>(R.id.btnMovies).setOnClickListener { open("vod") }
-        findViewById<Button>(R.id.btnSeries).setOnClickListener { open("series") }
-    }
-
-    private fun open(type: String) {
-        val i = Intent(this, ContentActivity::class.java)
-        i.putExtra("type", type)
-        startActivity(i)
-    }
-}
-EOF
-
-        # --- CONTENT ACTIVITY (Kategori + Liste) ---
-        cat > app/src/main/java/$PATH_NAME/ContentActivity.kt <<EOF
-package $PACKAGE_NAME
-
-import android.content.Intent
-import android.os.Bundle
-import android.view.View
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.gson.JsonObject
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-
-class ContentActivity : AppCompatActivity() {
-
-    private lateinit var type: String
-    private lateinit var api: XtreamService
-    private lateinit var portal: String
-    private lateinit var user: String
-    private lateinit var pass: String
-
-    private lateinit var rvCats: RecyclerView
-    private lateinit var rvItems: RecyclerView
-    private lateinit var progress: ProgressBar
-    private lateinit var txtTitle: TextView
-
-    private lateinit var catAdapter: SimpleAdapter
-    private lateinit var itemAdapter: SimpleAdapter
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_content)
-
-        type = intent.getStringExtra("type") ?: "live"
-
-        portal = Prefs.portal(this)
-        user = Prefs.user(this)
-        pass = Prefs.pass(this)
-        api = ApiClient.create(portal)
-
-        txtTitle = findViewById(R.id.txtTitle)
-        rvCats = findViewById(R.id.rvCategories)
-        rvItems = findViewById(R.id.rvItems)
-        progress = findViewById(R.id.progress)
-
-        txtTitle.text = when(type) {
-            "vod" -> "Filmler"
-            "series" -> "Diziler"
-            else -> "Canlı TV"
-        }
-
-        rvCats.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        rvItems.layoutManager = LinearLayoutManager(this)
-
-        catAdapter = SimpleAdapter(emptyList()) { row -> loadItems(row.id) }
-        itemAdapter = SimpleAdapter(emptyList()) { row ->
-            when (type) {
-                "series" -> {
-                    val i = Intent(this, SeriesEpisodesActivity::class.java)
-                    i.putExtra("series_id", row.id)
-                    i.putExtra("series_title", row.title)
-                    startActivity(i)
-                }
-                else -> {
-                    val url = buildPlayUrl(type, row.id)
-                    val i = Intent(this, PlayerActivity::class.java)
-                    i.putExtra("stream_url", url)
-                    startActivity(i)
-                }
             }
         }
+        EOF
 
-        rvCats.adapter = catAdapter
-        rvItems.adapter = itemAdapter
+        # 4. PlayerActivity
+        cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
+        package $PACKAGE_NAME
+        import android.os.Bundle
+        import androidx.appcompat.app.AppCompatActivity
+        import androidx.media3.common.MediaItem
+        import androidx.media3.exoplayer.ExoPlayer
+        import androidx.media3.ui.PlayerView
 
-        loadCategories()
-    }
-
-    private fun loadCategories() {
-        progress.visibility = View.VISIBLE
-
-        val action = when(type) {
-            "vod" -> "get_vod_categories"
-            "series" -> "get_series_categories"
-            else -> "get_live_categories"
+        class PlayerActivity : AppCompatActivity() {
+            private var player: ExoPlayer? = null
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_player)
+                val url = intent.getStringExtra("url") ?: ""
+                player = ExoPlayer.Builder(this).build()
+                findViewById<PlayerView>(R.id.player_view).player = player
+                player?.setMediaItem(MediaItem.fromUri(url))
+                player?.prepare(); player?.play()
+            }
+            override fun onStop() { super.onStop(); player?.release(); player = null }
         }
+        EOF
 
-        api.playerApi(user, pass, action).enqueue(object : Callback<JsonObject> {
-            override fun onResponse(call: Call<JsonObject>, response: Response<JsonObject>) {
-                progress.visibility = View.GONE
-                val arr = response.body()?.asJsonArray ?: run {
-                    Toast.makeText(this@ContentActivity, "Kategori gelmedi", Toast.LENGTH_SHORT).show()
-                    return
-                }
+        # --- Manifest ---
+        cat <<EOF > app/src/main/AndroidManifest.xml
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+            <uses-permission android:name="android.permission.INTERNET" />
+            <application android:theme="@style/Theme.ErdinPlayer" android:icon="@mipmap/ic_launcher" android:label="ErdinPlayer" android:usesCleartextTraffic="true">
+                <activity android:name=".LoginActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
+                <activity android:name=".DashboardActivity"/><activity android:name=".ListActivity"/><activity android:name=".PlayerActivity"/>
+            </application>
+        </manifest>
+        EOF
 
-                val list = arr.mapNotNull { el ->
-                    val o = el.asJsonObject
-                    val id = o.get("category_id")?.asString ?: return@mapNotNull null
-                    val name = o.get("category_name")?.asString ?: "Kategori"
-                    SimpleAdapter.RowItem(id, name)
-                }
-
-                catAdapter.submit(list)
-                if (list.isNotEmpty()) loadItems(list.first().id)
-            }
-
-            override fun onFailure(call: Call<JsonObject>, t: Throwable) {
-                progress.visibility = View.GONE
-                Toast.makeText(this@ContentActivity, "Hata: \${t.message}", Toast.LENGTH_LONG).show()
-            }
-        })
-    }
-
-    private fun loadItems(categoryId: String) {
-        progress.visibility = View.VISIBLE
-
-        val action = when(type) {
-            "vod" -> "get_vod_streams"
-            "series" -> "get_series"
-            else -> "get_live_streams"
-        }
-
-        api.playerApi(user, pass, action, categoryId).enqueue(object : Callback<JsonObject> {
-            override fun onResponse(call: Call<JsonObject>, response: Response<JsonObject>) {
-                progress.visibility = View.GONE
-                val arr = response.body()?.asJsonArray ?: run {
-                    Toast.makeText(this@ContentActivity, "Liste gelmedi", Toast.LENGTH_SHORT).show()
-                    return
-                }
-
-                val idField = if (type == "series") "series_id" else "stream_id"
-
-                val list = arr.mapNotNull { el ->
-                    val o = el.asJsonObject
-                    val id = o.get(idField)?.asString ?: return@mapNotNull null
-                    val name = o.get("name")?.asString ?: "İçerik"
-                    SimpleAdapter.RowItem(id, name)
-                }
-
-                itemAdapter.submit(list)
-            }
-
-            override fun onFailure(call: Call<JsonObject>, t: Throwable) {
-                progress.visibility = View.GONE
-                Toast.makeText(this@ContentActivity, "Hata: \${t.message}", Toast.LENGTH_LONG).show()
-            }
-        })
-    }
-
-    private fun buildPlayUrl(type: String, id: String): String {
-        val base = if (portal.endsWith("/")) portal.dropLast(1) else portal
-        return when(type) {
-            "vod" -> "\$base/movie/\$user/\$pass/\$id.mp4"
-            else -> "\$base/live/\$user/\$pass/\$id.m3u8"
-        }
-    }
-}
-EOF
-
-        # --- SERIES EPISODES ACTIVITY (Dizi -> Bölümler) ---
-        cat > app/src/main/java/$PATH_NAME/SeriesEpisodesActivity.kt <<EOF
-package $PACKAGE_NAME
-
-import android.content.Intent
-import android.os.Bundle
-import android.view.View
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.gson.JsonObject
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-
-class SeriesEpisodesActivity : AppCompatActivity() {
-
-    private lateinit var api: XtreamService
-    private lateinit var portal: String
-    private lateinit var user: String
-    private lateinit var pass: String
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_series_episodes)
-
-        portal = Prefs.portal(this)
-        user = Prefs.user(this)
-        pass = Prefs.pass(this)
-        api = ApiClient.create(portal)
-
-        val seriesId = intent.getStringExtra("series_id") ?: ""
-        val seriesTitle = intent.getStringExtra("series_title") ?: "Dizi"
-
-        val txtTitle = findViewById<TextView>(R.id.txtTitle)
-        val rv = findViewById<RecyclerView>(R.id.rvEpisodes)
-        val progress = findViewById<ProgressBar>(R.id.progress)
-
-        txtTitle.text = seriesTitle
-        rv.layoutManager = LinearLayoutManager(this)
-
-        val adapter = SimpleAdapter(emptyList()) { row ->
-            val url = buildEpisodeUrl(row.id)
-            val i = Intent(this, PlayerActivity::class.java)
-            i.putExtra("stream_url", url)
-            startActivity(i)
-        }
-        rv.adapter = adapter
-
-        if (seriesId.isEmpty()) {
-            Toast.makeText(this, "Series ID yok", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-
-        progress.visibility = View.VISIBLE
-        api.playerApi(user, pass, "get_series_info", null, seriesId).enqueue(object : Callback<JsonObject> {
-            override fun onResponse(call: Call<JsonObject>, response: Response<JsonObject>) {
-                progress.visibility = View.GONE
-                val body = response.body() ?: run {
-                    Toast.makeText(this@SeriesEpisodesActivity, "Bilgi gelmedi", Toast.LENGTH_SHORT).show()
-                    return
-                }
-
-                val episodesObj = body.getAsJsonObject("episodes") ?: run {
-                    Toast.makeText(this@SeriesEpisodesActivity, "Bölüm bulunamadı", Toast.LENGTH_SHORT).show()
-                    return
-                }
-
-                val out = mutableListOf<SimpleAdapter.RowItem>()
-                for ((seasonKey, arrEl) in episodesObj.entrySet()) {
-                    val arr = arrEl.asJsonArray
-                    arr.forEach { epEl ->
-                        val o = epEl.asJsonObject
-                        val id = o.get("id")?.asString ?: return@forEach
-                        val titleEp = o.get("title")?.asString ?: "Episode"
-                        val epNum = o.get("episode_num")?.asString ?: ""
-                        val label = "S\${seasonKey}E\${epNum} - \$titleEp"
-                        out.add(SimpleAdapter.RowItem(id, label))
-                    }
-                }
-
-                if (out.isEmpty()) {
-                    Toast.makeText(this@SeriesEpisodesActivity, "Bölüm listesi boş", Toast.LENGTH_SHORT).show()
-                } else {
-                    adapter.submit(out)
-                }
-            }
-
-            override fun onFailure(call: Call<JsonObject>, t: Throwable) {
-                progress.visibility = View.GONE
-                Toast.makeText(this@SeriesEpisodesActivity, "Hata: \${t.message}", Toast.LENGTH_LONG).show()
-            }
-        })
-    }
-
-    private fun buildEpisodeUrl(episodeId: String): String {
-        val base = if (portal.endsWith("/")) portal.dropLast(1) else portal
-        return "\$base/series/\$user/\$pass/\$episodeId.m3u8"
-    }
-}
-EOF
-
-        # --- PLAYER ACTIVITY (AYNI MANTIK) ---
-        cat > app/src/main/java/$PATH_NAME/PlayerActivity.kt <<EOF
-package $PACKAGE_NAME
-
-import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
-
-class PlayerActivity : AppCompatActivity() {
-    private var player: ExoPlayer? = null
-    private lateinit var playerView: PlayerView
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_player)
-
-        playerView = findViewById(R.id.player_view)
-        val streamUrl = intent.getStringExtra("stream_url") ?: ""
-        initializePlayer(streamUrl)
-    }
-
-    private fun initializePlayer(url: String) {
-        player = ExoPlayer.Builder(this).build()
-        playerView.player = player
-        val mediaItem = MediaItem.fromUri(url)
-        player!!.setMediaItem(mediaItem)
-        player!!.prepare()
-        player!!.play()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        player?.release()
-        player = null
-    }
-}
-EOF
-
-        echo "✅ Güncellendi: Login artık Player'a değil Menü'ye gider (Canlı/Film/Dizi + Dizi Bölümleri)."
-
-    - name: 3. Gradle 8.0 Kurulumu
+    - name: 3. Gradle ve Derleme
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.0'
 
-    - name: 4. APK Derleme
+    - name: 4. APK Oluştur
       run: |
         cd ErdinPlayer
-        echo "🚀 Derleme Başlıyor..."
-        gradle assembleRelease --no-daemon --stacktrace
+        gradle assembleRelease --no-daemon
 
-    - name: 5. APK'yı Yükle
+    - name: 5. APK'yı Sun (Download)
       uses: actions/upload-artifact@v4
       with:
-        name: erdin-player-release
-        path: |
-          ErdinPlayer/app/build/outputs/apk/release/*.apk
+        name: ErdinPlayer-Advanced-v3
+        path: ErdinPlayer/app/build/outputs/apk/release/*.apk
