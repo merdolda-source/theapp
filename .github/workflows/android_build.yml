@@ -78,7 +78,7 @@ jobs:
                 minSdk 24
                 targetSdk 33
                 versionCode 1
-                versionName "1.2.0"
+                versionName "1.3.0"
             }
 
             signingConfigs {
@@ -120,6 +120,7 @@ jobs:
             // Media3 ExoPlayer
             implementation 'androidx.media3:media3-exoplayer:1.1.0'
             implementation 'androidx.media3:media3-ui:1.1.0'
+            implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
 
             // Glide (istersen icon için kullanırsın)
             implementation 'com.github.bumptech.glide:glide:4.15.1'
@@ -258,7 +259,9 @@ jobs:
             val series_id: String?,
             val container_extension: String?,
             val category_id: String?,
-            val full_url: String? // M3U için direkt URL
+            val full_url: String?,   // M3U için direkt URL
+            val referer: String?,    // M3U için Referer
+            val origin: String?      // M3U için Origin
         )
 
         data class EpisodeItem(
@@ -831,9 +834,17 @@ jobs:
 
                 var currentName = ""
                 var currentGroup = "Genel"
+                var currentRef: String? = null
+                var currentOrg: String? = null
 
                 for (raw in lines) {
                     val line = raw.trim()
+                    if (line.isEmpty()) continue
+
+                    if (line.startsWith("#EXTM3U", ignoreCase = true)) {
+                        continue
+                    }
+
                     if (line.startsWith("#EXTINF", ignoreCase = true)) {
                         var name = ""
                         var group = "Genel"
@@ -854,7 +865,19 @@ jobs:
 
                         currentName = if (name.isNotEmpty()) name else "Kanal"
                         currentGroup = if (group.isNotEmpty()) group else "Genel"
-                    } else if (line.isNotEmpty() && !line.startsWith("#")) {
+                        currentRef = null
+                        currentOrg = null
+                    } else if (line.startsWith("#EXTVLCOPT:http-referrer=", ignoreCase = true)) {
+                        val idx = line.indexOf("=")
+                        if (idx >= 0 && idx < line.length - 1) {
+                            currentRef = line.substring(idx + 1).trim()
+                        }
+                    } else if (line.startsWith("#EXTVLCOPT:http-origin=", ignoreCase = true)) {
+                        val idx = line.indexOf("=")
+                        if (idx >= 0 && idx < line.length - 1) {
+                            currentOrg = line.substring(idx + 1).trim()
+                        }
+                    } else if (!line.startsWith("#")) {
                         val urlPlay = line
                         val groupId = currentGroup.ifEmpty { "Genel" }
 
@@ -869,9 +892,14 @@ jobs:
                                 series_id = null,
                                 container_extension = null,
                                 category_id = cat.category_id,
-                                full_url = urlPlay
+                                full_url = urlPlay,
+                                referer = currentRef,
+                                origin = currentOrg
                             )
                         )
+
+                        currentRef = null
+                        currentOrg = null
                     }
                 }
 
@@ -977,7 +1005,9 @@ jobs:
                             series_id = seriesId,
                             container_extension = ext,
                             category_id = catId,
-                            full_url = null
+                            full_url = null,
+                            referer = null,
+                            origin = null
                         )
                     )
                     i++
@@ -1010,9 +1040,15 @@ jobs:
 
                 rv.adapter = GridAdapter(filtered) { item ->
                     if (acc.type == "M3U") {
-                        val url = item.full_url ?: return@GridAdapter
+                        val url = item.full_url
+                        if (url.isNullOrEmpty()) {
+                            Toast.makeText(this, "Geçersiz M3U kanalı.", Toast.LENGTH_SHORT).show()
+                            return@GridAdapter
+                        }
                         val itn = Intent(this, PlayerActivity::class.java)
                         itn.putExtra("URL", url)
+                        itn.putExtra("REF", item.referer ?: "")
+                        itn.putExtra("ORG", item.origin ?: "")
                         startActivity(itn)
                     } else {
                         if (currentMode == "SERIES") {
@@ -1041,6 +1077,8 @@ jobs:
 
                             val itn = Intent(this, PlayerActivity::class.java)
                             itn.putExtra("URL", playUrl)
+                            itn.putExtra("REF", "")
+                            itn.putExtra("ORG", "")
                             startActivity(itn)
                         }
                     }
@@ -1219,6 +1257,8 @@ jobs:
 
                 val itn = android.content.Intent(this, PlayerActivity::class.java)
                 itn.putExtra("URL", url)
+                itn.putExtra("REF", "")
+                itn.putExtra("ORG", "")
                 startActivity(itn)
             }
 
@@ -1232,15 +1272,18 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY ---
+        # --- PLAYER ACTIVITY (Referer + Origin destekli) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
         import android.os.Bundle
         import android.view.WindowManager
+        import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
         import androidx.media3.common.MediaItem
+        import androidx.media3.datasource.DefaultHttpDataSource
         import androidx.media3.exoplayer.ExoPlayer
+        import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
         import androidx.media3.ui.PlayerView
 
         class PlayerActivity : AppCompatActivity() {
@@ -1258,14 +1301,50 @@ jobs:
                 setContentView(R.layout.activity_player_pro)
 
                 val url = intent.getStringExtra("URL") ?: ""
+                val ref = intent.getStringExtra("REF") ?: ""
+                val org = intent.getStringExtra("ORG") ?: ""
+
+                if (url.isEmpty()) {
+                    Toast.makeText(this, "Geçersiz yayın URL'si.", Toast.LENGTH_SHORT).show()
+                    finish()
+                    return
+                }
+
                 val pv = findViewById<PlayerView>(R.id.pvMain)
 
-                player = ExoPlayer.Builder(this).build().also { exo ->
-                    pv.player = exo
-                    val item = MediaItem.fromUri(url)
-                    exo.setMediaItem(item)
-                    exo.prepare()
-                    exo.play()
+                try {
+                    val httpFactory = DefaultHttpDataSource.Factory()
+                        .setConnectTimeoutMs(15000)
+                        .setReadTimeoutMs(30000)
+
+                    httpFactory.setDefaultRequestProperty(
+                        "User-Agent",
+                        "Mozilla/5.0 (Android) ExoPlayer"
+                    )
+
+                    if (ref.isNotEmpty()) {
+                        httpFactory.setDefaultRequestProperty("Referer", ref)
+                    }
+                    if (org.isNotEmpty()) {
+                        httpFactory.setDefaultRequestProperty("Origin", org)
+                    }
+
+                    val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
+
+                    player = ExoPlayer.Builder(this)
+                        .setMediaSourceFactory(mediaSourceFactory)
+                        .build()
+                        .also { exo ->
+                            pv.player = exo
+                            val item = MediaItem.fromUri(url)
+                            exo.setMediaItem(item)
+                            exo.prepare()
+                            exo.play()
+                        }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
+                    finish()
                 }
             }
 
