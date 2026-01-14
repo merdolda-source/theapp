@@ -19,7 +19,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Xtream + M3U + Kategorili + Modern Drawer + BottomNav)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Xtream + M3U + 3 Mod Player)
       run: |
         set -e
         APP_NAME="ErdinPlayer"
@@ -30,43 +30,55 @@ jobs:
         echo "🚀 ErdinPlayer Pro Projesi Üretiliyor..."
 
         # Klasör Yapısı
-        rm -rf $APP_NAME
-        mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME
-        mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME/models
-        mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME/adapters
-        mkdir -p $APP_NAME/app/src/main/java/$PATH_NAME/utils
-        mkdir -p $APP_NAME/app/src/main/res/layout
-        mkdir -p $APP_NAME/app/src/main/res/values
-        mkdir -p $APP_NAME/app/src/main/res/drawable
-        mkdir -p $APP_NAME/app/src/main/res/mipmap-hdpi
-        mkdir -p $APP_NAME/app/src/main/res/menu
+        rm -rf "$APP_NAME"
+        mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME"
+        mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME/models"
+        mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME/adapters"
+        mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME/utils"
+        mkdir -p "$APP_NAME/app/src/main/res/layout"
+        mkdir -p "$APP_NAME/app/src/main/res/values"
+        mkdir -p "$APP_NAME/app/src/main/res/drawable"
+        mkdir -p "$APP_NAME/app/src/main/res/mipmap-hdpi"
+        mkdir -p "$APP_NAME/app/src/main/res/menu"
         
-        cd $APP_NAME
+        cd "$APP_NAME"
 
         # İKON ve KEYSTORE
         wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://www.freepnglogos.com/uploads/512x512-logo-png/512x512-logo-download-anarchy-png-image-transparent-png-31.png"
-        keytool -genkey -v -keystore app/keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias key0 -storepass $PASS -keypass $PASS -dname "CN=Erdin, O=ErdinMedia, C=TR"
+        keytool -genkey -v -keystore app/keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias key0 -storepass "$PASS" -keypass "$PASS" -dname "CN=Erdin, O=ErdinMedia, C=TR"
 
         # --- GRADLE ROOT ---
         echo "include ':app'" > settings.gradle
-        echo -e "android.useAndroidX=true\nandroid.enableJetifier=true\norg.gradle.jvmargs=-Xmx2048m" > gradle.properties
+        cat <<EOF > gradle.properties
+        android.useAndroidX=true
+        android.enableJetifier=true
+        org.gradle.jvmargs=-Xmx2048m
+        EOF
 
         cat <<EOF > build.gradle
         buildscript {
-            repositories { google(); mavenCentral() }
+            repositories {
+                google()
+                mavenCentral()
+            }
             dependencies {
                 classpath 'com.android.tools.build:gradle:8.0.0'
-                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
             }
         }
-        allprojects { repositories { google(); mavenCentral() } }
+
+        allprojects {
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
         EOF
 
         # --- APP MODULE GRADLE ---
         cat <<EOF > app/build.gradle
         plugins {
             id 'com.android.application'
-            id 'kotlin-android'
+            id 'org.jetbrains.kotlin.android'
         }
 
         android {
@@ -202,7 +214,7 @@ jobs:
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="12dp"
-            android:background="@color:bg_dark">
+            android:background="@color/bg_dark">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -215,7 +227,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Kullanıcı: -"
-                    android:textColor="@color:white"
+                    android:textColor="@color/white"
                     android:textStyle="bold"
                     android:textSize="16sp" />
 
@@ -224,7 +236,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Bitiş: -"
-                    android:textColor="@color:accent_green"
+                    android:textColor="@color/white"
                     android:textSize="14sp"
                     android:layout_marginTop="4dp" />
             </LinearLayout>
@@ -238,7 +250,7 @@ jobs:
         data class AccountProfile(
             val id: Int,
             val name: String,
-            val type: String,
+            val type: String, // "XTREAM" veya "M3U"
             val dns: String?,
             val user: String?,
             val pass: String?,
@@ -256,9 +268,9 @@ jobs:
             val series_id: String?,
             val container_extension: String?,
             val category_id: String?,
-            val full_url: String?,
-            val referer: String?,
-            val origin: String?
+            val full_url: String?,   // M3U için direkt URL
+            val referer: String?,    // M3U Referer
+            val origin: String?      // M3U Origin
         )
 
         data class EpisodeItem(
@@ -270,7 +282,7 @@ jobs:
         )
         EOF
 
-        # --- UTILS (Prefs + çoklu hesap + silme) ---
+        # --- UTILS (Prefs + Çoklu Hesap + Silme) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
@@ -434,7 +446,7 @@ jobs:
         }
         EOF
 
-        # --- LOGIN ACTIVITY ---
+        # --- LOGIN ACTIVITY (hesap ekle + uzun bas sil) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -554,7 +566,7 @@ jobs:
         }
         EOF
 
-        # --- DASHBOARD (opsiyonel) ---
+        # --- DASHBOARD (istersen kullan) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
         package $PACKAGE_NAME
 
@@ -815,8 +827,7 @@ jobs:
                                 categories = fetchedCategories
                                 streams = fetchedStreams
 
-                                val nameToShow = if (acc.name.isNotEmpty()) acc.name else (accInfo.first
-                                    ?: user)
+                                val nameToShow = if (acc.name.isNotEmpty()) acc.name else (accInfo.first ?: user)
                                 val expText = formatExp(accInfo.second)
 
                                 headerUser.text = "Kullanıcı: " + nameToShow
@@ -868,9 +879,7 @@ jobs:
                     val line = raw.trim()
                     if (line.isEmpty()) continue
 
-                    if (line.startsWith("#EXTM3U", ignoreCase = true)) {
-                        continue
-                    }
+                    if (line.startsWith("#EXTM3U", ignoreCase = true)) continue
 
                     if (line.startsWith("#EXTINF", ignoreCase = true)) {
                         var name = ""
@@ -1057,7 +1066,7 @@ jobs:
             }
 
             private fun filterAndShow(categoryId: String?) {
-                val filtered = if (categoryId == null || categoryId.length == 0) {
+                val filtered = if (categoryId == null || categoryId.isEmpty()) {
                     streams
                 } else {
                     streams.filter { it.category_id == categoryId }
@@ -1093,7 +1102,7 @@ jobs:
                             val ext = if (currentMode == "LIVE") {
                                 ".ts"
                             } else {
-                                if (item.container_extension != null && item.container_extension.length > 0) {
+                                if (item.container_extension != null && item.container_extension.isNotEmpty()) {
                                     "." + item.container_extension
                                 } else {
                                     ".mp4"
@@ -1159,7 +1168,7 @@ jobs:
 
                 tvTitle.text = seriesName
 
-                if (seriesId.length == 0) {
+                if (seriesId.isEmpty()) {
                     tvStatus.text = "Geçersiz seri bilgisi."
                     tvStatus.visibility = View.VISIBLE
                     return
@@ -1243,11 +1252,7 @@ jobs:
                                 tvStatus.visibility = View.GONE
                                 val labels = ArrayList<String>()
                                 for (ep in episodes) {
-                                    labels.add(
-                                        "S" + ep.seasonNumber +
-                                                "E" + ep.episodeNumber +
-                                                " - " + ep.title
-                                    )
+                                    labels.add("S${ep.seasonNumber}E${ep.episodeNumber} - ${ep.title}")
                                 }
                                 val adapter = ArrayAdapter(
                                     this,
@@ -1275,7 +1280,7 @@ jobs:
                 val pass = prefs.getPass().trim()
 
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
-                val ext = if (ep.container_extension != null && ep.container_extension.length > 0)
+                val ext = if (ep.container_extension != null && ep.container_extension.isNotEmpty())
                     ep.container_extension
                 else
                     "mp4"
@@ -1299,7 +1304,7 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (3 mod + referer/origin + tüm formatlar) ---
+        # --- PLAYER ACTIVITY (3 mod: kare/full/zoom + referer/origin + auto landscape) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1704,11 +1709,11 @@ jobs:
                 android:layout_width="260dp"
                 android:layout_height="match_parent"
                 android:layout_gravity="start"
-                android:background="@color:bg_dark"
+                android:background="@color/bg_dark"
                 app:headerLayout="@layout/nav_header"
                 app:itemTextColor="@color/white"
                 app:itemIconTint="@color/white"
-                app:itemBackground="@color/gray_800" />
+                app:itemBackground="@color/gray_800"/>
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
 
@@ -1793,7 +1798,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player layout
+        # Player layout (3 mod butonlu)
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -1839,8 +1844,7 @@ jobs:
                 <activity android:name=".DashboardActivity" />
                 <activity android:name=".ContentActivity" />
                 <activity android:name=".SeriesDetailActivity" />
-                <activity
-                    android:name=".PlayerActivity"
+                <activity android:name=".PlayerActivity"
                     android:screenOrientation="sensorLandscape" />
             </application>
         </manifest>
