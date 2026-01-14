@@ -115,7 +115,7 @@ jobs:
 
             implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
 
-            // Media3 ExoPlayer + HLS + DASH
+            # Media3 ExoPlayer + HLS + DASH
             implementation 'androidx.media3:media3-exoplayer:1.1.0'
             implementation 'androidx.media3:media3-ui:1.1.0'
             implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
@@ -238,7 +238,7 @@ jobs:
         data class AccountProfile(
             val id: Int,
             val name: String,
-            val type: String, // "XTREAM" veya "M3U"
+            val type: String,
             val dns: String?,
             val user: String?,
             val pass: String?,
@@ -386,7 +386,6 @@ jobs:
                 return all.find { it.id == activeId } ?: all[0]
             }
 
-            // Eski fonksiyonlar
             fun save(dns: String, u: String, ps: String) {
                 val name = if (u.isNotEmpty()) u else "Xtream"
                 createXtreamAccount(name, dns, u, ps)
@@ -435,7 +434,7 @@ jobs:
         }
         EOF
 
-        # --- LOGIN ACTIVITY (hesap ekle / sil / seç) ---
+        # --- LOGIN ACTIVITY (FIX: ${acc.name} kaldırıldı) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -540,7 +539,7 @@ jobs:
                         val acc = accounts[position]
                         AlertDialog.Builder(this)
                             .setTitle("Hesabı Sil")
-                            .setMessage("\"${acc.name}\" hesabını silmek istiyor musun?")
+                            .setMessage("\"" + acc.name + "\" hesabını silmek istiyor musun?")
                             .setPositiveButton("Sil") { _, _ ->
                                 prefs.deleteAccount(acc.id)
                                 Toast.makeText(this, "Hesap silindi.", Toast.LENGTH_SHORT).show()
@@ -1300,7 +1299,7 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (3 mod + M3U tüm formatlar) ---
+        # --- PLAYER ACTIVITY (3 mod + referer/origin + tüm formatlar) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1324,12 +1323,11 @@ jobs:
             private var player: ExoPlayer? = null
             private lateinit var pv: PlayerView
             private lateinit var btnMode: ImageButton
-            private var modeIndex = 0 // 0: KARE(FIT), 1: FULL(FILL), 2: ZOOM FULL(ZOOM)
+            private var modeIndex = 0
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
 
-                // Sadece yatay (landscape), sensöre göre sağ/sol dönebilir
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
                 window.setFlags(
@@ -1360,7 +1358,7 @@ jobs:
                 pv = findViewById(R.id.pvMain)
                 btnMode = findViewById(R.id.btnMode)
 
-                applyResizeMode() // başlangıç: KARE (FIT)
+                applyResizeMode()
 
                 btnMode.setOnClickListener {
                     modeIndex = (modeIndex + 1) % 3
@@ -1406,28 +1404,28 @@ jobs:
             private fun inferMimeType(url: String): String {
                 val u = url.lowercase(Locale.getDefault())
                 return when {
-                    u.contains(".m3u8") -> "application/x-mpegURL"       // HLS
-                    u.contains(".mpd") -> "application/dash+xml"         // DASH
-                    u.endsWith(".mp3") -> "audio/mpeg"                   // MP3
+                    u.contains(".m3u8") -> "application/x-mpegURL"
+                    u.contains(".mpd") -> "application/dash+xml"
+                    u.endsWith(".mp3") -> "audio/mpeg"
                     u.endsWith(".aac") -> "audio/aac"
                     u.endsWith(".ts") -> "video/mp2t"
                     u.endsWith(".mp4") || u.endsWith(".mkv") || u.endsWith(".mov") ->
                         "video/mp4"
-                    else -> "application/x-mpegURL" // uzantısız ise çoğu senaryoda HLS kabul
+                    else -> "application/x-mpegURL"
                 }
             }
 
             private fun applyResizeMode() {
                 when (modeIndex) {
-                    0 -> { // KARE (FIT)
+                    0 -> {
                         pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                         Toast.makeText(this, "Mod: Kare (FIT)", Toast.LENGTH_SHORT).show()
                     }
-                    1 -> { // FULL (FILL)
+                    1 -> {
                         pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
                         Toast.makeText(this, "Mod: Full (FILL)", Toast.LENGTH_SHORT).show()
                     }
-                    2 -> { // ZOOM FULL (ZOOM) – ekranı taşar, kırpar
+                    2 -> {
                         pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                         Toast.makeText(this, "Mod: Zoom Full", Toast.LENGTH_SHORT).show()
                     }
@@ -1642,7 +1640,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Content (Drawer renkleri güncel)
+        # Content
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -1795,7 +1793,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player (3 mod butonlu)
+        # Player layout
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
