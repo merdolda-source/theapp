@@ -9,6 +9,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # ✅ Keystore secrets ENV olarak job'a alındı
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
     steps:
     - name: 1. Depo Çekme
       uses: actions/checkout@v4
@@ -19,13 +26,19 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Xtream + M3U + Reklamlı + Gesture Player)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Xtream + M3U + Reklamlı + Gesture Player) - SIGNED
+      shell: bash
       run: |
         set -e
         APP_NAME="ErdinPlayer"
         PACKAGE_NAME="com.erdin.player"
         PATH_NAME="com/erdin/player"
+
+        # ✅ Eski PASS mantığını bozma ama secrets varsa onları kullan
         PASS="erdin123"
+        STORE_PASS="${ANDROID_KEYSTORE_PASSWORD:-$PASS}"
+        KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
+        KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
         
         echo "🚀 ErdinPlayer Pro Projesi Üretiliyor..."
 
@@ -44,9 +57,22 @@ jobs:
         
         cd "$APP_NAME"
 
-        # İKON ve KEYSTORE
+        # İKON ve KEYSTORE (SECRETS destekli)
         wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://www.freepnglogos.com/uploads/512x512-logo-png/512x512-logo-download-anarchy-png-image-transparent-png-31.png"
-        keytool -genkey -v -keystore app/keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias key0 -storepass "$PASS" -keypass "$PASS" -dname "CN=Erdin, O=ErdinMedia, C=TR"
+
+        if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
+          echo "🔐 Keystore secrets'ten yazılıyor..."
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/keystore.jks
+        else
+          echo "⚠️ ANDROID_KEYSTORE_BASE64 yok, local keystore üretilecek."
+          keytool -genkey -v \
+            -keystore app/keystore.jks \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -alias "$KEY_ALIAS" \
+            -storepass "$STORE_PASS" \
+            -keypass "$KEY_PASS" \
+            -dname "CN=Erdin, O=ErdinMedia, C=TR"
+        fi
 
         # --- GRADLE ROOT ---
         echo "include ':app'" > settings.gradle
@@ -90,9 +116,9 @@ jobs:
             signingConfigs {
                 release {
                     storeFile file("keystore.jks")
-                    storePassword "$PASS"
-                    keyAlias "key0"
-                    keyPassword "$PASS"
+                    storePassword "$STORE_PASS"
+                    keyAlias "$KEY_ALIAS"
+                    keyPassword "$KEY_PASS"
                 }
             }
 
@@ -2381,25 +2407,38 @@ jobs:
       with:
         gradle-version: '8.0'
 
-    - name: 5. Build APK
+    - name: 5. Build APK + AAB (Release / Signed)
       run: |
         cd ErdinPlayer
         gradle assembleRelease --no-daemon
+        gradle bundleRelease --no-daemon
 
     - name: 6. APK'yi GitHub Artifact Olarak Yükle
       id: upload_apk
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Ultra
+        name: ErdinPlayer-Pro-Ultra-APK
         path: ErdinPlayer/app/build/outputs/apk/release/*.apk
 
-    - name: 7. Artifact URL'ini Göster
+    - name: 7. AAB'yi GitHub Artifact Olarak Yükle
+      id: upload_aab
+      uses: actions/upload-artifact@v4
+      with:
+        name: ErdinPlayer-Pro-Ultra-AAB
+        path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
+
+    - name: 8. Artifact URL'lerini Göster
       run: |
         echo "====================================="
         echo " 📦 APK Artifact URL (GitHub):"
         echo "${{ steps.upload_apk.outputs.artifact-url }}"
+        echo "-------------------------------------"
+        echo " 📦 AAB Artifact URL (GitHub):"
+        echo "${{ steps.upload_aab.outputs.artifact-url }}"
         echo "====================================="
 
-        echo "### ErdinPlayer Pro APK" >> $GITHUB_STEP_SUMMARY
+        echo "### ErdinPlayer Pro Çıktılar" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY  
+        echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
