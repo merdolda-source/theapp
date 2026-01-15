@@ -30,7 +30,7 @@ jobs:
       shell: bash
       run: |
         set -e
-        APP_NAME="ErdinPlayer"
+        APP_NAME="EMIN XTREAM PLAYER"
         PACKAGE_NAME="com.erdin.player"
         PATH_NAME="com/erdin/player"
 
@@ -40,7 +40,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
         
-        echo "🚀 ErdinPlayer Pro Projesi Üretiliyor..."
+        echo "🚀 EMİN XTREAM Player Projesi Üretiliyor..."
 
         # Klasör Yapısı
         rm -rf "$APP_NAME"
@@ -59,7 +59,7 @@ jobs:
         cd "$APP_NAME"
 
         # İKON
-        wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://www.freepnglogos.com/uploads/512x512-logo-png/512x512-logo-download-anarchy-png-image-transparent-png-31.png"
+        wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://i.ibb.co/Xr48xsZc/1000518013-512x512.png"
 
         # ✅ KEYSTORE (SECRETS'TEN) -> app/keystore.jks
         if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
