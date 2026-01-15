@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Ultra Build 
+name: ErdinPlayer Pro Ultra Build
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
     steps:
     - name: 1. Depo Çekme
       uses: actions/checkout@v4
-    
+
     - name: 2. Java 17 Kurulumu
       uses: actions/setup-java@v4
       with:
@@ -50,6 +50,7 @@ jobs:
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME/utils"
         mkdir -p "$APP_NAME/app/src/main/res/layout"
         mkdir -p "$APP_NAME/app/src/main/res/values"
+        mkdir -p "$APP_NAME/app/src/main/res/values-tr"
         mkdir -p "$APP_NAME/app/src/main/res/drawable"
         mkdir -p "$APP_NAME/app/src/main/res/mipmap-hdpi"
         mkdir -p "$APP_NAME/app/src/main/res/menu"
@@ -190,7 +191,17 @@ jobs:
         <resources>
             <string name="app_name">ErdinPlayer Pro</string>
 
-            <!-- AdMob test ID'ler -->
+            <!-- AdMob test ID'ler (fallback) -->
+            <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+            <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
+            <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
+        </resources>
+        EOF
+
+        # TR çeviri altyapısı (şimdilik aynı değerler)
+        cat <<EOF > app/src/main/res/values-tr/strings.xml
+        <resources>
+            <string name="app_name">ErdinPlayer Pro</string>
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
@@ -338,7 +349,175 @@ jobs:
         )
         EOF
 
-        # --- UTILS (Prefs + AdsHelper) ---
+        # --- UTILS: RemoteConfig (reklam + interval sunucudan) ---
+        cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
+        package $PACKAGE_NAME.utils
+
+        import android.content.Context
+        import android.util.Log
+        import org.json.JSONObject
+        import java.net.HttpURLConnection
+        import java.net.URL
+        import $PACKAGE_NAME.R
+
+        object RemoteConfig {
+
+            private const val TAG = "RemoteConfig"
+            private const val CONFIG_URL = "https://creatorapp24.com/erdin/api/config.php"
+
+            @Volatile
+            private var initialized = false
+
+            @Volatile
+            private var admobAppId: String? = null
+
+            @Volatile
+            private var bannerId: String? = null
+
+            @Volatile
+            private var interstitialId: String? = null
+
+            @Volatile
+            private var channelInterval: Int = 4
+
+            fun init(context: Context) {
+                if (initialized) return
+                synchronized(this) {
+                    if (initialized) return
+                    initialized = true
+
+                    Thread {
+                        try {
+                            val url = URL(CONFIG_URL)
+                            val conn = url.openConnection() as HttpURLConnection
+                            conn.connectTimeout = 8000
+                            conn.readTimeout = 8000
+                            conn.requestMethod = "GET"
+
+                            val code = conn.responseCode
+                            if (code != HttpURLConnection.HTTP_OK) {
+                                Log.w(TAG, "Config HTTP code: $code")
+                                return@Thread
+                            }
+
+                            val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                            val obj = JSONObject(body)
+
+                            val ads = obj.optJSONObject("ads") ?: obj
+
+                            admobAppId = ads.optString("admob_app_id", null)
+                            bannerId = ads.optString("admob_banner_id", null)
+                            interstitialId = ads.optString("admob_interstitial_id", null)
+
+                            val interval = ads.optInt("channel_interval", 0)
+                            if (interval > 0) {
+                                channelInterval = interval
+                            }
+
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Config load failed: ${e.message}")
+                        }
+                    }.start()
+                }
+            }
+
+            fun getBannerId(context: Context): String {
+                init(context)
+                return bannerId ?: context.getString(R.string.admob_banner_test)
+            }
+
+            fun getInterstitialId(context: Context): String {
+                init(context)
+                return interstitialId ?: context.getString(R.string.admob_interstitial_test)
+            }
+
+            fun getChannelInterval(context: Context, defaultInterval: Int): Int {
+                init(context)
+                return if (channelInterval > 0) channelInterval else defaultInterval
+            }
+        }
+        EOF
+
+        # --- UTILS: RemoteLogger (kim ne yapmış log) ---
+        cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteLogger.kt
+        package $PACKAGE_NAME.utils
+
+        import android.content.Context
+        import android.os.Build
+        import android.provider.Settings
+        import android.util.Log
+        import java.net.HttpURLConnection
+        import java.net.URL
+        import java.net.URLEncoder
+
+        object RemoteLogger {
+
+            private const val TAG = "RemoteLogger"
+            private const val EVENT_URL = "https://creatorapp24.com/erdin/api/event.php"
+
+            fun sendEvent(context: Context, type: String, data: Map<String, String>) {
+                Thread {
+                    try {
+                        val appContext = context.applicationContext
+
+                        val deviceId = Settings.Secure.getString(
+                            appContext.contentResolver,
+                            Settings.Secure.ANDROID_ID
+                        ) ?: "unknown"
+
+                        val pkg = appContext.packageName
+                        val verName = try {
+                            appContext.packageManager.getPackageInfo(pkg, 0).versionName ?: "1.0"
+                        } catch (e: Exception) {
+                            "1.0"
+                        }
+
+                        val baseData = HashMap<String, String>()
+                        baseData["type"] = type
+                        baseData["device_id"] = deviceId
+                        baseData["package"] = pkg
+                        baseData["version"] = verName
+                        baseData["brand"] = Build.BRAND ?: ""
+                        baseData["model"] = Build.MODEL ?: ""
+
+                        baseData.putAll(data)
+
+                        val bodyBuilder = StringBuilder()
+                        var first = true
+                        for ((k, v) in baseData) {
+                            if (!first) bodyBuilder.append("&")
+                            first = false
+                            bodyBuilder.append(URLEncoder.encode(k, "UTF-8"))
+                            bodyBuilder.append("=")
+                            bodyBuilder.append(URLEncoder.encode(v, "UTF-8"))
+                        }
+                        val body = bodyBuilder.toString()
+
+                        val url = URL(EVENT_URL)
+                        val conn = url.openConnection() as HttpURLConnection
+                        conn.connectTimeout = 8000
+                        conn.readTimeout = 8000
+                        conn.requestMethod = "POST"
+                        conn.doOutput = true
+                        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+
+                        conn.outputStream.use { os ->
+                            os.write(body.toByteArray(Charsets.UTF_8))
+                        }
+
+                        val code = conn.responseCode
+                        if (code != HttpURLConnection.HTTP_OK) {
+                            Log.w(TAG, "Event HTTP code: $code")
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "sendEvent failed: ${e.message}")
+                    }
+                }.start()
+            }
+        }
+        EOF
+
+        # --- UTILS: Prefs (hesap + log) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
@@ -348,7 +527,8 @@ jobs:
         import org.json.JSONObject
 
         class Prefs(ctx: Context) {
-            private val p = ctx.getSharedPreferences("EP_Prefs", 0)
+            private val appContext = ctx.applicationContext
+            private val p = appContext.getSharedPreferences("EP_Prefs", 0)
 
             private fun loadArray(): JSONArray {
                 val s = p.getString("accounts_json", "[]") ?: "[]"
@@ -375,6 +555,18 @@ jobs:
                 saveArray(arr)
 
                 p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
+
+                // 🔴 Sunucuya logla
+                RemoteLogger.sendEvent(
+                    appContext,
+                    "account_xtream_created",
+                    mapOf(
+                        "name" to name,
+                        "dns" to dns,
+                        "user" to u
+                    )
+                )
+
                 return id
             }
 
@@ -394,6 +586,17 @@ jobs:
                 saveArray(arr)
 
                 p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
+
+                // 🔴 Sunucuya logla
+                RemoteLogger.sendEvent(
+                    appContext,
+                    "account_m3u_created",
+                    mapOf(
+                        "name" to name,
+                        "m3u" to m3u.take(200)
+                    )
+                )
+
                 return id
             }
 
@@ -437,6 +640,12 @@ jobs:
                     val newActive = if (remaining.isNotEmpty()) remaining[0].id else -1
                     p.edit().putInt("active_id", newActive).apply()
                 }
+
+                RemoteLogger.sendEvent(
+                    appContext,
+                    "account_deleted",
+                    mapOf("account_id" to id.toString())
+                )
             }
 
             fun setActive(id: Int) {
@@ -462,6 +671,7 @@ jobs:
         }
         EOF
 
+        # --- UTILS: AdsHelper (ID + interval sunucudan) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
         package $PACKAGE_NAME.utils
 
@@ -482,8 +692,8 @@ jobs:
             private var interstitial: InterstitialAd? = null
             private var clickCount = 0
 
+            // Varsayılan interval (sunucu override edecek)
             var CHANNEL_INTERVAL = 4
-            var LIST_OPEN_INTERVAL = 2
 
             fun init(context: Context) {
                 if (!initialized) {
@@ -494,16 +704,24 @@ jobs:
                         }
                     }
                 }
+                RemoteConfig.init(context)
+                CHANNEL_INTERVAL = RemoteConfig.getChannelInterval(context, CHANNEL_INTERVAL)
             }
 
             fun loadBanner(adView: AdView?) {
                 if (adView == null) return
+
+                val id = RemoteConfig.getBannerId(adView.context)
+                try {
+                    adView.adUnitId = id
+                } catch (_: Exception) { }
+
                 val request = AdRequest.Builder().build()
                 adView.loadAd(request)
             }
 
             fun loadInterstitial(context: Context) {
-                val adUnitId = context.getString(R.string.admob_interstitial_test)
+                val adUnitId = RemoteConfig.getInterstitialId(context)
                 val request = AdRequest.Builder().build()
                 InterstitialAd.load(
                     context,
@@ -645,6 +863,8 @@ jobs:
         import $PACKAGE_NAME.models.AccountProfile
         import $PACKAGE_NAME.utils.AdsHelper
         import $PACKAGE_NAME.utils.Prefs
+        import $PACKAGE_NAME.utils.RemoteConfig
+        import $PACKAGE_NAME.utils.RemoteLogger
 
         class LoginActivity : AppCompatActivity() {
 
@@ -656,6 +876,10 @@ jobs:
                 setContentView(R.layout.activity_login)
 
                 val prefs = Prefs(this)
+
+                // Remote config + event log
+                RemoteConfig.init(this)
+                RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
 
                 // Reklam
                 AdsHelper.init(this)
@@ -818,7 +1042,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (banner + geçiş reklamı) ---
+        # --- CONTENT ACTIVITY (banner + geçiş reklamı + event log) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -851,6 +1075,7 @@ jobs:
         import $PACKAGE_NAME.models.StreamItem
         import $PACKAGE_NAME.utils.AdsHelper
         import $PACKAGE_NAME.utils.Prefs
+        import $PACKAGE_NAME.utils.RemoteLogger
 
         class ContentActivity : AppCompatActivity() {
 
@@ -1324,6 +1549,15 @@ jobs:
                         itn.putExtra("ORG", item.origin ?: "")
 
                         AdsHelper.maybeShowOnChannelClick(this) {
+                            RemoteLogger.sendEvent(
+                                this,
+                                "play_m3u",
+                                mapOf(
+                                    "channel_name" to item.name,
+                                    "category_id" to (item.category_id ?: ""),
+                                    "url" to url.take(200)
+                                )
+                            )
                             startActivity(itn)
                         }
                     } else {
@@ -1333,6 +1567,14 @@ jobs:
                             itn.putExtra("SERIES_NAME", item.name)
 
                             AdsHelper.maybeShowOnChannelClick(this) {
+                                RemoteLogger.sendEvent(
+                                    this,
+                                    "open_series_detail",
+                                    mapOf(
+                                        "series_id" to (item.series_id ?: ""),
+                                        "series_name" to item.name
+                                    )
+                                )
                                 startActivity(itn)
                             }
                         } else {
@@ -1360,6 +1602,16 @@ jobs:
                             itn.putExtra("ORG", "")
 
                             AdsHelper.maybeShowOnChannelClick(this) {
+                                RemoteLogger.sendEvent(
+                                    this,
+                                    "play_xtream",
+                                    mapOf(
+                                        "channel_name" to item.name,
+                                        "category_id" to (item.category_id ?: ""),
+                                        "stream_id" to (item.stream_id ?: ""),
+                                        "mode" to currentMode
+                                    )
+                                )
                                 startActivity(itn)
                             }
                         }
@@ -1369,7 +1621,7 @@ jobs:
         }
         EOF
 
-        # --- SERIES DETAIL (aynı) ---
+        # --- SERIES DETAIL ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1554,7 +1806,7 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (double tap + yüzde gösterimleri + tam cutout full) ---
+        # --- PLAYER ACTIVITY (gesture + referer/origin) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1606,7 +1858,6 @@ jobs:
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
 
-                // Tam ekran + cutout alanını da kullan
                 window.setFlags(
                     WindowManager.LayoutParams.FLAG_FULLSCREEN,
                     WindowManager.LayoutParams.FLAG_FULLSCREEN
@@ -1641,11 +1892,9 @@ jobs:
                 tvBrightness = findViewById(R.id.tvBrightness)
                 tvVolume = findViewById(R.id.tvVolume)
 
-                // Ses yöneticisi
                 audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
 
-                // Başlangıç parlaklığı
                 val lp = window.attributes
                 currentBrightness = if (lp.screenBrightness in 0f..1f) {
                     lp.screenBrightness
@@ -1716,10 +1965,8 @@ jobs:
                                 val percent = -dy / v.height.toFloat()
 
                                 if (isLeft) {
-                                    // parlaklık
                                     adjustBrightness(percent)
                                 } else {
-                                    // ses
                                     adjustVolume(percent)
                                 }
                             }
@@ -1802,7 +2049,7 @@ jobs:
             private fun applyResizeMode(pv: PlayerView) {
                 when (currentMode) {
                     0 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    1 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL   // çerçevesiz full, çentik dahil
+                    1 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
                     else -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 }
             }
@@ -1822,7 +2069,7 @@ jobs:
 
         # --- LAYOUTLAR ---
 
-        # Login: inputType ve hint renkleri güncellendi
+        # Login
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -1851,7 +2098,7 @@ jobs:
                 android:layout_marginBottom="12dp"/>
 
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Hesap Tipi"
                 android:textColor="@color/white"
@@ -2067,7 +2314,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Content (üst + alt banner)
+        # Content
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -2280,7 +2527,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player layout: overlay'ler + bilgi yazıları
+        # Player layout
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2292,7 +2539,6 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
 
-            <!-- Üstüne gesture overlay: sol = parlaklık/geri, sağ = ses/ileri -->
             <LinearLayout
                 android:id="@+id/overlayContainer"
                 android:layout_width="match_parent"
@@ -2401,6 +2647,8 @@ jobs:
             </application>
         </manifest>
         EOF
+
+        echo "✅ Proje üretimi tamam. İmzalı build'e hazır."
 
     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
