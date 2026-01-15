@@ -59,7 +59,7 @@ jobs:
         cd "$APP_NAME"
 
         # İKON
-        wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://i.ibb.co/Xr48xsZc/1000518013-512x512.png"
+        wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://i.ibb.co/LDdzzhsk/f564b0ed-277d-489c-9a1a-c59f0fe471fc.png"
 
         # ✅ KEYSTORE (SECRETS'TEN) -> app/keystore.jks
         if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
@@ -204,7 +204,7 @@ jobs:
         # TR (şimdilik aynı ID'ler; yazıları sonra ayrı taşıyabiliriz)
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
-            <string name="app_name">ErdinPlayer Pro</string>
+            <string name="app_name">EMIN XTREAM PLAYER</string>
 
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
