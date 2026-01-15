@@ -192,7 +192,7 @@ jobs:
         # EN (default)
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
-            <string name="app_name">ErdinPlayer Pro</string>
+            <string name="app_name">EMIN XTREAM PLAYER</string>
 
             <!-- AdMob test ID'ler (fallback) -->
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
