@@ -19,7 +19,7 @@ jobs:
     steps:
     - name: 1. Depo Çekme
       uses: actions/checkout@v4
-
+    
     - name: 2. Java 17 Kurulumu
       uses: actions/setup-java@v4
       with:
@@ -58,9 +58,10 @@ jobs:
         
         cd "$APP_NAME"
 
-        # İKON ve KEYSTORE (SECRETS destekli)
+        # İKON
         wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://www.freepnglogos.com/uploads/512x512-logo-png/512x512-logo-download-anarchy-png-image-transparent-png-31.png"
 
+        # ✅ KEYSTORE (SECRETS'TEN) -> app/keystore.jks
         if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
           echo "🔐 Keystore secrets'ten yazılıyor..."
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/keystore.jks
@@ -77,6 +78,7 @@ jobs:
 
         # --- GRADLE ROOT ---
         echo "include ':app'" > settings.gradle
+
         cat <<EOF > gradle.properties
         android.useAndroidX=true
         android.enableJetifier=true
@@ -187,6 +189,7 @@ jobs:
         </resources>
         EOF
 
+        # EN (default)
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">ErdinPlayer Pro</string>
@@ -198,10 +201,11 @@ jobs:
         </resources>
         EOF
 
-        # TR çeviri altyapısı (şimdilik aynı değerler)
+        # TR (şimdilik aynı ID'ler; yazıları sonra ayrı taşıyabiliriz)
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">ErdinPlayer Pro</string>
+
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
@@ -349,7 +353,7 @@ jobs:
         )
         EOF
 
-        # --- UTILS: RemoteConfig (reklam + interval sunucudan) ---
+        # --- UTILS: RemoteConfig ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
 
@@ -396,7 +400,7 @@ jobs:
 
                             val code = conn.responseCode
                             if (code != HttpURLConnection.HTTP_OK) {
-                                Log.w(TAG, "Config HTTP code: $code")
+                                Log.w(TAG, "Config HTTP code: " + code)
                                 return@Thread
                             }
 
@@ -415,7 +419,7 @@ jobs:
                             }
 
                         } catch (e: Exception) {
-                            Log.w(TAG, "Config load failed: ${e.message}")
+                            Log.w(TAG, "Config load failed: " + (e.message ?: ""))
                         }
                     }.start()
                 }
@@ -438,7 +442,7 @@ jobs:
         }
         EOF
 
-        # --- UTILS: RemoteLogger (kim ne yapmış log) ---
+        # --- UTILS: RemoteLogger ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteLogger.kt
         package $PACKAGE_NAME.utils
 
@@ -507,17 +511,17 @@ jobs:
 
                         val code = conn.responseCode
                         if (code != HttpURLConnection.HTTP_OK) {
-                            Log.w(TAG, "Event HTTP code: $code")
+                            Log.w(TAG, "Event HTTP code: " + code)
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "sendEvent failed: ${e.message}")
+                        Log.w(TAG, "sendEvent failed: " + (e.message ?: ""))
                     }
                 }.start()
             }
         }
         EOF
 
-        # --- UTILS: Prefs (hesap + log) ---
+        # --- UTILS: Prefs (RemoteLogger entegre) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
@@ -556,7 +560,6 @@ jobs:
 
                 p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
 
-                // 🔴 Sunucuya logla
                 RemoteLogger.sendEvent(
                     appContext,
                     "account_xtream_created",
@@ -587,7 +590,6 @@ jobs:
 
                 p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
 
-                // 🔴 Sunucuya logla
                 RemoteLogger.sendEvent(
                     appContext,
                     "account_m3u_created",
@@ -671,7 +673,7 @@ jobs:
         }
         EOF
 
-        # --- UTILS: AdsHelper (ID + interval sunucudan) ---
+        # --- UTILS: AdsHelper (RemoteConfig entegre) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
         package $PACKAGE_NAME.utils
 
@@ -683,7 +685,6 @@ jobs:
         import com.google.android.gms.ads.interstitial.InterstitialAd
         import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
         import com.google.android.gms.ads.LoadAdError
-        import $PACKAGE_NAME.R
 
         object AdsHelper {
             @Volatile
@@ -692,7 +693,6 @@ jobs:
             private var interstitial: InterstitialAd? = null
             private var clickCount = 0
 
-            // Varsayılan interval (sunucu override edecek)
             var CHANNEL_INTERVAL = 4
 
             fun init(context: Context) {
@@ -710,12 +710,10 @@ jobs:
 
             fun loadBanner(adView: AdView?) {
                 if (adView == null) return
-
                 val id = RemoteConfig.getBannerId(adView.context)
                 try {
                     adView.adUnitId = id
                 } catch (_: Exception) { }
-
                 val request = AdRequest.Builder().build()
                 adView.loadAd(request)
             }
@@ -877,11 +875,9 @@ jobs:
 
                 val prefs = Prefs(this)
 
-                // Remote config + event log
                 RemoteConfig.init(this)
                 RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
 
-                // Reklam
                 AdsHelper.init(this)
                 val adTop = findViewById<AdView>(R.id.adViewTopLogin)
                 AdsHelper.loadBanner(adTop)
@@ -993,7 +989,6 @@ jobs:
                         Toast.makeText(this, "M3U hesabı eklendi. Aşağıdaki kayıtlardan seçerek giriş yapın.", Toast.LENGTH_SHORT).show()
                     }
 
-                    // Hesap eklendikten sonra alanları sıfırla
                     etName.setText("")
                     etDns.setText("")
                     etUser.setText("")
@@ -1042,7 +1037,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (banner + geçiş reklamı + event log) ---
+        # --- CONTENT ACTIVITY (RemoteLogger + Ads) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1621,7 +1616,7 @@ jobs:
         }
         EOF
 
-        # --- SERIES DETAIL ---
+        # --- SERIES DETAIL (aynı mantık) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1806,7 +1801,7 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (gesture + referer/origin) ---
+        # --- PLAYER ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -2098,7 +2093,7 @@ jobs:
                 android:layout_marginBottom="12dp"/>
 
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Hesap Tipi"
                 android:textColor="@color/white"
@@ -2647,8 +2642,6 @@ jobs:
             </application>
         </manifest>
         EOF
-
-        echo "✅ Proje üretimi tamam. İmzalı build'e hazır."
 
     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
