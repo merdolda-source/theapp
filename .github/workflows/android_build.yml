@@ -106,7 +106,7 @@ jobs:
 
         android {
             namespace '$PACKAGE_NAME'
-            compileSdk 35
+            compileSdk 34
 
             defaultConfig {
                 applicationId "$PACKAGE_NAME"
