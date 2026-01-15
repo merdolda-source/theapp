@@ -106,12 +106,12 @@ jobs:
 
         android {
             namespace '$PACKAGE_NAME'
-            compileSdk 34
+            compileSdk 35
 
             defaultConfig {
                 applicationId "$PACKAGE_NAME"
                 minSdk 24
-                targetSdk 34
+                targetSdk 35
                 versionCode 1
                 versionName "1.6.0"
             }
