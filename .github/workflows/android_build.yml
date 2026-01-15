@@ -30,7 +30,7 @@ jobs:
       shell: bash
       run: |
         set -e
-        APP_NAME="EMIN XTREAM PLAYER"
+        APP_NAME="ErdinPlayer"
         PACKAGE_NAME="com.erdin.player"
         PATH_NAME="com/erdin/player"
 
