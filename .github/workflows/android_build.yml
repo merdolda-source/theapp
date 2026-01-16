@@ -814,7 +814,8 @@ jobs:
         }
         EOF
 
-        # --- LOGIN ACTIVITY ---
+        
+                                            # --- LOGIN ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -843,6 +844,7 @@ jobs:
 
                 val prefs = Prefs(this)
 
+                // EKRAN AÇILIŞ EVENTİ
                 RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
 
                 AdsHelper.init(this)
@@ -923,6 +925,7 @@ jobs:
                                     .setNegativeButton("Hayır", null)
                                     .create()
 
+                                // ✅ Evet / Hayır butonlarına renk
                                 dialog.setOnShowListener {
                                     val positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
                                     val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
@@ -954,22 +957,60 @@ jobs:
                         val d = etDns.text.toString().trim()
                         val u = etUser.text.toString().trim()
                         val p = etPass.text.toString().trim()
+
                         if (d.isEmpty() || u.isEmpty()) {
                             Toast.makeText(this, "Xtream için DNS ve kullanıcı zorunlu.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
+
+                        // HESAP OLUŞTUR
                         prefs.createXtreamAccount(finalName, d, u, p)
-                        Toast.makeText(this, "Xtream hesabı eklendi. Aşağıdaki kayıtlardan seçerek giriş yapın.", Toast.LENGTH_SHORT).show()
+
+                        // ✅ XTREAM HESAP LOG (ŞİFRE YOK!)
+                        RemoteLogger.sendEvent(
+                            this,
+                            "account_xtream_created",
+                            mapOf(
+                                "name" to finalName,
+                                "dns" to d,
+                                "user" to u
+                            )
+                        )
+
+                        Toast.makeText(
+                            this,
+                            "Xtream hesabı eklendi. Aşağıdaki kayıtlardan seçerek giriş yapın.",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
                         val m = etM3u.text.toString().trim()
                         if (m.isEmpty()) {
                             Toast.makeText(this, "M3U linki boş olamaz.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
+
+                        // HESAP OLUŞTUR
                         prefs.createM3uAccount(finalName, m)
-                        Toast.makeText(this, "M3U hesabı eklendi. Aşağıdaki kayıtlardan seçerek giriş yapın.", Toast.LENGTH_SHORT).show()
+
+                        // ✅ M3U HESAP LOG (ŞİFRE YOK, LINK KISALTILMIŞ)
+                        RemoteLogger.sendEvent(
+                            this,
+                            "account_m3u_created",
+                            mapOf(
+                                "name" to finalName,
+                                // Tam M3U'yu göndermeyelim, sadece ilk kısmı
+                                "m3u_prefix" to m.take(160)
+                            )
+                        )
+
+                        Toast.makeText(
+                            this,
+                            "M3U hesabı eklendi. Aşağıdaki kayıtlardan seçerek giriş yapın.",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
 
+                    // Form temizle
                     etName.setText("")
                     etDns.setText("")
                     etUser.setText("")
@@ -979,7 +1020,7 @@ jobs:
                     refreshList()
                 }
             }
-        }
+        
         EOF
 
         # --- DASHBOARD ---
