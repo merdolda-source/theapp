@@ -201,7 +201,7 @@ jobs:
         </resources>
         EOF
 
-        # TR
+        # TR (şimdilik aynı ID'ler; yazıları sonra ayrı taşıyabiliriz)
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
@@ -1037,7 +1037,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY ---
+        # --- CONTENT ACTIVITY (RemoteLogger + Ads) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1115,7 +1115,6 @@ jobs:
                 pb = findViewById(R.id.pbLoading)
 
                 rv.layoutManager = LinearLayoutManager(this)
-                rv.setHasFixedSize(true)
 
                 val headerView = navView.getHeaderView(0)
                 headerUser = headerView.findViewById(R.id.tvHeaderUser)
@@ -1617,7 +1616,7 @@ jobs:
         }
         EOF
 
-        # --- SERIES DETAIL ---
+        # --- SERIES DETAIL (aynı mantık) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1802,7 +1801,7 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (ekran kilidi kapanmaz + controller timeout koddan) ---
+        # --- PLAYER ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1858,10 +1857,7 @@ jobs:
                     WindowManager.LayoutParams.FLAG_FULLSCREEN,
                     WindowManager.LayoutParams.FLAG_FULLSCREEN
                 )
-                window.addFlags(
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-                )
+                window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
 
                 window.decorView.systemUiVisibility =
                     View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
@@ -1884,9 +1880,6 @@ jobs:
                 }
 
                 val pv = findViewById<PlayerView>(R.id.pvMain)
-                // XML'de attribute kullanmak yerine, timeout'u burada koddan ayarlıyoruz
-                pv.controllerShowTimeoutMs = 3000
-
                 val btnMode = findViewById<ImageButton>(R.id.btnMode)
                 leftOverlay = findViewById(R.id.overlayLeft)
                 rightOverlay = findViewById(R.id.overlayRight)
@@ -2529,9 +2522,10 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player layout (XML'de extra attribute yok, hata vermez)
+        # Player layout
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/black">
@@ -2539,25 +2533,27 @@ jobs:
             <androidx.media3.ui.PlayerView
                 android:id="@+id/pvMain"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent"
+                app:use_controller="true"
+                app:controller_show_timeout_ms="5000"/>
 
+            <!-- Kenarlarda gesture alanı, ortası boş: timeline ve tıklama PlayerView'e gider -->
             <LinearLayout
                 android:id="@+id/overlayContainer"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:gravity="center_horizontal">
 
                 <View
                     android:id="@+id/overlayLeft"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1" />
+                    android:layout_width="80dp"
+                    android:layout_height="match_parent" />
 
                 <View
                     android:id="@+id/overlayRight"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1" />
+                    android:layout_width="80dp"
+                    android:layout_height="match_parent" />
             </LinearLayout>
 
             <TextView
@@ -2605,8 +2601,8 @@ jobs:
 
                 <ImageButton
                     android:id="@+id/btnMode"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
                     android:background="@android:color/transparent"
                     android:src="@android:drawable/ic_menu_crop"
                     android:tint="@android:color/white"/>
@@ -2690,3 +2686,15 @@ jobs:
         echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+
+---
+
+Bunu aynen workflow’a yapıştırıp çalıştır.  
+Sonra player’da özellikle şunları bir dene:
+
+- Yayın aç → timeline ilk geldiğinde **orta alanda** ileri/geri sar.
+- Timeline kaybolunca yine **ortaya tek tık** yap → tekrar çıkması lazım.
+- Sol kenara çift tık: 15 sn geri, sağ kenara çift tık: 15 sn ileri.
+- Alt sağdaki ekran boyutu ikonunun büyüdüğünü göreceksin.
+
+Bir sonraki adımda istersen ikonun şeklini de sana özel bir SVG / PNG ile değiştirebiliriz.
