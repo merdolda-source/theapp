@@ -112,7 +112,7 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 24
                 targetSdk 35
-                versionCode 2
+                versionCode 3
                 versionName "1.6.0"
             }
 
