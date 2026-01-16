@@ -814,41 +814,57 @@ jobs:
         }
         EOF
 
-        cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
-        package $PACKAGE_NAME.adapters
+      package com.erdin.player.adapters
 
-        import android.view.LayoutInflater
-        import android.view.View
-        import android.view.ViewGroup
-        import android.widget.TextView
-        import androidx.recyclerview.widget.RecyclerView
-        import $PACKAGE_NAME.R
-        import $PACKAGE_NAME.models.StreamItem
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+import com.erdin.player.models.StreamItem
 
-        class GridAdapter(
-            private val list: List<StreamItem>,
-            private val onClick: (StreamItem) -> Unit
-        ) : RecyclerView.Adapter<GridAdapter.VH>() {
+class GridAdapter(
+    private val list: List<StreamItem>,
+    private val onClick: (StreamItem) -> Unit
+) : RecyclerView.Adapter<GridAdapter.VH>() {
 
-            class VH(v: View) : RecyclerView.ViewHolder(v) {
-                val txt: TextView = v.findViewById(R.id.txtName)
-            }
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val txt: TextView = v.findViewById(android.R.id.text1)
 
-            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-                val v = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_grid_pro, parent, false)
-                return VH(v)
-            }
+        init {
+            // TV odak için:
+            itemView.isFocusable = true
+            itemView.isFocusableInTouchMode = true
 
-            override fun onBindViewHolder(holder: VH, position: Int) {
-                val item = list[position]
-                holder.txt.text = item.name
-                holder.itemView.setOnClickListener { onClick(item) }
-            }
+            txt.isFocusable = false
+            txt.maxLines = 2
 
-            override fun getItemCount(): Int = list.size
+            // Yazıyı biraz büyüt + satırı büyüt
+            txt.textSize = 18f
+            val p = txt.paddingLeft
+            txt.setPadding(p, p, p, p)
+            itemView.minimumHeight = (72 * v.resources.displayMetrics.density).toInt()
         }
-        EOF
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context)
+            .inflate(android.R.layout.simple_list_item_1, parent, false)
+        return VH(v)
+    }
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val item = list[position]
+        holder.txt.text = item.name
+
+        holder.itemView.setOnClickListener {
+            onClick(item)
+        }
+    }
+
+    override fun getItemCount(): Int = list.size
+}
+ EOF
 
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
         package $PACKAGE_NAME.adapters
