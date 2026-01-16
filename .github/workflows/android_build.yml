@@ -9,7 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # ✅ Keystore secrets ENV olarak job'a alındı
     env:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -34,7 +33,6 @@ jobs:
         PACKAGE_NAME="com.erdin.player"
         PATH_NAME="com/erdin/player"
 
-        # ✅ Eski PASS mantığını bozma ama secrets varsa onları kullan
         PASS="erdin123"
         STORE_PASS="${ANDROID_KEYSTORE_PASSWORD:-$PASS}"
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
@@ -42,7 +40,6 @@ jobs:
         
         echo "🚀 EMİN XTREAM Player Projesi Üretiliyor..."
 
-        # Klasör Yapısı
         rm -rf "$APP_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME/models"
@@ -58,10 +55,8 @@ jobs:
         
         cd "$APP_NAME"
 
-        # İKON
         wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://i.ibb.co/LDdzzhsk/f564b0ed-277d-489c-9a1a-c59f0fe471fc.png"
 
-        # ✅ KEYSTORE (SECRETS'TEN) -> app/keystore.jks
         if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
           echo "🔐 Keystore secrets'ten yazılıyor..."
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/keystore.jks
@@ -76,7 +71,6 @@ jobs:
             -dname "CN=Erdin, O=ErdinMedia, C=TR"
         fi
 
-        # --- GRADLE ROOT ---
         echo "include ':app'" > settings.gradle
 
         cat <<EOF > gradle.properties
@@ -96,7 +90,6 @@ jobs:
         allprojects { repositories { google(); mavenCentral() } }
         EOF
 
-        # --- APP MODULE GRADLE ---
         mkdir -p app
         cat <<EOF > app/build.gradle
         plugins {
@@ -160,7 +153,6 @@ jobs:
         }
         EOF
 
-        # --- COLORS / STYLES / STRINGS ---
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
             <color name="bg_dark">#050608</color>
@@ -181,31 +173,24 @@ jobs:
                 <item name="android:windowBackground">@color/bg_dark</item>
                 <item name="android:textColor">@color/white</item>
                 <item name="colorAccent">@color/accent_green</item>
-
-                <!-- Çentik / ön kamera alanını da kullan -->
                 <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
                 <item name="android:windowFullscreen">true</item>
             </style>
         </resources>
         EOF
 
-        # EN (default)
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
-
-            <!-- AdMob test ID'ler (fallback) -->
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
         </resources>
         EOF
 
-        # TR (şimdilik aynı ID'ler; yazıları sonra ayrı taşıyabiliriz)
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
-
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
@@ -252,7 +237,6 @@ jobs:
         </shape>
         EOF
 
-        # Yan menü yazı renkleri
         cat <<EOF > app/src/main/res/color/nav_item_text.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
             <item android:state_checked="true" android:color="@color/accent_green"/>
@@ -260,7 +244,6 @@ jobs:
         </selector>
         EOF
 
-        # --- BOTTOM NAV MENU ---
         cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
         <menu xmlns:android="http://schemas.android.com/apk/res/android">
             <item
@@ -278,7 +261,6 @@ jobs:
         </menu>
         EOF
 
-        # --- NAV HEADER ---
         cat <<EOF > app/src/main/res/layout/nav_header.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -314,14 +296,13 @@ jobs:
         </LinearLayout>
         EOF
 
-        # --- MODELLER ---
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
 
         data class AccountProfile(
             val id: Int,
             val name: String,
-            val type: String, // "XTREAM" veya "M3U"
+            val type: String,
             val dns: String?,
             val user: String?,
             val pass: String?,
@@ -339,9 +320,9 @@ jobs:
             val series_id: String?,
             val container_extension: String?,
             val category_id: String?,
-            val full_url: String?,   // M3U için direkt URL
-            val referer: String?,    // M3U için Referer
-            val origin: String?      // M3U için Origin
+            val full_url: String?,
+            val referer: String?,
+            val origin: String?
         )
 
         data class EpisodeItem(
@@ -353,7 +334,6 @@ jobs:
         )
         EOF
 
-        # --- UTILS: RemoteConfig ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
 
@@ -388,7 +368,8 @@ jobs:
                 if (initialized) return
                 synchronized(this) {
                     if (initialized) return
-                    initialized = true
+                    initialized =
+                        true
 
                     Thread {
                         try {
@@ -442,7 +423,6 @@ jobs:
         }
         EOF
 
-        # --- UTILS: RemoteLogger ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteLogger.kt
         package $PACKAGE_NAME.utils
 
@@ -521,7 +501,6 @@ jobs:
         }
         EOF
 
-        # --- UTILS: Prefs (RemoteLogger entegre) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
@@ -673,7 +652,6 @@ jobs:
         }
         EOF
 
-        # --- UTILS: AdsHelper (RemoteConfig entegre) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
         package $PACKAGE_NAME.utils
 
@@ -751,7 +729,6 @@ jobs:
         }
         EOF
 
-        # --- ADAPTERLER ---
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
 
@@ -845,7 +822,6 @@ jobs:
         }
         EOF
 
-        # --- LOGIN ACTIVITY (ÖZEL SİLME DİYALOĞU DAHİL) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -950,7 +926,6 @@ jobs:
                                 startActivity(Intent(this, ContentActivity::class.java))
                             },
                             onDelete = { acc ->
-                                // Özel silme diyaloğu (Evet / Hayır net görünsün)
                                 val dialogView = layoutInflater.inflate(
                                     R.layout.dialog_confirm_delete,
                                     null
@@ -964,8 +939,7 @@ jobs:
                                     dialogView.findViewById<Button>(R.id.btnNo)
 
                                 tvMessage.text =
-    "\"" + acc.name + "\" hesabını silmek istiyor musun?"
-
+                                    "\"" + acc.name + "\" hesabını silmek istiyor musun?"
 
                                 val dialog = AlertDialog.Builder(this)
                                     .setView(dialogView)
@@ -1045,7 +1019,55 @@ jobs:
         }
         EOF
 
-        # --- DASHBOARD ---
+        cat <<EOF > app/src/main/res/layout/dialog_confirm_delete.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="280dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@drawable/bg_account_card">
+
+            <TextView
+                android:id="@+id/tvMessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Hesabı silmek istiyor musun?"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:layout_marginBottom="16dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="end">
+
+                <Button
+                    android:id="@+id/btnNo"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="Hayır"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:background="@color/gray_800"
+                    android:layout_marginRight="8dp" />
+
+                <Button
+                    android:id="@+id/btnYes"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:text="Evet"
+                    android:textAllCaps="false"
+                    android:textColor="@color/black"
+                    android:background="@color/accent_green" />
+            </LinearLayout>
+
+        </LinearLayout>
+        EOF
+
         cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
         package $PACKAGE_NAME
 
@@ -1081,7 +1103,6 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (RemoteLogger + Ads) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1660,7 +1681,6 @@ jobs:
         }
         EOF
 
-        # --- SERIES DETAIL (aynı mantık) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1845,7 +1865,6 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (seekbar düzeltildi + ikon büyütme kontrol tarafı) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1871,8 +1890,6 @@ jobs:
 
             private var player: ExoPlayer? = null
             private var currentMode: Int = 0
-
-            private lateinit var playerView: PlayerView
 
             private lateinit var leftOverlay: View
             private lateinit var rightOverlay: View
@@ -1925,18 +1942,13 @@ jobs:
                     return
                 }
 
-                playerView = findViewById(R.id.pvMain)
+                val pv = findViewById<PlayerView>(R.id.pvMain)
                 val btnMode = findViewById<ImageButton>(R.id.btnMode)
                 leftOverlay = findViewById(R.id.overlayLeft)
                 rightOverlay = findViewById(R.id.overlayRight)
                 tvCenterInfo = findViewById(R.id.tvInfoCenter)
                 tvBrightness = findViewById(R.id.tvBrightness)
                 tvVolume = findViewById(R.id.tvVolume)
-
-                // PlayerView controller ayarları
-                playerView.setControllerAutoShow(true)
-                playerView.setControllerShowTimeoutMs(5000)
-                playerView.setControllerHideOnTouch(true)
 
                 audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
@@ -1948,15 +1960,19 @@ jobs:
                     0.5f
                 }
 
-                applyResizeMode(playerView)
+                pv.useController = true
+                pv.setControllerShowTimeoutMs(4000)
+                pv.setControllerHideOnTouch(true)
+
+                applyResizeMode(pv)
 
                 btnMode.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
-                    applyResizeMode(playerView)
+                    applyResizeMode(pv)
                 }
 
-                setupGestureOverlay(leftOverlay, isLeft = true)
-                setupGestureOverlay(rightOverlay, isLeft = false)
+                setupGestureOverlay(leftOverlay, true, pv)
+                setupGestureOverlay(rightOverlay, false, pv)
 
                 try {
                     val headers = mutableMapOf<String, String>()
@@ -1980,7 +1996,7 @@ jobs:
                         .build()
 
                     val exo = player!!
-                    playerView.player = exo
+                    pv.player = exo
                     val item = MediaItem.fromUri(url)
                     exo.setMediaItem(item)
                     exo.prepare()
@@ -1992,18 +2008,9 @@ jobs:
                 }
             }
 
-            private fun setupGestureOverlay(view: View, isLeft: Boolean) {
+            private fun setupGestureOverlay(view: View, isLeft: Boolean, pv: PlayerView) {
                 view.setOnTouchListener { v, event ->
                     val am = audioManager
-
-                    // Alt %20 bölge: süre çubuğu / butonlar için dokunuşu PlayerView'e bırak
-                    val h = v.height
-                    if (h > 0 && event.action == MotionEvent.ACTION_DOWN) {
-                        if (event.y > h * 0.8f) {
-                            return@setOnTouchListener false
-                        }
-                    }
-
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> {
                             gestureStartY = event.y
@@ -2030,8 +2037,6 @@ jobs:
                         MotionEvent.ACTION_UP -> {
                             if (!isGesture) {
                                 val now = System.currentTimeMillis()
-                                var handledDouble = false
-
                                 if (isLeft) {
                                     if (now - lastTapLeft < 350) {
                                         tapCountLeft++
@@ -2043,7 +2048,8 @@ jobs:
                                         tapCountLeft = 0
                                         seekBy(-15000L)
                                         showCenterInfo("15 saniye geri")
-                                        handledDouble = true
+                                    } else {
+                                        toggleController(pv)
                                     }
                                 } else {
                                     if (now - lastTapRight < 350) {
@@ -2056,18 +2062,10 @@ jobs:
                                         tapCountRight = 0
                                         seekBy(15000L)
                                         showCenterInfo("15 saniye ileri")
-                                        handledDouble = true
+                                    } else {
+                                        toggleController(pv)
                                     }
                                 }
-
-                                // Çift tık değilse: tek tık → controller aç/kapa
-                                if (!handledDouble) {
-                                    toggleController()
-                                }
-                            } else {
-                                // Gesture bitti: overlay metinlerini sakla
-                                tvBrightness.visibility = View.GONE
-                                tvVolume.visibility = View.GONE
                             }
                             true
                         }
@@ -2076,13 +2074,11 @@ jobs:
                 }
             }
 
-            private fun toggleController() {
-                if (::playerView.isInitialized) {
-                    if (playerView.isControllerFullyVisible) {
-                        playerView.hideController()
-                    } else {
-                        playerView.showController()
-                    }
+            private fun toggleController(pv: PlayerView) {
+                if (pv.isControllerVisible) {
+                    pv.hideController()
+                } else {
+                    pv.showController()
                 }
             }
 
@@ -2135,9 +2131,6 @@ jobs:
             private fun showCenterInfo(text: String) {
                 tvCenterInfo.text = text
                 tvCenterInfo.visibility = View.VISIBLE
-                tvCenterInfo.postDelayed({
-                    tvCenterInfo.visibility = View.GONE
-                }, 800)
             }
 
             override fun onDestroy() {
@@ -2148,9 +2141,6 @@ jobs:
         }
         EOF
 
-        # --- LAYOUTLAR ---
-
-        # Login
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -2346,7 +2336,6 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Dashboard
         cat <<EOF > app/src/main/res/layout/activity_dashboard.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2395,7 +2384,6 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Content
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -2483,7 +2471,6 @@ jobs:
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
 
-        # Grid item
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2518,7 +2505,6 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Kayıtlı hesap kartı
         cat <<EOF > app/src/main/res/layout/item_account.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2563,7 +2549,6 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Series detail
         cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2609,7 +2594,6 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player layout (ikon büyütüldü: 52dp)
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2625,7 +2609,8 @@ jobs:
                 android:id="@+id/overlayContainer"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:layout_marginBottom="80dp">
 
                 <View
                     android:id="@+id/overlayLeft"
@@ -2685,8 +2670,8 @@ jobs:
 
                 <ImageButton
                     android:id="@+id/btnMode"
-                    android:layout_width="52dp"
-                    android:layout_height="52dp"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
                     android:background="@android:color/transparent"
                     android:src="@android:drawable/ic_menu_crop"
                     android:tint="@android:color/white"/>
@@ -2694,57 +2679,6 @@ jobs:
         </FrameLayout>
         EOF
 
-        # ÖZEL SİLME DİYALOĞU LAYOUT'U
-        cat <<EOF > app/src/main/res/layout/dialog_confirm_delete.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="280dp"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:background="@drawable/bg_account_card">
-
-            <TextView
-                android:id="@+id/tvMessage"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Hesabı silmek istiyor musun?"
-                android:textColor="@color/white"
-                android:textSize="14sp"
-                android:layout_marginBottom="16dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="end">
-
-                <Button
-                    android:id="@+id/btnNo"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:text="Hayır"
-                    android:textAllCaps="false"
-                    android:textColor="@color/white"
-                    android:background="@color/gray_800"
-                    android:layout_marginRight="8dp" />
-
-                <Button
-                    android:id="@+id/btnYes"
-                    android:layout_width="0dp"
-                    android:layout_height="40dp"
-                    android:layout_weight="1"
-                    android:text="Evet"
-                    android:textAllCaps="false"
-                    android:textColor="@color/black"
-                    android:background="@color/accent_green" />
-            </LinearLayout>
-
-        </LinearLayout>
-        EOF
-
-        # --- MANIFEST ---
         cat <<EOF > app/src/main/AndroidManifest.xml
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
