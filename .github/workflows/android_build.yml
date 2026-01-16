@@ -181,31 +181,26 @@ jobs:
                 <item name="android:windowBackground">@color/bg_dark</item>
                 <item name="android:textColor">@color/white</item>
                 <item name="colorAccent">@color/accent_green</item>
-
-                <!-- Çentik / ön kamera alanını da kullan -->
                 <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
                 <item name="android:windowFullscreen">true</item>
             </style>
         </resources>
         EOF
 
-        # EN (default)
+        # EN
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
-
-            <!-- AdMob test ID'ler (fallback) -->
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
         </resources>
         EOF
 
-        # TR (şimdilik aynı ID'ler; yazıları sonra ayrı taşıyabiliriz)
+        # TR
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
-
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
@@ -252,7 +247,6 @@ jobs:
         </shape>
         EOF
 
-        # Yan menü yazı renkleri
         cat <<EOF > app/src/main/res/color/nav_item_text.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
             <item android:state_checked="true" android:color="@color/accent_green"/>
@@ -321,7 +315,7 @@ jobs:
         data class AccountProfile(
             val id: Int,
             val name: String,
-            val type: String, // "XTREAM" veya "M3U"
+            val type: String,
             val dns: String?,
             val user: String?,
             val pass: String?,
@@ -339,9 +333,9 @@ jobs:
             val series_id: String?,
             val container_extension: String?,
             val category_id: String?,
-            val full_url: String?,   // M3U için direkt URL
-            val referer: String?,    // M3U için Referer
-            val origin: String?      // M3U için Origin
+            val full_url: String?,
+            val referer: String?,
+            val origin: String?
         )
 
         data class EpisodeItem(
@@ -521,7 +515,7 @@ jobs:
         }
         EOF
 
-        # --- UTILS: Prefs (RemoteLogger entegre) ---
+        # --- UTILS: Prefs ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
@@ -560,16 +554,6 @@ jobs:
 
                 p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
 
-                RemoteLogger.sendEvent(
-                    appContext,
-                    "account_xtream_created",
-                    mapOf(
-                        "name" to name,
-                        "dns" to dns,
-                        "user" to u
-                    )
-                )
-
                 return id
             }
 
@@ -589,15 +573,6 @@ jobs:
                 saveArray(arr)
 
                 p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
-
-                RemoteLogger.sendEvent(
-                    appContext,
-                    "account_m3u_created",
-                    mapOf(
-                        "name" to name,
-                        "m3u" to m3u.take(200)
-                    )
-                )
 
                 return id
             }
@@ -642,12 +617,6 @@ jobs:
                     val newActive = if (remaining.isNotEmpty()) remaining[0].id else -1
                     p.edit().putInt("active_id", newActive).apply()
                 }
-
-                RemoteLogger.sendEvent(
-                    appContext,
-                    "account_deleted",
-                    mapOf("account_id" to id.toString())
-                )
             }
 
             fun setActive(id: Int) {
@@ -673,7 +642,7 @@ jobs:
         }
         EOF
 
-        # --- UTILS: AdsHelper (RemoteConfig entegre) ---
+        # --- UTILS: AdsHelper ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
         package $PACKAGE_NAME.utils
 
@@ -861,7 +830,6 @@ jobs:
         import $PACKAGE_NAME.models.AccountProfile
         import $PACKAGE_NAME.utils.AdsHelper
         import $PACKAGE_NAME.utils.Prefs
-        import $PACKAGE_NAME.utils.RemoteConfig
         import $PACKAGE_NAME.utils.RemoteLogger
 
         class LoginActivity : AppCompatActivity() {
@@ -875,7 +843,6 @@ jobs:
 
                 val prefs = Prefs(this)
 
-                RemoteConfig.init(this)
                 RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
 
                 AdsHelper.init(this)
@@ -1037,7 +1004,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (RemoteLogger + Ads) ---
+        # --- CONTENT ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1616,7 +1583,7 @@ jobs:
         }
         EOF
 
-        # --- SERIES DETAIL (aynı mantık) ---
+        # --- SERIES DETAIL ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1801,7 +1768,7 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY ---
+        # --- PLAYER ACTIVITY (GÜNCEL) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1828,6 +1795,7 @@ jobs:
             private var player: ExoPlayer? = null
             private var currentMode: Int = 0
 
+            private lateinit var playerView: PlayerView
             private lateinit var leftOverlay: View
             private lateinit var rightOverlay: View
 
@@ -1879,7 +1847,7 @@ jobs:
                     return
                 }
 
-                val pv = findViewById<PlayerView>(R.id.pvMain)
+                playerView = findViewById(R.id.pvMain)
                 val btnMode = findViewById<ImageButton>(R.id.btnMode)
                 leftOverlay = findViewById(R.id.overlayLeft)
                 rightOverlay = findViewById(R.id.overlayRight)
@@ -1897,11 +1865,11 @@ jobs:
                     0.5f
                 }
 
-                applyResizeMode(pv)
+                applyResizeMode(playerView)
 
                 btnMode.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
-                    applyResizeMode(pv)
+                    applyResizeMode(playerView)
                 }
 
                 setupGestureOverlay(leftOverlay, isLeft = true)
@@ -1929,7 +1897,7 @@ jobs:
                         .build()
 
                     val exo = player!!
-                    pv.player = exo
+                    playerView.player = exo
                     val item = MediaItem.fromUri(url)
                     exo.setMediaItem(item)
                     exo.prepare()
@@ -1951,6 +1919,8 @@ jobs:
                             gestureStartVolume = am?.getStreamVolume(AudioManager.STREAM_MUSIC)
                                 ?: (maxVolume / 2)
                             gestureStartBrightness = currentBrightness
+                            tvBrightness.visibility = View.GONE
+                            tvVolume.visibility = View.GONE
                             true
                         }
                         MotionEvent.ACTION_MOVE -> {
@@ -1995,7 +1965,15 @@ jobs:
                                         showCenterInfo("15 saniye ileri")
                                     }
                                 }
+
+                                // 🟢 Tek tıklamada controller'ı göster (süre çubuğu geri gelsin)
+                                try {
+                                    playerView.showController()
+                                } catch (_: Exception) { }
                             }
+
+                            tvBrightness.visibility = View.GONE
+                            tvVolume.visibility = View.GONE
                             true
                         }
                         else -> false
@@ -2052,6 +2030,9 @@ jobs:
             private fun showCenterInfo(text: String) {
                 tvCenterInfo.text = text
                 tvCenterInfo.visibility = View.VISIBLE
+                tvCenterInfo.postDelayed({
+                    tvCenterInfo.visibility = View.GONE
+                }, 1200)
             }
 
             override fun onDestroy() {
@@ -2522,10 +2503,9 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player layout
+        # Player layout (overlay altta boşluk + büyük ikon)
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/black">
@@ -2533,27 +2513,26 @@ jobs:
             <androidx.media3.ui.PlayerView
                 android:id="@+id/pvMain"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:use_controller="true"
-                app:controller_show_timeout_ms="5000"/>
+                android:layout_height="match_parent"/>
 
-            <!-- Kenarlarda gesture alanı, ortası boş: timeline ve tıklama PlayerView'e gider -->
             <LinearLayout
                 android:id="@+id/overlayContainer"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="horizontal"
-                android:gravity="center_horizontal">
+                android:layout_marginBottom="72dp">
 
                 <View
                     android:id="@+id/overlayLeft"
-                    android:layout_width="80dp"
-                    android:layout_height="match_parent" />
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
 
                 <View
                     android:id="@+id/overlayRight"
-                    android:layout_width="80dp"
-                    android:layout_height="match_parent" />
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
             </LinearLayout>
 
             <TextView
@@ -2605,6 +2584,7 @@ jobs:
                     android:layout_height="56dp"
                     android:background="@android:color/transparent"
                     android:src="@android:drawable/ic_menu_crop"
+                    android:padding="8dp"
                     android:tint="@android:color/white"/>
             </LinearLayout>
         </FrameLayout>
@@ -2686,15 +2666,3 @@ jobs:
         echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
-
----
-
-Bunu aynen workflow’a yapıştırıp çalıştır.  
-Sonra player’da özellikle şunları bir dene:
-
-- Yayın aç → timeline ilk geldiğinde **orta alanda** ileri/geri sar.
-- Timeline kaybolunca yine **ortaya tek tık** yap → tekrar çıkması lazım.
-- Sol kenara çift tık: 15 sn geri, sağ kenara çift tık: 15 sn ileri.
-- Alt sağdaki ekran boyutu ikonunun büyüdüğünü göreceksin.
-
-Bir sonraki adımda istersen ikonun şeklini de sana özel bir SVG / PNG ile değiştirebiliriz.
