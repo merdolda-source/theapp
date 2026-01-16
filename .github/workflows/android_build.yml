@@ -2090,7 +2090,7 @@ jobs:
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Hesap Tipi"
+                android:text="Giriş Tipi"
                 android:textColor="@color/white"
                 android:textSize="14sp"
                 android:layout_marginBottom="4dp"/>
@@ -2148,11 +2148,11 @@ jobs:
                 android:id="@+id/etName"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:hint="Hesap Adı (ör: Salon TV)"
+                android:hint="örnek bir isim"
                 android:background="@drawable/bg_input_dark"
                 android:padding="10dp"
                 android:textColor="@color/white"
-                android:textColorHint="@color/hint_yellow"
+                android:textColorHint="@color/white"
                 android:inputType="textPersonName"
                 android:layout_marginBottom="8dp"/>
 
@@ -2166,11 +2166,11 @@ jobs:
                     android:id="@+id/etDns"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:hint="Xtream DNS / URL (ör: http://sunucu:8080)"
+                    android:hint="Xtream Url girin"
                     android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
                     android:textColor="@color/white"
-                    android:textColorHint="@color/hint_yellow"
+                    android:textColorHint="@color/white"
                     android:inputType="textUri"
                     android:layout_marginBottom="8dp"/>
 
@@ -2178,11 +2178,11 @@ jobs:
                     android:id="@+id/etUser"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:hint="Xtream Kullanıcı Adı"
+                    android:hint="Kullanıcı Adı"
                     android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
                     android:textColor="@color/white"
-                    android:textColorHint="@color/hint_yellow"
+                    android:textColorHint="@color/white"
                     android:inputType="textEmailAddress"
                     android:layout_marginBottom="8dp"/>
 
@@ -2190,12 +2190,12 @@ jobs:
                     android:id="@+id/etPass"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:hint="Xtream Şifre"
+                    android:hint=" Şifre"
                     android:inputType="textVisiblePassword"
                     android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
                     android:textColor="@color/white"
-                    android:textColorHint="@color/hint_yellow"
+                    android:textColorHint="@color/white"
                     android:layout_marginBottom="8dp"/>
             </LinearLayout>
 
@@ -2210,7 +2210,7 @@ jobs:
                     android:id="@+id/etM3u"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:hint="M3U Linki (ör: http://site/get.php?...)"
+                    android:hint="M3U Linki Giriniz"
                     android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
                     android:textColor="@color/white"
@@ -2223,7 +2223,7 @@ jobs:
                 android:id="@+id/btnAddAccount"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
-                android:text="HESAP EKLE"
+                android:text="Kullanıcı EKLE"
                 android:textStyle="bold"
                 android:textColor="@color/black"
                 android:background="@color/accent_green"
@@ -2240,7 +2240,7 @@ jobs:
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Aşağıdaki kayıtlı hesaplardan birine dokunarak giriş yapın."
+                android:text="EKLENEN KULLANICILARDAN GIRIS YAPIN"
                 android:textColor="@color/hint_yellow"
                 android:textSize="12sp"
                 android:layout_marginBottom="4dp"/>
