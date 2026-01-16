@@ -18,7 +18,7 @@ jobs:
     steps:
     - name: 1. Depo Çekme
       uses: actions/checkout@v4
-
+    
     - name: 2. Java 17 Kurulumu
       uses: actions/setup-java@v4
       with:
@@ -37,8 +37,8 @@ jobs:
         STORE_PASS="${ANDROID_KEYSTORE_PASSWORD:-$PASS}"
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
-
-        echo "🚀 ERDIN Player Projesi Üretiliyor (TV+Mobil, Dil Global, Drawer Yok)..."
+        
+        echo "🚀 EMİN XTREAM Player Projesi Üretiliyor..."
 
         rm -rf "$APP_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME"
@@ -50,7 +50,9 @@ jobs:
         mkdir -p "$APP_NAME/app/src/main/res/values-tr"
         mkdir -p "$APP_NAME/app/src/main/res/drawable"
         mkdir -p "$APP_NAME/app/src/main/res/mipmap-hdpi"
-
+        mkdir -p "$APP_NAME/app/src/main/res/menu"
+        mkdir -p "$APP_NAME/app/src/main/res/color"
+        
         cd "$APP_NAME"
 
         wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://i.ibb.co/LDdzzhsk/f564b0ed-277d-489c-9a1a-c59f0fe471fc.png"
@@ -128,7 +130,9 @@ jobs:
                 sourceCompatibility JavaVersion.VERSION_17
                 targetCompatibility JavaVersion.VERSION_17
             }
-            kotlinOptions { jvmTarget = '17' }
+            kotlinOptions {
+                jvmTarget = '17'
+            }
         }
 
         dependencies {
@@ -136,6 +140,7 @@ jobs:
             implementation 'androidx.appcompat:appcompat:1.6.1'
             implementation 'com.google.android.material:material:1.9.0'
             implementation 'androidx.recyclerview:recyclerview:1.3.0'
+            implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
 
             implementation 'androidx.media3:media3-exoplayer:1.1.0'
             implementation 'androidx.media3:media3-ui:1.1.0'
@@ -143,13 +148,11 @@ jobs:
             implementation 'androidx.media3:media3-exoplayer-dash:1.1.0'
 
             implementation 'com.github.bumptech.glide:glide:4.15.1'
+
             implementation 'com.google.android.gms:play-services-ads:23.4.0'
         }
         EOF
 
-        # -----------------------------
-        # RES / THEME
-        # -----------------------------
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
             <color name="bg_dark">#050608</color>
@@ -159,8 +162,8 @@ jobs:
             <color name="black">#000000</color>
             <color name="gray_800">#1C1C1E</color>
             <color name="error_red">#FF5252</color>
+            <color name="drawer_bg">#0B0D10</color>
             <color name="hint_yellow">#FFD600</color>
-            <color name="focus_gold">#FFD54F</color>
         </resources>
         EOF
 
@@ -176,43 +179,9 @@ jobs:
         </resources>
         EOF
 
-        # -----------------------------
-        # STRINGS (EN default + TR)
-        # -----------------------------
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
-
-            <string name="lang_title">Select Language</string>
-            <string name="lang_en">English</string>
-            <string name="lang_tr">Türkçe</string>
-
-            <string name="login_type">Login Type</string>
-            <string name="xtream">Xtream</string>
-            <string name="m3u">M3U</string>
-            <string name="example_name">example name</string>
-            <string name="enter_xtream_url">Enter Xtream URL</string>
-            <string name="username">Username</string>
-            <string name="password">Password</string>
-            <string name="enter_m3u">Enter M3U URL</string>
-            <string name="add_account">Add Account</string>
-
-            <string name="saved_accounts">Saved Accounts</string>
-            <string name="saved_accounts_hint">Select an account below to continue</string>
-
-            <string name="live_tv">Live TV</string>
-            <string name="movies">Movies</string>
-            <string name="series">Series</string>
-
-            <string name="categories">Categories</string>
-            <string name="back">Back</string>
-            <string name="account">Account</string>
-
-            <string name="logout">Logout</string>
-            <string name="switch_account">Switch Account</string>
-            <string name="active_account">Active Account</string>
-            <string name="expire">Expire</string>
-
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
@@ -222,46 +191,20 @@ jobs:
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
-
-            <string name="lang_title">Dil Seçimi</string>
-            <string name="lang_en">İngilizce</string>
-            <string name="lang_tr">Türkçe</string>
-
-            <string name="login_type">Giriş Tipi</string>
-            <string name="xtream">Xtream</string>
-            <string name="m3u">M3U</string>
-            <string name="example_name">örnek bir isim</string>
-            <string name="enter_xtream_url">Xtream URL girin</string>
-            <string name="username">Kullanıcı Adı</string>
-            <string name="password">Şifre</string>
-            <string name="enter_m3u">M3U Linki Giriniz</string>
-            <string name="add_account">Kullanıcı EKLE</string>
-
-            <string name="saved_accounts">Kayıtlı Hesaplar</string>
-            <string name="saved_accounts_hint">Aşağıdan bir hesap seçerek devam et</string>
-
-            <string name="live_tv">Canlı TV</string>
-            <string name="movies">Filmler</string>
-            <string name="series">Diziler</string>
-
-            <string name="categories">Kategoriler</string>
-            <string name="back">Geri</string>
-            <string name="account">Hesap</string>
-
-            <string name="logout">Çıkış</string>
-            <string name="switch_account">Hesap Değiştir</string>
-            <string name="active_account">Aktif Hesap</string>
-            <string name="expire">Bitiş</string>
-
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
         </resources>
         EOF
 
-        # -----------------------------
-        # DRAWABLES (focus + inputs)
-        # -----------------------------
+        cat <<EOF > app/src/main/res/drawable/bg_input.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <solid android:color="@color/white"/>
+            <corners android:radius="10dp"/>
+            <stroke android:width="2dp" android:color="@color/accent_green"/>
+        </shape>
+        EOF
+
         cat <<EOF > app/src/main/res/drawable/bg_input_dark.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="@color/gray_800"/>
@@ -270,28 +213,89 @@ jobs:
         </shape>
         EOF
 
-        cat <<EOF > app/src/main/res/drawable/bg_row_focus.xml
+        cat <<EOF > app/src/main/res/drawable/bg_header_card.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <corners android:radius="16dp"/>
+            <gradient
+                android:startColor="@color/accent_green"
+                android:endColor="@color/bordo"
+                android:angle="135"/>
+            <padding
+                android:left="12dp"
+                android:top="12dp"
+                android:right="12dp"
+                android:bottom="12dp"/>
+        </shape>
+        EOF
+
+        cat <<EOF > app/src/main/res/drawable/bg_account_card.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <solid android:color="@color/gray_800"/>
+            <corners android:radius="18dp"/>
+            <stroke android:width="1dp" android:color="@color/bordo"/>
+            <padding android:left="16dp" android:top="14dp" android:right="16dp" android:bottom="14dp"/>
+        </shape>
+        EOF
+
+        cat <<EOF > app/src/main/res/color/nav_item_text.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
-            <item android:state_focused="true">
-                <shape>
-                    <solid android:color="@color/gray_800"/>
-                    <stroke android:width="2dp" android:color="@color/focus_gold"/>
-                    <corners android:radius="14dp"/>
-                </shape>
-            </item>
-            <item>
-                <shape>
-                    <solid android:color="@color/gray_800"/>
-                    <stroke android:width="1dp" android:color="@color/bordo"/>
-                    <corners android:radius="14dp"/>
-                </shape>
-            </item>
+            <item android:state_checked="true" android:color="@color/accent_green"/>
+            <item android:color="@color/white"/>
         </selector>
         EOF
 
-        # -----------------------------
-        # MODELS
-        # -----------------------------
+        cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
+        <menu xmlns:android="http://schemas.android.com/apk/res/android">
+            <item
+                android:id="@+id/nav_live"
+                android:icon="@android:drawable/ic_media_play"
+                android:title="Canlı TV" />
+            <item
+                android:id="@+id/nav_vod"
+                android:icon="@android:drawable/ic_menu_slideshow"
+                android:title="Filmler" />
+            <item
+                android:id="@+id/nav_series"
+                android:icon="@android:drawable/ic_menu_agenda"
+                android:title="Diziler" />
+        </menu>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/nav_header.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:background="@color/drawer_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_header_card">
+
+                <TextView
+                    android:id="@+id/tvHeaderUser"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Kullanıcı: -"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/tvHeaderExpire"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bitiş: -"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+        </LinearLayout>
+        EOF
+
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
 
@@ -320,11 +324,182 @@ jobs:
             val referer: String?,
             val origin: String?
         )
+
+        data class EpisodeItem(
+            val id: String,
+            val title: String,
+            val seasonNumber: Int,
+            val episodeNumber: Int,
+            val container_extension: String?
+        )
         EOF
 
-        # -----------------------------
-        # PREFS (lang + accounts)
-        # -----------------------------
+        cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
+        package $PACKAGE_NAME.utils
+
+        import android.content.Context
+        import android.util.Log
+        import org.json.JSONObject
+        import java.net.HttpURLConnection
+        import java.net.URL
+        import $PACKAGE_NAME.R
+
+        object RemoteConfig {
+
+            private const val TAG = "RemoteConfig"
+            private const val CONFIG_URL = "https://creatorapp24.com/erdin/api/config.php"
+
+            @Volatile
+            private var initialized = false
+
+            @Volatile
+            private var admobAppId: String? = null
+
+            @Volatile
+            private var bannerId: String? = null
+
+            @Volatile
+            private var interstitialId: String? = null
+
+            @Volatile
+            private var channelInterval: Int = 4
+
+            fun init(context: Context) {
+                if (initialized) return
+                synchronized(this) {
+                    if (initialized) return
+                    initialized = true
+
+                    Thread {
+                        try {
+                            val url = URL(CONFIG_URL)
+                            val conn = url.openConnection() as HttpURLConnection
+                            conn.connectTimeout = 8000
+                            conn.readTimeout = 8000
+                            conn.requestMethod = "GET"
+
+                            val code = conn.responseCode
+                            if (code != HttpURLConnection.HTTP_OK) {
+                                Log.w(TAG, "Config HTTP code: " + code)
+                                return@Thread
+                            }
+
+                            val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                            val obj = JSONObject(body)
+
+                            val ads = obj.optJSONObject("ads") ?: obj
+
+                            admobAppId = ads.optString("admob_app_id", null)
+                            bannerId = ads.optString("admob_banner_id", null)
+                            interstitialId = ads.optString("admob_interstitial_id", null)
+
+                            val interval = ads.optInt("channel_interval", 0)
+                            if (interval > 0) {
+                                channelInterval = interval
+                            }
+
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Config load failed: " + (e.message ?: ""))
+                        }
+                    }.start()
+                }
+            }
+
+            fun getBannerId(context: Context): String {
+                init(context)
+                return bannerId ?: context.getString(R.string.admob_banner_test)
+            }
+
+            fun getInterstitialId(context: Context): String {
+                init(context)
+                return interstitialId ?: context.getString(R.string.admob_interstitial_test)
+            }
+
+            fun getChannelInterval(context: Context, defaultInterval: Int): Int {
+                init(context)
+                return if (channelInterval > 0) channelInterval else defaultInterval
+            }
+        }
+        EOF
+
+        cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteLogger.kt
+        package $PACKAGE_NAME.utils
+
+        import android.content.Context
+        import android.os.Build
+        import android.provider.Settings
+        import android.util.Log
+        import java.net.HttpURLConnection
+        import java.net.URL
+        import java.net.URLEncoder
+
+        object RemoteLogger {
+
+            private const val TAG = "RemoteLogger"
+            private const val EVENT_URL = "https://creatorapp24.com/erdin/api/event.php"
+
+            fun sendEvent(context: Context, type: String, data: Map<String, String>) {
+                Thread {
+                    try {
+                        val appContext = context.applicationContext
+
+                        val deviceId = Settings.Secure.getString(
+                            appContext.contentResolver,
+                            Settings.Secure.ANDROID_ID
+                        ) ?: "unknown"
+
+                        val pkg = appContext.packageName
+                        val verName = try {
+                            appContext.packageManager.getPackageInfo(pkg, 0).versionName ?: "1.0"
+                        } catch (e: Exception) {
+                            "1.0"
+                        }
+
+                        val baseData = HashMap<String, String>()
+                        baseData["type"] = type
+                        baseData["device_id"] = deviceId
+                        baseData["package"] = pkg
+                        baseData["version"] = verName
+                        baseData["brand"] = Build.BRAND ?: ""
+                        baseData["model"] = Build.MODEL ?: ""
+
+                        baseData.putAll(data)
+
+                        val bodyBuilder = StringBuilder()
+                        var first = true
+                        for ((k, v) in baseData) {
+                            if (!first) bodyBuilder.append("&")
+                            first = false
+                            bodyBuilder.append(URLEncoder.encode(k, "UTF-8"))
+                            bodyBuilder.append("=")
+                            bodyBuilder.append(URLEncoder.encode(v, "UTF-8"))
+                        }
+                        val body = bodyBuilder.toString()
+
+                        val url = URL(EVENT_URL)
+                        val conn = url.openConnection() as HttpURLConnection
+                        conn.connectTimeout = 8000
+                        conn.readTimeout = 8000
+                        conn.requestMethod = "POST"
+                        conn.doOutput = true
+                        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+
+                        conn.outputStream.use { os ->
+                            os.write(body.toByteArray(Charsets.UTF_8))
+                        }
+
+                        val code = conn.responseCode
+                        if (code != HttpURLConnection.HTTP_OK) {
+                            Log.w(TAG, "Event HTTP code: " + code)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "sendEvent failed: " + (e.message ?: ""))
+                    }
+                }.start()
+            }
+        }
+        EOF
+
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
@@ -362,6 +537,7 @@ jobs:
                 saveArray(arr)
 
                 p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
+
                 return id
             }
 
@@ -381,6 +557,7 @@ jobs:
                 saveArray(arr)
 
                 p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
+
                 return id
             }
 
@@ -392,7 +569,7 @@ jobs:
                     val o = arr.optJSONObject(i)
                     if (o != null) {
                         val id = o.optInt("id", 0)
-                        val name = o.optString("name", "Account " + i)
+                        val name = o.optString("name", "Hesap " + i)
                         val type = o.optString("type", "XTREAM")
                         val dns = o.optString("dns", null)
                         val user = o.optString("user", null)
@@ -411,7 +588,9 @@ jobs:
                 var i = 0
                 while (i < arr.length()) {
                     val o = arr.optJSONObject(i)
-                    if (o != null && o.optInt("id", 0) != id) newArr.put(o)
+                    if (o != null && o.optInt("id", 0) != id) {
+                        newArr.put(o)
+                    }
                     i++
                 }
                 saveArray(newArr)
@@ -424,7 +603,9 @@ jobs:
                 }
             }
 
-            fun setActive(id: Int) { p.edit().putInt("active_id", id).apply() }
+            fun setActive(id: Int) {
+                p.edit().putInt("active_id", id).apply()
+            }
 
             fun getActive(): AccountProfile? {
                 val all = getAccounts()
@@ -434,63 +615,206 @@ jobs:
                 return all.find { it.id == activeId } ?: all[0]
             }
 
-            fun setLastScreen(screen: String) { p.edit().putString("last_screen", screen).apply() }
-            fun getLastScreen(): String = p.getString("last_screen", "LOGIN") ?: "LOGIN"
+            fun save(dns: String, u: String, ps: String) {
+                val name = if (u.isNotEmpty()) u else "Xtream"
+                createXtreamAccount(name, dns, u, ps)
+            }
 
-            fun setLastMode(mode: String) { p.edit().putString("last_mode", mode).apply() }
-            fun getLastMode(): String = p.getString("last_mode", "LIVE") ?: "LIVE"
+            fun getDns(): String = getActive()?.dns ?: ""
+            fun getUser(): String = getActive()?.user ?: ""
+            fun getPass(): String = getActive()?.pass ?: ""
 
-            fun setLang(lang: String) { p.edit().putString("lang", lang).apply() }
-            fun getLang(): String = p.getString("lang", "en") ?: "en"
+            fun setLastScreen(screen: String) {
+                p.edit().putString("last_screen", screen).apply()
+            }
+
+            fun getLastScreen(): String {
+                return p.getString("last_screen", "LOGIN") ?: "LOGIN"
+            }
+
+            fun setLastMode(mode: String) {
+                p.edit().putString("last_mode", mode).apply()
+            }
+
+            fun getLastMode(): String {
+                return p.getString("last_mode", "LIVE") ?: "LIVE"
+            }
+
+            fun setLang(lang: String) {
+                p.edit().putString("lang", lang).apply()
+            }
+
+            fun getLang(): String {
+                return p.getString("lang", "en") ?: "en"
+            }
         }
         EOF
 
-        # -----------------------------
-        # LOCALE (GLOBAL)
-        # -----------------------------
-        cat <<EOF > app/src/main/java/$PATH_NAME/utils/LocaleManager.kt
+        # --- DİL YÖNETİCİSİ: API'den çeken LangManager ---
+        cat <<EOF > app/src/main/java/$PATH_NAME/utils/LangManager.kt
         package $PACKAGE_NAME.utils
 
         import android.content.Context
-        import android.content.res.Configuration
-        import java.util.Locale
+        import android.util.Log
+        import org.json.JSONObject
+        import java.net.HttpURLConnection
+        import java.net.URL
 
-        object LocaleManager {
+        object LangManager {
 
-            fun wrap(ctx: Context, lang: String): Context {
-                val locale = Locale(lang)
-                Locale.setDefault(locale)
+            private const val TAG = "LangManager"
+            private const val URL_BASE =
+                "https://creatorapp24.com/erdin/api/lang.php?app=erdinplayer&lang="
 
-                val config = Configuration(ctx.resources.configuration)
-                config.setLocale(locale)
-                config.setLayoutDirection(locale)
+            @Volatile
+            private var cache: JSONObject? = null
 
-                return ctx.createConfigurationContext(config)
+            fun restoreFromPrefs(context: Context, lang: String) {
+                val p = context.applicationContext.getSharedPreferences("EP_Lang", 0)
+                val savedCode = p.getString("lang_code", null)
+                val savedJson = p.getString("lang_json", null)
+
+                if (savedCode == lang && savedJson != null) {
+                    try {
+                        cache = JSONObject(savedJson)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+
+            fun init(context: Context, lang: String) {
+                Thread {
+                    try {
+                        val url = URL(URL_BASE + lang)
+                        val conn = url.openConnection() as HttpURLConnection
+                        conn.connectTimeout = 8000
+                        conn.readTimeout = 8000
+                        conn.requestMethod = "GET"
+
+                        val code = conn.responseCode
+                        if (code != HttpURLConnection.HTTP_OK) {
+                            Log.w(TAG, "Lang HTTP code: " + code)
+                            return@Thread
+                        }
+
+                        val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                        val obj = JSONObject(body)
+                        val strings = obj.optJSONObject("strings") ?: return@Thread
+
+                        cache = strings
+
+                        val p = context.applicationContext.getSharedPreferences("EP_Lang", 0)
+                        p.edit()
+                            .putString("lang_code", lang)
+                            .putString("lang_json", strings.toString())
+                            .apply()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Lang load failed: " + (e.message ?: ""))
+                    }
+                }.start()
+            }
+
+            fun t(context: Context, key: String, fallback: String): String {
+                val local = cache
+                if (local != null) {
+                    val v = local.optString(key, "")
+                    if (v.isNotEmpty()) return v
+                }
+
+                val p = context.applicationContext.getSharedPreferences("EP_Lang", 0)
+                val savedJson = p.getString("lang_json", null)
+                if (savedJson != null) {
+                    try {
+                        val obj = JSONObject(savedJson)
+                        val v2 = obj.optString(key, "")
+                        if (v2.isNotEmpty()) return v2
+                    } catch (_: Exception) {
+                    }
+                }
+
+                return fallback
             }
         }
         EOF
 
-        cat <<EOF > app/src/main/java/$PATH_NAME/BaseActivity.kt
-        package $PACKAGE_NAME
+        cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
+        package $PACKAGE_NAME.utils
 
+        import android.app.Activity
         import android.content.Context
-        import androidx.appcompat.app.AppCompatActivity
-        import $PACKAGE_NAME.utils.Prefs
-        import $PACKAGE_NAME.utils.LocaleManager
+        import com.google.android.gms.ads.AdRequest
+        import com.google.android.gms.ads.AdView
+        import com.google.android.gms.ads.MobileAds
+        import com.google.android.gms.ads.interstitial.InterstitialAd
+        import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+        import com.google.android.gms.ads.LoadAdError
 
-        open class BaseActivity : AppCompatActivity() {
-            override fun attachBaseContext(newBase: Context) {
-                val prefs = Prefs(newBase)
-                val lang = prefs.getLang()
-                super.attachBaseContext(LocaleManager.wrap(newBase, lang))
+        object AdsHelper {
+            @Volatile
+            private var initialized = false
+
+            private var interstitial: InterstitialAd? = null
+            private var clickCount = 0
+
+            var CHANNEL_INTERVAL = 4
+
+            fun init(context: Context) {
+                if (!initialized) {
+                    synchronized(this) {
+                        if (!initialized) {
+                            MobileAds.initialize(context.applicationContext) {}
+                            initialized = true
+                        }
+                    }
+                }
+                RemoteConfig.init(context)
+                CHANNEL_INTERVAL = RemoteConfig.getChannelInterval(context, CHANNEL_INTERVAL)
+            }
+
+            fun loadBanner(adView: AdView?) {
+                if (adView == null) return
+                val id = RemoteConfig.getBannerId(adView.context)
+                try {
+                    adView.adUnitId = id
+                } catch (_: Exception) { }
+                val request = AdRequest.Builder().build()
+                adView.loadAd(request)
+            }
+
+            fun loadInterstitial(context: Context) {
+                val adUnitId = RemoteConfig.getInterstitialId(context)
+                val request = AdRequest.Builder().build()
+                InterstitialAd.load(
+                    context,
+                    adUnitId,
+                    request,
+                    object : InterstitialAdLoadCallback() {
+                        override fun onAdLoaded(ad: InterstitialAd) {
+                            interstitial = ad
+                        }
+                        override fun onAdFailedToLoad(error: LoadAdError) {
+                            interstitial = null
+                        }
+                    }
+                )
+            }
+
+            fun maybeShowOnChannelClick(activity: Activity, onContinue: () -> Unit) {
+                clickCount++
+                val ad = interstitial
+                if (ad != null && CHANNEL_INTERVAL > 0 && (clickCount % CHANNEL_INTERVAL == 0)) {
+                    ad.show(activity)
+                    interstitial = null
+                    loadInterstitial(activity)
+                    onContinue()
+                } else {
+                    onContinue()
+                }
             }
         }
         EOF
 
-        # -----------------------------
-        # ADAPTER (TV focusable row)
-        # -----------------------------
-        cat <<EOF > app/src/main/java/$PATH_NAME/adapters/RowAdapter.kt
+        cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
 
         import android.view.LayoutInflater
@@ -499,49 +823,110 @@ jobs:
         import android.widget.TextView
         import androidx.recyclerview.widget.RecyclerView
         import $PACKAGE_NAME.R
+        import $PACKAGE_NAME.models.StreamItem
 
-        class RowAdapter(
-            private val items: List<String>,
-            private val onClick: (Int) -> Unit
-        ) : RecyclerView.Adapter<RowAdapter.VH>() {
+        class GridAdapter(
+            private val list: List<StreamItem>,
+            private val onClick: (StreamItem) -> Unit
+        ) : RecyclerView.Adapter<GridAdapter.VH>() {
 
             class VH(v: View) : RecyclerView.ViewHolder(v) {
-                val txt: TextView = v.findViewById(R.id.txtRow)
+                val txt: TextView = v.findViewById(R.id.txtName)
             }
 
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_row, parent, false)
-                v.isFocusable = true
-                v.isFocusableInTouchMode = true
+                val v = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_grid_pro, parent, false)
                 return VH(v)
             }
 
             override fun onBindViewHolder(holder: VH, position: Int) {
-                holder.txt.text = items[position]
-                holder.itemView.setOnClickListener { onClick(position) }
+                val item = list[position]
+                holder.txt.text = item.name
+                holder.itemView.setOnClickListener { onClick(item) }
             }
 
-            override fun getItemCount(): Int = items.size
+            override fun getItemCount(): Int = list.size
         }
         EOF
 
-        # -----------------------------
-        # LOGIN (language: click -> dialog EN/TR)
-        # -----------------------------
+        cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
+        package $PACKAGE_NAME.adapters
+
+        import android.content.Context
+        import android.view.LayoutInflater
+        import android.view.View
+        import android.view.ViewGroup
+        import android.widget.BaseAdapter
+        import android.widget.ImageButton
+        import android.widget.TextView
+        import $PACKAGE_NAME.R
+        import $PACKAGE_NAME.models.AccountProfile
+
+        class AccountsAdapter(
+            private val ctx: Context,
+            private val items: MutableList<AccountProfile>,
+            private val onOpen: (AccountProfile) -> Unit,
+            private val onDelete: (AccountProfile) -> Unit
+        ) : BaseAdapter() {
+
+            override fun getCount(): Int = items.size
+
+            override fun getItem(position: Int): Any = items[position]
+
+            override fun getItemId(position: Int): Long = items[position].id.toLong()
+
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
+                val v = convertView ?: LayoutInflater.from(ctx)
+                    .inflate(R.layout.item_account, parent, false)
+
+                val txtName = v.findViewById<TextView>(R.id.tvAccountName)
+                val txtType = v.findViewById<TextView>(R.id.tvAccountType)
+                val btnDelete = v.findViewById<ImageButton>(R.id.btnDeleteAccount)
+
+                val item = items[position]
+                txtName.text = item.name
+                txtType.text = if (item.type == "M3U") "M3U" else "Xtream"
+
+                v.setOnClickListener {
+                    onOpen(item)
+                }
+
+                btnDelete.setOnClickListener {
+                    onDelete(item)
+                }
+
+                return v
+            }
+
+            fun update(newItems: List<AccountProfile>) {
+                items.clear()
+                items.addAll(newItems)
+                notifyDataSetChanged()
+            }
+        }
+        EOF
+
+        # --- DİL İKONLU, API TABANLI LOGIN ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
         import android.content.Intent
         import android.os.Bundle
+        import android.view.View
         import android.widget.*
         import androidx.appcompat.app.AlertDialog
+        import androidx.appcompat.app.AppCompatActivity
+        import androidx.core.content.ContextCompat
         import com.google.android.gms.ads.AdView
         import $PACKAGE_NAME.adapters.AccountsAdapter
         import $PACKAGE_NAME.models.AccountProfile
         import $PACKAGE_NAME.utils.AdsHelper
         import $PACKAGE_NAME.utils.Prefs
+        import $PACKAGE_NAME.utils.RemoteLogger
+        import $PACKAGE_NAME.utils.LangManager
 
-        class LoginActivity : BaseActivity() {
+        class LoginActivity : AppCompatActivity() {
 
             private var isXtream = true
             private var accountsAdapter: AccountsAdapter? = null
@@ -552,42 +937,34 @@ jobs:
 
                 val prefs = Prefs(this)
 
+                // Son açılışta içerikte kalmışsa oradan devam et
                 val lastScreen = prefs.getLastScreen()
                 val activeStartup = prefs.getActive()
                 if (lastScreen == "CONTENT" && activeStartup != null) {
-                    startActivity(Intent(this, ContentActivity::class.java))
+                    val i = Intent(this, ContentActivity::class.java)
+                    startActivity(i)
                     finish()
                     return
                 }
+
+                // Dil ayarı
+                val lang = prefs.getLang()
+                LangManager.restoreFromPrefs(this, lang)
+                LangManager.init(this, lang)
+
+                RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
 
                 AdsHelper.init(this)
                 val adTop = findViewById<AdView>(R.id.adViewTopLogin)
                 AdsHelper.loadBanner(adTop)
                 AdsHelper.loadInterstitial(this)
 
-                val layoutLang = findViewById<LinearLayout>(R.id.layoutLang)
-                val tvLang = findViewById<TextView>(R.id.tvLangLine)
+                val tvTitle = findViewById<TextView>(R.id.tvTitle)
+                val tvLoginType = findViewById<TextView>(R.id.tvLoginType)
+                val tvAccountsTitle = findViewById<TextView>(R.id.tvAccountsTitle)
+                val tvAccountsHint = findViewById<TextView>(R.id.tvAccountsHint)
 
-                fun updateLangLine() {
-                    val lang = prefs.getLang()
-                    tvLang.text = if (lang == "tr") "TR" else "EN"
-                }
-                updateLangLine()
-
-                layoutLang.setOnClickListener {
-                    val items = arrayOf(getString(R.string.lang_en), getString(R.string.lang_tr))
-                    AlertDialog.Builder(this)
-                        .setTitle(getString(R.string.lang_title))
-                        .setItems(items) { _, which ->
-                            val newLang = if (which == 1) "tr" else "en"
-                            prefs.setLang(newLang)
-                            // restart to apply globally
-                            val i = intent
-                            finish()
-                            startActivity(i)
-                        }
-                        .show()
-                }
+                val btnLang = findViewById<ImageButton>(R.id.btnLangLogin)
 
                 val etName = findViewById<EditText>(R.id.etName)
                 val etDns = findViewById<EditText>(R.id.etDns)
@@ -595,35 +972,71 @@ jobs:
                 val etPass = findViewById<EditText>(R.id.etPass)
                 val etM3u = findViewById<EditText>(R.id.etM3u)
 
-                val layoutXtream = findViewById<LinearLayout>(R.id.layoutXtream)
-                val layoutM3u = findViewById<LinearLayout>(R.id.layoutM3u)
+                val layoutXtream = findViewById<View>(R.id.layoutXtream)
+                val layoutM3u = findViewById<View>(R.id.layoutM3u)
 
-                val cardXtream = findViewById<LinearLayout>(R.id.cardXtream)
-                val cardM3u = findViewById<LinearLayout>(R.id.cardM3u)
+                val cardXtream = findViewById<View>(R.id.cardXtream)
+                val cardM3u = findViewById<View>(R.id.cardM3u)
+                val tvXtream = findViewById<TextView>(R.id.tvXtream)
+                val tvM3u = findViewById<TextView>(R.id.tvM3u)
 
                 val btnAdd = findViewById<Button>(R.id.btnAddAccount)
                 val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
 
+                fun applyLanguageTexts() {
+                    tvTitle.text = LangManager.t(this, "login_title", "Emin Xtream Player")
+                    tvLoginType.text = LangManager.t(this, "login_type", "Login Type")
+                    tvXtream.text = LangManager.t(this, "login_xtream", "Xtream")
+                    tvM3u.text = LangManager.t(this, "login_m3u", "M3U")
+
+                    etName.hint = LangManager.t(this, "login_name_hint", "example name")
+                    etDns.hint = LangManager.t(this, "login_dns_hint", "Enter Xtream URL")
+                    etUser.hint = LangManager.t(this, "login_user_hint", "Username")
+                    etPass.hint = LangManager.t(this, "login_pass_hint", "Password")
+                    etM3u.hint = LangManager.t(this, "login_m3u_hint", "Enter M3U URL")
+
+                    btnAdd.text = LangManager.t(this, "login_add_button", "Add Account")
+                    tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "Saved Accounts")
+                    tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Select an account below to continue")
+                }
+
+                applyLanguageTexts()
+
+                btnLang.setOnClickListener {
+                    showLanguageDialog(prefs)
+                }
+
                 fun updateTypeUI() {
                     if (isXtream) {
-                        layoutXtream.visibility = android.view.View.VISIBLE
-                        layoutM3u.visibility = android.view.View.GONE
-                        cardXtream.alpha = 1f
-                        cardM3u.alpha = 0.55f
+                        layoutXtream.visibility = View.VISIBLE
+                        layoutM3u.visibility = View.GONE
+
+                        cardXtream.background = ContextCompat.getDrawable(this, R.drawable.bg_header_card)
+                        cardM3u.background = ContextCompat.getDrawable(this, R.drawable.bg_input_dark)
                     } else {
-                        layoutXtream.visibility = android.view.View.GONE
-                        layoutM3u.visibility = android.view.View.VISIBLE
-                        cardM3u.alpha = 1f
-                        cardXtream.alpha = 0.55f
+                        layoutXtream.visibility = View.GONE
+                        layoutM3u.visibility = View.VISIBLE
+
+                        cardM3u.background = ContextCompat.getDrawable(this, R.drawable.bg_header_card)
+                        cardXtream.background = ContextCompat.getDrawable(this, R.drawable.bg_input_dark)
                     }
                 }
 
-                cardXtream.setOnClickListener { isXtream = true; updateTypeUI() }
-                cardM3u.setOnClickListener { isXtream = false; updateTypeUI() }
+                cardXtream.setOnClickListener {
+                    isXtream = true
+                    updateTypeUI()
+                }
+
+                cardM3u.setOnClickListener {
+                    isXtream = false
+                    updateTypeUI()
+                }
+
                 updateTypeUI()
 
                 fun refreshList() {
                     val accounts: MutableList<AccountProfile> = prefs.getAccounts().toMutableList()
+
                     if (accountsAdapter == null) {
                         accountsAdapter = AccountsAdapter(
                             this,
@@ -631,18 +1044,50 @@ jobs:
                             onOpen = { acc ->
                                 prefs.setActive(acc.id)
                                 prefs.setLastScreen("CONTENT")
-                                startActivity(Intent(this, ContentActivity::class.java))
-                                finish()
+                                val i = Intent(this, ContentActivity::class.java)
+                                startActivity(i)
                             },
                             onDelete = { acc ->
-                                AlertDialog.Builder(this)
-                                    .setTitle("Delete")
-                                    .setMessage("Delete \"" + acc.name + "\" ?")
-                                    .setPositiveButton("Yes") { _, _ ->
-                                        prefs.deleteAccount(acc.id); refreshList()
+                                val dialog = AlertDialog.Builder(this)
+                                    .setTitle(
+                                        LangManager.t(
+                                            this,
+                                            "login_delete_title",
+                                            "Delete Account"
+                                        )
+                                    )
+                                    .setMessage(
+                                        LangManager.t(
+                                            this,
+                                            "login_delete_message",
+                                            "Delete account?"
+                                        ) + " " + acc.name
+                                    )
+                                    .setPositiveButton(
+                                        LangManager.t(this, "login_yes", "Yes")
+                                    ) { _, _ ->
+                                        prefs.deleteAccount(acc.id)
+                                        refreshList()
                                     }
-                                    .setNegativeButton("No", null)
-                                    .show()
+                                    .setNegativeButton(
+                                        LangManager.t(this, "login_no", "No"),
+                                        null
+                                    )
+                                    .create()
+
+                                dialog.setOnShowListener {
+                                    val positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                                    val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+
+                                    positive?.setTextColor(
+                                        ContextCompat.getColor(this, R.color.accent_green)
+                                    )
+                                    negative?.setTextColor(
+                                        ContextCompat.getColor(this, R.color.error_red)
+                                    )
+                                }
+
+                                dialog.show()
                             }
                         )
                         lvAccounts.adapter = accountsAdapter
@@ -655,24 +1100,82 @@ jobs:
 
                 btnAdd.setOnClickListener {
                     val name = etName.text.toString().trim()
-                    val finalName = if (name.isNotEmpty()) name else "Account"
+                    val finalName = if (name.isNotEmpty()) name else "Hesap"
 
                     if (isXtream) {
                         val d = etDns.text.toString().trim()
                         val u = etUser.text.toString().trim()
                         val p = etPass.text.toString().trim()
+
                         if (d.isEmpty() || u.isEmpty()) {
-                            Toast.makeText(this, "Xtream: url + user required", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this,
+                                LangManager.t(
+                                    this,
+                                    "login_xtream_required",
+                                    "Xtream URL and username required."
+                                ),
+                                Toast.LENGTH_SHORT
+                            ).show()
                             return@setOnClickListener
                         }
+
                         prefs.createXtreamAccount(finalName, d, u, p)
+
+                        RemoteLogger.sendEvent(
+                            this,
+                            "account_xtream_created",
+                            mapOf(
+                                "name" to finalName,
+                                "dns" to d,
+                                "user" to u
+                            )
+                        )
+
+                        Toast.makeText(
+                            this,
+                            LangManager.t(
+                                this,
+                                "login_xtream_added",
+                                "Xtream account added. Select it below to continue."
+                            ),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
                         val m = etM3u.text.toString().trim()
                         if (m.isEmpty()) {
-                            Toast.makeText(this, "M3U cannot be empty", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this,
+                                LangManager.t(
+                                    this,
+                                    "login_m3u_required",
+                                    "M3U URL cannot be empty."
+                                ),
+                                Toast.LENGTH_SHORT
+                            ).show()
                             return@setOnClickListener
                         }
+
                         prefs.createM3uAccount(finalName, m)
+
+                        RemoteLogger.sendEvent(
+                            this,
+                            "account_m3u_created",
+                            mapOf(
+                                "name" to finalName,
+                                "m3u_prefix" to m.take(160)
+                            )
+                        )
+
+                        Toast.makeText(
+                            this,
+                            LangManager.t(
+                                this,
+                                "login_m3u_added",
+                                "M3U account added. Select it below to continue."
+                            ),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
 
                     etName.setText("")
@@ -680,62 +1183,131 @@ jobs:
                     etUser.setText("")
                     etPass.setText("")
                     etM3u.setText("")
+
                     refreshList()
                 }
+            }
+
+            private fun showLanguageDialog(prefs: Prefs) {
+                val items = arrayOf("English", "Türkçe")
+                val codes = arrayOf("en", "tr")
+                val current = prefs.getLang()
+                var checkedIndex = if (current == "tr") 1 else 0
+
+                val dialog = AlertDialog.Builder(this)
+                    .setTitle("Dil / Language")
+                    .setSingleChoiceItems(items, checkedIndex) { _, which ->
+                        checkedIndex = which
+                    }
+                    .setPositiveButton("OK") { d, _ ->
+                        val newLang = codes[checkedIndex]
+                        if (newLang != current) {
+                            prefs.setLang(newLang)
+                            LangManager.restoreFromPrefs(this, newLang)
+                            LangManager.init(this, newLang)
+                            recreate()
+                        }
+                        d.dismiss()
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .create()
+
+                dialog.show()
             }
         }
         EOF
 
-        # -----------------------------
-        # CONTENT (Drawer yok, LIST flow)
-        # -----------------------------
+        cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
+        package $PACKAGE_NAME
+
+        import android.content.Intent
+        import android.os.Bundle
+        import android.widget.Button
+        import android.widget.TextView
+        import androidx.appcompat.app.AppCompatActivity
+        import $PACKAGE_NAME.utils.Prefs
+
+        class DashboardActivity : AppCompatActivity() {
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_dashboard)
+
+                val prefs = Prefs(this)
+                val tvInfo = findViewById<TextView>(R.id.tvInfo)
+                val active = prefs.getActive()
+                val name = active?.name ?: "-"
+                tvInfo.text = "AKTİF HESAP: " + name
+
+                fun go(mode: String) {
+                    val i = Intent(this, ContentActivity::class.java)
+                    i.putExtra("MODE", mode)
+                    startActivity(i)
+                }
+
+                findViewById<Button>(R.id.btnLive).setOnClickListener { go("LIVE") }
+                findViewById<Button>(R.id.btnVod).setOnClickListener { go("VOD") }
+                findViewById<Button>(R.id.btnSeries).setOnClickListener { go("SERIES") }
+                findViewById<Button>(R.id.btnExit).setOnClickListener { finish() }
+            }
+        }
+        EOF
+
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
         import android.content.Intent
         import android.os.Bundle
+        import android.view.Menu
         import android.view.View
         import android.widget.ProgressBar
         import android.widget.TextView
         import android.widget.Toast
+        import androidx.appcompat.app.AppCompatActivity
+        import androidx.core.view.GravityCompat
+        import androidx.drawerlayout.widget.DrawerLayout
         import androidx.recyclerview.widget.LinearLayoutManager
         import androidx.recyclerview.widget.RecyclerView
         import com.google.android.gms.ads.AdView
+        import com.google.android.material.bottomnavigation.BottomNavigationView
+        import com.google.android.material.navigation.NavigationView
         import org.json.JSONArray
         import org.json.JSONObject
         import java.net.HttpURLConnection
         import java.net.URL
         import java.text.SimpleDateFormat
+        import java.util.ArrayList
         import java.util.Date
         import java.util.Locale
-        import $PACKAGE_NAME.adapters.RowAdapter
+        import $PACKAGE_NAME.adapters.GridAdapter
         import $PACKAGE_NAME.models.AccountProfile
         import $PACKAGE_NAME.models.Category
         import $PACKAGE_NAME.models.StreamItem
         import $PACKAGE_NAME.utils.AdsHelper
         import $PACKAGE_NAME.utils.Prefs
+        import $PACKAGE_NAME.utils.RemoteLogger
+        import $PACKAGE_NAME.utils.LangManager
 
-        class ContentActivity : BaseActivity() {
+        class ContentActivity : AppCompatActivity() {
 
             private lateinit var prefs: Prefs
+            private lateinit var drawer: DrawerLayout
+            private lateinit var navView: NavigationView
+            private lateinit var bottomNav: BottomNavigationView
             private lateinit var rv: RecyclerView
             private lateinit var tvHeader: TextView
-            private lateinit var tvSub: TextView
-            private lateinit var tvAccount: TextView
+            private lateinit var tvHeaderAccounts: TextView
             private lateinit var tvStatus: TextView
             private lateinit var pb: ProgressBar
 
-            private var currentMode: String = "LIVE"
-            private var activeAcc: AccountProfile? = null
-            private var accountType: String = "XTREAM"
+            private lateinit var headerUser: TextView
+            private lateinit var headerExpire: TextView
 
+            private var currentMode: String = "LIVE"
             private var categories: List<Category> = emptyList()
             private var streams: List<StreamItem> = emptyList()
 
-            // navigation state
-            private var level: Int = 0   // 0=categories, 1=items
-            private var selectedCategoryId: String? = null
-            private var selectedCategoryName: String = ""
+            private var activeAcc: AccountProfile? = null
+            private var accountType: String = "XTREAM"
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -744,252 +1316,245 @@ jobs:
                 prefs = Prefs(this)
                 prefs.setLastScreen("CONTENT")
 
+                val lang = prefs.getLang()
+                LangManager.restoreFromPrefs(this, lang)
+                LangManager.init(this, lang)
+
                 AdsHelper.init(this)
-                findViewById<AdView>(R.id.adViewTopContent)?.let { AdsHelper.loadBanner(it) }
-                findViewById<AdView>(R.id.adViewBottomContent)?.let { AdsHelper.loadBanner(it) }
+                val adTop = findViewById<AdView>(R.id.adViewTopContent)
+                val adBottom = findViewById<AdView>(R.id.adViewBottomContent)
+                AdsHelper.loadBanner(adTop)
+                AdsHelper.loadBanner(adBottom)
                 AdsHelper.loadInterstitial(this)
 
+                drawer = findViewById(R.id.drawerLayout)
+                navView = findViewById(R.id.navView)
+                bottomNav = findViewById(R.id.bottomNav)
                 rv = findViewById(R.id.rvContent)
                 tvHeader = findViewById(R.id.tvHeader)
-                tvSub = findViewById(R.id.tvSub)
-                tvAccount = findViewById(R.id.tvAccount)
+                tvHeaderAccounts = findViewById(R.id.tvAccounts)
                 tvStatus = findViewById(R.id.tvStatus)
                 pb = findViewById(R.id.pbLoading)
 
                 rv.layoutManager = LinearLayoutManager(this)
-                rv.isFocusable = true
-                rv.descendantFocusability = View.FOCUS_AFTER_DESCENDANTS
 
-                tvAccount.setOnClickListener {
-                    startActivity(Intent(this, AccountActivity::class.java))
+                val headerView = navView.getHeaderView(0)
+                headerUser = headerView.findViewById(R.id.tvHeaderUser)
+                headerExpire = headerView.findViewById(R.id.tvHeaderExpire)
+
+                tvHeaderAccounts.text = LangManager.t(
+                    this,
+                    "content_accounts",
+                    "Hesaplar / Çıkış"
+                )
+
+                tvHeader.setOnClickListener {
+                    drawer.openDrawer(GravityCompat.START)
                 }
 
-                // header click: back in list hierarchy
-                tvHeader.setOnClickListener {
-                    if (level == 1) {
-                        showCategories()
+                tvHeaderAccounts.setOnClickListener {
+                    prefs.setLastScreen("LOGIN")
+                    val i = Intent(this, LoginActivity::class.java)
+                    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(i)
+                    finish()
+                }
+
+                navView.setNavigationItemSelectedListener { item ->
+                    val idx = item.itemId
+                    if (idx in categories.indices) {
+                        val cat = categories[idx]
+                        item.isCheckable = true
+                        item.isChecked = true
+                        filterAndShow(cat.category_id)
+                        drawer.closeDrawer(GravityCompat.START)
+                        true
+                    } else {
+                        false
                     }
                 }
 
                 activeAcc = prefs.getActive()
                 if (activeAcc == null) {
-                    tvStatus.text = "No account. Add account first."
+                    tvStatus.text = "Kayıtlı hesap bulunamadı. Önce giriş ekranından hesap ekleyin."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
-
                 accountType = activeAcc?.type ?: "XTREAM"
-                currentMode = if (accountType == "M3U") "LIVE" else prefs.getLastMode()
 
-                // mode title (tap changes mode on mobile, dpad enter works too)
-                tvSub.setOnClickListener {
-                    if (accountType == "M3U") return@setOnClickListener
-                    val next = when (currentMode) {
-                        "LIVE" -> "VOD"
-                        "VOD" -> "SERIES"
-                        else -> "LIVE"
+                bottomNav.setOnItemSelectedListener { item ->
+                    if (accountType == "M3U") {
+                        if (item.itemId == R.id.nav_live) {
+                            prefs.setLastMode("LIVE")
+                            loadMode("LIVE")
+                            true
+                        } else {
+                            Toast.makeText(
+                                this,
+                                "M3U hesabında yalnızca Canlı TV listesi gösterilir.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            false
+                        }
+                    } else {
+                        when (item.itemId) {
+                            R.id.nav_live -> {
+                                prefs.setLastMode("LIVE")
+                                loadMode("LIVE"); true
+                            }
+                            R.id.nav_vod -> {
+                                prefs.setLastMode("VOD")
+                                loadMode("VOD"); true
+                            }
+                            R.id.nav_series -> {
+                                prefs.setLastMode("SERIES")
+                                loadMode("SERIES"); true
+                            }
+                            else -> false
+                        }
                     }
-                    currentMode = next
-                    prefs.setLastMode(next)
-                    fetchCategoriesAndStreams()
+                }
+
+                val lastMode = prefs.getLastMode()
+                val initialMode = if (accountType == "M3U") "LIVE" else lastMode
+                currentMode = initialMode
+
+                bottomNav.selectedItemId = when (initialMode) {
+                    "VOD" -> R.id.nav_vod
+                    "SERIES" -> R.id.nav_series
+                    else -> R.id.nav_live
+                }
+
+                loadMode(initialMode)
+            }
+
+            private fun loadMode(mode: String) {
+                currentMode = if (accountType == "M3U") "LIVE" else mode
+
+                tvHeader.text = when (currentMode) {
+                    "VOD" -> LangManager.t(this, "header_vod", "☰ Filmler")
+                    "SERIES" -> LangManager.t(this, "header_series", "☰ Diziler")
+                    else -> LangManager.t(this, "header_live", "☰ Canlı TV")
                 }
 
                 fetchCategoriesAndStreams()
             }
 
-            private fun setHeaderTexts() {
-                tvHeader.text = if (level == 0) getString(R.string.categories) else getString(R.string.back)
-                tvSub.text = when (currentMode) {
-                    "VOD" -> getString(R.string.movies)
-                    "SERIES" -> getString(R.string.series)
-                    else -> getString(R.string.live_tv)
-                }
-            }
-
             private fun fetchCategoriesAndStreams() {
-                setHeaderTexts()
-
-                val acc = activeAcc ?: return
-
-                pb.visibility = View.VISIBLE
-                tvStatus.visibility = View.GONE
+                val acc = activeAcc
+                if (acc == null) {
+                    tvStatus.text = "Aktif hesap yok."
+                    tvStatus.visibility = View.VISIBLE
+                    return
+                }
 
                 if (acc.type == "M3U") {
                     val m3uUrl = acc.m3u?.trim() ?: ""
                     if (m3uUrl.isEmpty()) {
-                        pb.visibility = View.GONE
-                        tvStatus.text = "M3U link missing."
+                        tvStatus.text = "Bu M3U hesabında link bulunamadı."
                         tvStatus.visibility = View.VISIBLE
                         return
                     }
+
+                    pb.visibility = View.VISIBLE
+                    tvStatus.visibility = View.GONE
 
                     Thread {
                         try {
                             val result = fetchM3u(m3uUrl)
                             val cats = result.first
                             val streamsList = result.second
+
                             runOnUiThread {
                                 pb.visibility = View.GONE
                                 categories = cats
                                 streams = streamsList
-                                showCategories()
+
+                                headerUser.text = "Hesap: " + acc.name
+                                headerExpire.text = "M3U Playlist"
+
+                                populateDrawerCategories()
+                                if (categories.isNotEmpty()) {
+                                    filterAndShow(categories[0].category_id)
+                                } else {
+                                    filterAndShow(null)
+                                }
                             }
                         } catch (e: Exception) {
+                            e.printStackTrace()
                             runOnUiThread {
                                 pb.visibility = View.GONE
-                                tvStatus.text = "M3U failed: " + (e.message ?: "")
+                                tvStatus.text = "M3U okunamadı: " + (e.message ?: "bilinmeyen hata")
                                 tvStatus.visibility = View.VISIBLE
                             }
                         }
                     }.start()
-                    return
-                }
-
-                val dnsRaw = acc.dns?.trim() ?: ""
-                val user = acc.user?.trim() ?: ""
-                val pass = acc.pass?.trim() ?: ""
-                if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                    pb.visibility = View.GONE
-                    tvStatus.text = "DNS / user / pass missing."
-                    tvStatus.visibility = View.VISIBLE
-                    return
-                }
-
-                val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
-                val base = dns + "/player_api.php?username=" + user + "&password=" + pass
-
-                val catAction = when (currentMode) {
-                    "VOD" -> "get_vod_categories"
-                    "SERIES" -> "get_series_categories"
-                    else -> "get_live_categories"
-                }
-                val streamsAction = when (currentMode) {
-                    "VOD" -> "get_vod_streams"
-                    "SERIES" -> "get_series"
-                    else -> "get_live_streams"
-                }
-
-                val catUrl = base + "&action=" + catAction
-                val streamsUrl = base + "&action=" + streamsAction
-
-                Thread {
-                    try {
-                        val accInfo = fetchAccountInfo(base)
-                        val fetchedCategories = fetchCategories(catUrl)
-                        val fetchedStreams = fetchStreams(streamsUrl)
-
-                        runOnUiThread {
-                            pb.visibility = View.GONE
-                            categories = fetchedCategories
-                            streams = fetchedStreams
-
-                            // account info shown in AccountActivity, but keep cached:
-                            showCategories()
-                        }
-                    } catch (e: Exception) {
-                        runOnUiThread {
-                            pb.visibility = View.GONE
-                            tvStatus.text = "Load failed: " + (e.message ?: "")
-                            tvStatus.visibility = View.VISIBLE
-                        }
-                    }
-                }.start()
-            }
-
-            private fun showCategories() {
-                level = 0
-                selectedCategoryId = null
-                selectedCategoryName = ""
-                setHeaderTexts()
-
-                val labels = categories.map { it.category_name }
-                if (labels.isEmpty()) {
-                    tvStatus.text = "No categories."
-                    tvStatus.visibility = View.VISIBLE
-                    rv.adapter = RowAdapter(emptyList()) {}
-                    return
-                }
-
-                tvStatus.visibility = View.GONE
-                rv.adapter = RowAdapter(labels) { index ->
-                    val cat = categories[index]
-                    selectedCategoryId = cat.category_id
-                    selectedCategoryName = cat.category_name
-                    showItemsForCategory(cat.category_id, cat.category_name)
-                }
-                rv.post { rv.requestFocus() }
-            }
-
-            private fun showItemsForCategory(catId: String, catName: String) {
-                level = 1
-                setHeaderTexts()
-
-                val filtered = streams.filter { it.category_id == catId }
-                if (filtered.isEmpty()) {
-                    tvStatus.text = "Empty."
-                    tvStatus.visibility = View.VISIBLE
-                    rv.adapter = RowAdapter(emptyList()) {}
-                    return
-                }
-
-                tvStatus.visibility = View.GONE
-                val labels = filtered.map { it.name }
-
-                rv.adapter = RowAdapter(labels) { idx ->
-                    val item = filtered[idx]
-                    openItem(item)
-                }
-                rv.post { rv.requestFocus() }
-            }
-
-            override fun onBackPressed() {
-                if (level == 1) {
-                    showCategories()
                 } else {
-                    super.onBackPressed()
-                }
-            }
+                    val dnsRaw = acc.dns?.trim() ?: ""
+                    val user = acc.user?.trim() ?: ""
+                    val pass = acc.pass?.trim() ?: ""
 
-            private fun openItem(item: StreamItem) {
-                val acc = activeAcc ?: return
-
-                if (acc.type == "M3U") {
-                    val url = item.full_url ?: ""
-                    if (url.isEmpty()) {
-                        Toast.makeText(this, "Invalid url", Toast.LENGTH_SHORT).show()
+                    if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
+                        tvStatus.text = "DNS / kullanıcı / şifre boş. Giriş ekranına dönün."
+                        tvStatus.visibility = View.VISIBLE
                         return
                     }
-                    val itn = Intent(this, PlayerActivity::class.java)
-                    itn.putExtra("URL", url)
-                    itn.putExtra("REF", item.referer ?: "")
-                    itn.putExtra("ORG", item.origin ?: "")
-                    AdsHelper.maybeShowOnChannelClick(this) { startActivity(itn) }
-                    return
+
+                    val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+                    val base = dns + "/player_api.php?username=" + user + "&password=" + pass
+
+                    val catAction = when (currentMode) {
+                        "VOD" -> "get_vod_categories"
+                        "SERIES" -> "get_series_categories"
+                        else -> "get_live_categories"
+                    }
+
+                    val streamsAction = when (currentMode) {
+                        "VOD" -> "get_vod_streams"
+                        "SERIES" -> "get_series"
+                        else -> "get_live_streams"
+                    }
+
+                    val catUrl = base + "&action=" + catAction
+                    val streamsUrl = base + "&action=" + streamsAction
+
+                    pb.visibility = View.VISIBLE
+                    tvStatus.visibility = View.GONE
+
+                    Thread {
+                        try {
+                            val accInfo = fetchAccountInfo(base)
+                            val fetchedCategories = fetchCategories(catUrl)
+                            val fetchedStreams = fetchStreams(streamsUrl)
+
+                            runOnUiThread {
+                                pb.visibility = View.GONE
+                                categories = fetchedCategories
+                                streams = fetchedStreams
+
+                                val nameToShow = if (acc.name.isNotEmpty()) acc.name else (accInfo.first ?: user)
+                                val expText = formatExp(accInfo.second)
+
+                                headerUser.text = "Kullanıcı: " + nameToShow
+                                headerExpire.text = "Bitiş: " + expText
+
+                                populateDrawerCategories()
+                                if (categories.isNotEmpty()) {
+                                    filterAndShow(categories[0].category_id)
+                                } else {
+                                    filterAndShow(null)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            runOnUiThread {
+                                pb.visibility = View.GONE
+                                tvStatus.text = "Veriler alınamadı: " + (e.message ?: "bilinmeyen hata")
+                                tvStatus.visibility = View.VISIBLE
+                            }
+                        }
+                    }.start()
                 }
-
-                if (currentMode == "SERIES") {
-                    val itn = Intent(this, SeriesDetailActivity::class.java)
-                    itn.putExtra("SERIES_ID", item.series_id ?: "")
-                    itn.putExtra("SERIES_NAME", item.name)
-                    AdsHelper.maybeShowOnChannelClick(this) { startActivity(itn) }
-                    return
-                }
-
-                val dnsRaw = acc.dns?.trim() ?: ""
-                val user = acc.user?.trim() ?: ""
-                val pass = acc.pass?.trim() ?: ""
-                val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
-
-                val path = if (currentMode == "LIVE") "live" else "movie"
-                val ext = if (currentMode == "LIVE") ".ts" else ("." + (item.container_extension ?: "mp4"))
-                val id = item.stream_id ?: ""
-
-                val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
-                val itn = Intent(this, PlayerActivity::class.java)
-                itn.putExtra("URL", playUrl)
-                itn.putExtra("REF", "")
-                itn.putExtra("ORG", "")
-                AdsHelper.maybeShowOnChannelClick(this) { startActivity(itn) }
             }
 
             private fun fetchM3u(urlStr: String): Pair<List<Category>, List<StreamItem>> {
@@ -1003,48 +1568,63 @@ jobs:
                 conn.requestMethod = "GET"
 
                 val code = conn.responseCode
-                if (code != HttpURLConnection.HTTP_OK) return Pair(emptyList(), emptyList())
+                if (code != HttpURLConnection.HTTP_OK) {
+                    return Pair(emptyList(), emptyList())
+                }
 
                 val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                 val lines = body.split("\n")
 
                 var currentName = ""
-                var currentGroup = "General"
+                var currentGroup = "Genel"
                 var currentRef: String? = null
                 var currentOrg: String? = null
 
                 for (raw in lines) {
                     val line = raw.trim()
                     if (line.isEmpty()) continue
-                    if (line.startsWith("#EXTM3U", true)) continue
 
-                    if (line.startsWith("#EXTINF", true)) {
+                    if (line.startsWith("#EXTM3U", ignoreCase = true)) continue
+
+                    if (line.startsWith("#EXTINF", ignoreCase = true)) {
                         var name = ""
-                        var group = "General"
+                        var group = "Genel"
+
                         val groupIndex = line.indexOf("group-title=\"")
                         if (groupIndex >= 0) {
                             val start = groupIndex + "group-title=\"".length
                             val end = line.indexOf("\"", startIndex = start)
-                            if (end > start) group = line.substring(start, end)
+                            if (end > start) {
+                                group = line.substring(start, end)
+                            }
                         }
+
                         val commaIndex = line.lastIndexOf(',')
                         if (commaIndex >= 0 && commaIndex < line.length - 1) {
                             name = line.substring(commaIndex + 1).trim()
                         }
-                        currentName = if (name.isNotEmpty()) name else "Channel"
-                        currentGroup = if (group.isNotEmpty()) group else "General"
+
+                        currentName = if (name.isNotEmpty()) name else "Kanal"
+                        currentGroup = if (group.isNotEmpty()) group else "Genel"
                         currentRef = null
                         currentOrg = null
-                    } else if (line.startsWith("#EXTVLCOPT:http-referrer=", true)) {
+                    } else if (line.startsWith("#EXTVLCOPT:http-referrer=", ignoreCase = true)) {
                         val idx = line.indexOf("=")
-                        if (idx >= 0 && idx < line.length - 1) currentRef = line.substring(idx + 1).trim()
-                    } else if (line.startsWith("#EXTVLCOPT:http-origin=", true)) {
+                        if (idx >= 0 && idx < line.length - 1) {
+                            currentRef = line.substring(idx + 1).trim()
+                        }
+                    } else if (line.startsWith("#EXTVLCOPT:http-origin=", ignoreCase = true)) {
                         val idx = line.indexOf("=")
-                        if (idx >= 0 && idx < line.length - 1) currentOrg = line.substring(idx + 1).trim()
+                        if (idx >= 0 && idx < line.length - 1) {
+                            currentOrg = line.substring(idx + 1).trim()
+                        }
                     } else if (!line.startsWith("#")) {
                         val urlPlay = line
-                        val groupId = if (currentGroup.isNotEmpty()) currentGroup else "General"
-                        val cat = categoriesMap.getOrPut(groupId) { Category(groupId, groupId) }
+                        val groupId = if (currentGroup.isNotEmpty()) currentGroup else "Genel"
+
+                        val cat = categoriesMap.getOrPut(groupId) {
+                            Category(groupId, groupId)
+                        }
 
                         streamsList.add(
                             StreamItem(
@@ -1058,6 +1638,7 @@ jobs:
                                 origin = currentOrg
                             )
                         )
+
                         currentRef = null
                         currentOrg = null
                     }
@@ -1073,16 +1654,40 @@ jobs:
                     conn.connectTimeout = 8000
                     conn.readTimeout = 8000
                     conn.requestMethod = "GET"
+
                     val code = conn.responseCode
-                    if (code != HttpURLConnection.HTTP_OK) Pair(null, null)
-                    else {
+                    if (code != HttpURLConnection.HTTP_OK) {
+                        Pair(null, null)
+                    } else {
                         val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                         val obj = JSONObject(body)
                         val userInfo = obj.optJSONObject("user_info")
-                        if (userInfo != null) Pair(userInfo.optString("username", null), userInfo.optString("exp_date", null))
-                        else Pair(null, null)
+                        if (userInfo != null) {
+                            val uname = userInfo.optString("username", null)
+                            val exp = userInfo.optString("exp_date", null)
+                            Pair(uname, exp)
+                        } else {
+                            Pair(null, null)
+                        }
                     }
-                } catch (_: Exception) { Pair(null, null) }
+                } catch (e: Exception) {
+                    Pair(null, null)
+                }
+            }
+
+            private fun formatExp(exp: String?): String {
+                if (exp == null || exp == "" || exp == "0" || exp == "null") {
+                    return "Sınırsız"
+                }
+                return try {
+                    val seconds = exp.toLong()
+                    val millis = seconds * 1000L
+                    val date = Date(millis)
+                    val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+                    sdf.format(date)
+                } catch (e: Exception) {
+                    exp
+                }
             }
 
             private fun fetchCategories(urlStr: String): List<Category> {
@@ -1093,13 +1698,19 @@ jobs:
                 conn.readTimeout = 15000
                 conn.requestMethod = "GET"
 
-                if (conn.responseCode != HttpURLConnection.HTTP_OK) return list
+                val code = conn.responseCode
+                if (code != HttpURLConnection.HTTP_OK) {
+                    return list
+                }
+
                 val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                 val arr = JSONArray(body)
                 var i = 0
                 while (i < arr.length()) {
                     val obj = arr.getJSONObject(i)
-                    list.add(Category(obj.optString("category_id", ""), obj.optString("category_name", "Category $i")))
+                    val id = obj.optString("category_id", "")
+                    val name = obj.optString("category_name", "Kategori " + i)
+                    list.add(Category(id, name))
                     i++
                 }
                 return list
@@ -1113,19 +1724,28 @@ jobs:
                 conn.readTimeout = 20000
                 conn.requestMethod = "GET"
 
-                if (conn.responseCode != HttpURLConnection.HTTP_OK) return list
+                val code = conn.responseCode
+                if (code != HttpURLConnection.HTTP_OK) {
+                    return list
+                }
+
                 val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                 val arr = JSONArray(body)
                 var i = 0
                 while (i < arr.length()) {
                     val obj = arr.getJSONObject(i)
+                    val name = obj.optString("name", "Bilinmeyen")
+                    val catId = obj.optString("category_id", "")
+                    val streamId = obj.optString("stream_id", null)
+                    val seriesId = obj.optString("series_id", null)
+                    val ext = obj.optString("container_extension", null)
                     list.add(
                         StreamItem(
-                            name = obj.optString("name", "Unknown"),
-                            stream_id = obj.optString("stream_id", null),
-                            series_id = obj.optString("series_id", null),
-                            container_extension = obj.optString("container_extension", null),
-                            category_id = obj.optString("category_id", ""),
+                            name = name,
+                            stream_id = streamId,
+                            series_id = seriesId,
+                            container_extension = ext,
+                            category_id = catId,
                             full_url = null,
                             referer = null,
                             origin = null
@@ -1135,146 +1755,116 @@ jobs:
                 }
                 return list
             }
-        }
-        EOF
 
-        # -----------------------------
-        # ACCOUNT SCREEN (liste: ad/tarih/cikis)
-        # -----------------------------
-        cat <<EOF > app/src/main/java/$PATH_NAME/AccountActivity.kt
-        package $PACKAGE_NAME
-
-        import android.content.Intent
-        import android.os.Bundle
-        import android.view.View
-        import android.widget.TextView
-        import androidx.appcompat.app.AlertDialog
-        import androidx.recyclerview.widget.LinearLayoutManager
-        import androidx.recyclerview.widget.RecyclerView
-        import org.json.JSONObject
-        import java.net.HttpURLConnection
-        import java.net.URL
-        import java.text.SimpleDateFormat
-        import java.util.Date
-        import java.util.Locale
-        import $PACKAGE_NAME.adapters.RowAdapter
-        import $PACKAGE_NAME.utils.Prefs
-
-        class AccountActivity : BaseActivity() {
-
-            override fun onCreate(savedInstanceState: Bundle?) {
-                super.onCreate(savedInstanceState)
-                setContentView(R.layout.activity_account)
-
-                val prefs = Prefs(this)
-                val acc = prefs.getActive()
-
-                val tvTop = findViewById<TextView>(R.id.tvAccountTop)
-                val tvInfo = findViewById<TextView>(R.id.tvAccountInfo)
-                val rv = findViewById<RecyclerView>(R.id.rvAccount)
-
-                rv.layoutManager = LinearLayoutManager(this)
-
-                tvTop.setOnClickListener { finish() }
-
-                fun formatExp(exp: String?): String {
-                    if (exp.isNullOrEmpty() || exp == "0" || exp == "null") return "Unlimited"
-                    return try {
-                        val seconds = exp.toLong()
-                        val millis = seconds * 1000L
-                        val date = Date(millis)
-                        SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(date)
-                    } catch (_: Exception) { exp }
-                }
-
-                fun loadInfo() {
-                    if (acc == null) {
-                        tvInfo.text = "No active account"
-                        return
-                    }
-                    if (acc.type == "M3U") {
-                        tvInfo.text = getString(R.string.active_account) + ": " + acc.name + "\n" + getString(R.string.expire) + ": M3U"
-                        return
-                    }
-                    val dnsRaw = acc.dns?.trim() ?: ""
-                    val user = acc.user?.trim() ?: ""
-                    val pass = acc.pass?.trim() ?: ""
-                    if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                        tvInfo.text = getString(R.string.active_account) + ": " + acc.name
-                        return
-                    }
-                    val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
-                    val base = dns + "/player_api.php?username=" + user + "&password=" + pass
-
-                    Thread {
-                        try {
-                            val conn = (URL(base).openConnection() as HttpURLConnection)
-                            conn.connectTimeout = 8000
-                            conn.readTimeout = 8000
-                            conn.requestMethod = "GET"
-                            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
-                                val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                                val obj = JSONObject(body)
-                                val ui = obj.optJSONObject("user_info")
-                                val uname = ui?.optString("username", user) ?: user
-                                val exp = ui?.optString("exp_date", null)
-                                runOnUiThread {
-                                    tvInfo.text = getString(R.string.active_account) + ": " + uname + "\n" +
-                                            getString(R.string.expire) + ": " + formatExp(exp)
-                                }
-                            } else {
-                                runOnUiThread {
-                                    tvInfo.text = getString(R.string.active_account) + ": " + acc.name
-                                }
-                            }
-                        } catch (_: Exception) {
-                            runOnUiThread { tvInfo.text = getString(R.string.active_account) + ": " + acc.name }
-                        }
-                    }.start()
-                }
-
-                loadInfo()
-
-                val rows = listOf(
-                    getString(R.string.switch_account),
-                    getString(R.string.logout)
-                )
-
-                rv.adapter = RowAdapter(rows) { index ->
+            private fun populateDrawerCategories() {
+                val menu: Menu = navView.menu
+                menu.clear()
+                var index = 0
+                for (cat in categories) {
+                    val item = menu.add(0, index, 0, cat.category_name)
+                    item.isCheckable = true
                     if (index == 0) {
-                        prefs.setLastScreen("LOGIN")
-                        val i = Intent(this, LoginActivity::class.java)
-                        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(i)
-                        finish()
+                        item.isChecked = true
+                    }
+                    index++
+                }
+            }
+
+            private fun filterAndShow(categoryId: String?) {
+                val filtered = if (categoryId == null || categoryId.length == 0) {
+                    streams
+                } else {
+                    streams.filter { it.category_id == categoryId }
+                }
+
+                val acc = activeAcc ?: return
+
+                rv.adapter = GridAdapter(filtered) { item ->
+                    if (acc.type == "M3U") {
+                        val url = item.full_url
+                        if (url.isNullOrEmpty()) {
+                            Toast.makeText(this, "Geçersiz M3U kanalı.", Toast.LENGTH_SHORT).show()
+                            return@GridAdapter
+                        }
+                        val itn = Intent(this, PlayerActivity::class.java)
+                        itn.putExtra("URL", url)
+                        itn.putExtra("REF", item.referer ?: "")
+                        itn.putExtra("ORG", item.origin ?: "")
+
+                        AdsHelper.maybeShowOnChannelClick(this) {
+                            RemoteLogger.sendEvent(
+                                this,
+                                "play_m3u",
+                                mapOf(
+                                    "channel_name" to item.name,
+                                    "category_id" to (item.category_id ?: ""),
+                                    "url" to url.take(200)
+                                )
+                            )
+                            startActivity(itn)
+                        }
                     } else {
-                        AlertDialog.Builder(this)
-                            .setTitle(getString(R.string.logout))
-                            .setMessage(getString(R.string.logout) + "?")
-                            .setPositiveButton("OK") { _, _ ->
-                                prefs.setLastScreen("LOGIN")
-                                val i = Intent(this, LoginActivity::class.java)
-                                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                                startActivity(i)
-                                finish()
+                        if (currentMode == "SERIES") {
+                            val itn = Intent(this, SeriesDetailActivity::class.java)
+                            itn.putExtra("SERIES_ID", item.series_id ?: "")
+                            itn.putExtra("SERIES_NAME", item.name)
+
+                            AdsHelper.maybeShowOnChannelClick(this) {
+                                RemoteLogger.sendEvent(
+                                    this,
+                                    "open_series_detail",
+                                    mapOf(
+                                        "series_id" to (item.series_id ?: ""),
+                                        "series_name" to item.name
+                                    )
+                                )
+                                startActivity(itn)
                             }
-                            .setNegativeButton("Cancel", null)
-                            .show()
+                        } else {
+                            val dnsRaw = acc.dns?.trim() ?: ""
+                            val user = acc.user?.trim() ?: ""
+                            val pass = acc.pass?.trim() ?: ""
+                            val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+
+                            val path = if (currentMode == "LIVE") "live" else "movie"
+                            val ext = if (currentMode == "LIVE") {
+                                ".ts"
+                            } else {
+                                if (item.container_extension != null && item.container_extension.length > 0) {
+                                    "." + item.container_extension
+                                } else {
+                                    ".mp4"
+                                }
+                            }
+                            val id = item.stream_id ?: ""
+                            val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
+
+                            val itn = Intent(this, PlayerActivity::class.java)
+                            itn.putExtra("URL", playUrl)
+                            itn.putExtra("REF", "")
+                            itn.putExtra("ORG", "")
+
+                            AdsHelper.maybeShowOnChannelClick(this) {
+                                RemoteLogger.sendEvent(
+                                    this,
+                                    "play_xtream",
+                                    mapOf(
+                                        "channel_name" to item.name,
+                                        "category_id" to (item.category_id ?: ""),
+                                        "stream_id" to (item.stream_id ?: ""),
+                                        "mode" to currentMode
+                                    )
+                                )
+                                startActivity(itn)
+                            }
+                        }
                     }
                 }
             }
         }
         EOF
 
-        # -----------------------------
-        # SERIES + PLAYER
-        # (Senin mevcut dosyaları çalışır; sadece BaseActivity extend et)
-        # -----------------------------
-        # SeriesDetailActivity: BaseActivity
-        # PlayerActivity: BaseActivity (dil etkilesin diye)
-        # Burada dosyalarını "aynı" tutup sadece class extends değiştiriyoruz:
-
-        # (Kısaltma yapmamak için minimal değişiklikle yeniden yazıyorum)
+        # SeriesDetailActivity ve PlayerActivity aynı
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1285,21 +1875,21 @@ jobs:
         import android.widget.ListView
         import android.widget.ProgressBar
         import android.widget.TextView
+        import androidx.appcompat.app.AppCompatActivity
         import org.json.JSONObject
         import java.net.HttpURLConnection
         import java.net.URL
         import java.util.ArrayList
+        import $PACKAGE_NAME.models.EpisodeItem
         import $PACKAGE_NAME.utils.Prefs
 
-        class SeriesDetailActivity : BaseActivity() {
+        class SeriesDetailActivity : AppCompatActivity() {
 
             private lateinit var prefs: Prefs
             private lateinit var tvTitle: TextView
             private lateinit var tvStatus: TextView
             private lateinit var pb: ProgressBar
             private lateinit var lv: ListView
-
-            data class EpisodeItem(val id: String, val title: String, val season: Int, val ep: Int, val ext: String)
 
             private val episodes = ArrayList<EpisodeItem>()
 
@@ -1314,13 +1904,13 @@ jobs:
                 pb = findViewById(R.id.pbSeries)
                 lv = findViewById(R.id.lvEpisodes)
 
-                val seriesName = intent.getStringExtra("SERIES_NAME") ?: "Series"
+                val seriesName = intent.getStringExtra("SERIES_NAME") ?: "Dizi"
                 val seriesId = intent.getStringExtra("SERIES_ID") ?: ""
 
                 tvTitle.text = seriesName
 
-                if (seriesId.isEmpty()) {
-                    tvStatus.text = "Invalid series."
+                if (seriesId.length == 0) {
+                    tvStatus.text = "Geçersiz seri bilgisi."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
@@ -1329,18 +1919,17 @@ jobs:
             }
 
             private fun loadSeriesInfo(seriesId: String) {
-                val acc = prefs.getActive()
-                val dnsRaw = acc?.dns?.trim() ?: ""
-                val user = acc?.user?.trim() ?: ""
-                val pass = acc?.pass?.trim() ?: ""
+                val dnsRaw = prefs.getDns().trim()
+                val user = prefs.getUser().trim()
+                val pass = prefs.getPass().trim()
 
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                    tvStatus.text = "Missing credentials."
+                    tvStatus.text = "DNS / kullanıcı / şifre eksik."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
 
-                val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
+                val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
                 val urlStr = dns +
                         "/player_api.php?username=" + user +
                         "&password=" + pass +
@@ -1351,13 +1940,15 @@ jobs:
 
                 Thread {
                     try {
-                        val conn = (URL(urlStr).openConnection() as HttpURLConnection)
+                        val url = URL(urlStr)
+                        val conn = url.openConnection() as HttpURLConnection
                         conn.connectTimeout = 10000
                         conn.readTimeout = 20000
                         conn.requestMethod = "GET"
 
-                        if (conn.responseCode != HttpURLConnection.HTTP_OK) {
-                            showError("HTTP: " + conn.responseCode)
+                        val code = conn.responseCode
+                        if (code != HttpURLConnection.HTTP_OK) {
+                            showError("Sunucu yanıtı: " + code)
                             return@Thread
                         }
 
@@ -1371,14 +1962,24 @@ jobs:
                             val seasonKey = keys.next()
                             val seasonNum = seasonKey.toIntOrNull() ?: 0
                             val arr = episodesObj.optJSONArray(seasonKey) ?: continue
+
                             var i = 0
                             while (i < arr.length()) {
                                 val epObj = arr.getJSONObject(i)
                                 val id = epObj.optString("id", "")
-                                val title = epObj.optString("title", "Episode")
+                                val title = epObj.optString("title", "Bölüm " + i)
                                 val epNum = epObj.optInt("episode_num", i + 1)
                                 val ext = epObj.optString("container_extension", "mp4")
-                                episodes.add(EpisodeItem(id, title, seasonNum, epNum, ext))
+
+                                episodes.add(
+                                    EpisodeItem(
+                                        id = id,
+                                        title = title,
+                                        seasonNumber = seasonNum,
+                                        episodeNumber = epNum,
+                                        container_extension = ext
+                                    )
+                                )
                                 i++
                             }
                         }
@@ -1386,33 +1987,52 @@ jobs:
                         runOnUiThread {
                             pb.visibility = View.GONE
                             if (episodes.isEmpty()) {
-                                tvStatus.text = "No episodes."
+                                tvStatus.text = "Bu seri için bölüm bulunamadı."
                                 tvStatus.visibility = View.VISIBLE
                             } else {
+                                tvStatus.visibility = View.GONE
                                 val labels = ArrayList<String>()
-                                for (ep in episodes) labels.add("S${ep.season}E${ep.ep} - ${ep.title}")
-                                lv.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, labels)
-                                lv.onItemClickListener = AdapterView.OnItemClickListener { _, _, pos, _ ->
-                                    playEpisode(episodes[pos])
+                                for (ep in episodes) {
+                                    labels.add(
+                                        "S" + ep.seasonNumber +
+                                                "E" + ep.episodeNumber +
+                                                " - " + ep.title
+                                    )
                                 }
+                                val adapter = ArrayAdapter(
+                                    this,
+                                    android.R.layout.simple_list_item_1,
+                                    labels
+                                )
+                                lv.adapter = adapter
+
+                                lv.onItemClickListener =
+                                    AdapterView.OnItemClickListener { _, _, position, _ ->
+                                        playEpisode(episodes[position])
+                                    }
                             }
                         }
-
                     } catch (e: Exception) {
-                        showError("Failed: " + (e.message ?: ""))
+                        e.printStackTrace()
+                        showError("Seri bilgisi alınamadı: " + (e.message ?: "bilinmeyen hata"))
                     }
                 }.start()
             }
 
             private fun playEpisode(ep: EpisodeItem) {
-                val acc = prefs.getActive() ?: return
-                val dnsRaw = acc.dns?.trim() ?: ""
-                val user = acc.user?.trim() ?: ""
-                val pass = acc.pass?.trim() ?: ""
-                val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
-                val url = dns + "/series/" + user + "/" + pass + "/" + ep.id + "." + ep.ext
+                val dnsRaw = prefs.getDns().trim()
+                val user = prefs.getUser().trim()
+                val pass = prefs.getPass().trim()
 
-                val itn = Intent(this, PlayerActivity::class.java)
+                val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+                val ext = if (ep.container_extension != null && ep.container_extension.length > 0)
+                    ep.container_extension
+                else
+                    "mp4"
+
+                val url = dns + "/series/" + user + "/" + pass + "/" + ep.id + "." + ext
+
+                val itn = android.content.Intent(this, PlayerActivity::class.java)
                 itn.putExtra("URL", url)
                 itn.putExtra("REF", "")
                 itn.putExtra("ORG", "")
@@ -1429,12 +2049,282 @@ jobs:
         }
         EOF
 
-        # PlayerActivity: senin kodun aynı, sadece BaseActivity
-        # (kısa tutuyorum: önceki PlayerActivity'ni aynen kullan; class PlayerActivity : BaseActivity() yap)
+        cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
+        package $PACKAGE_NAME
 
-        # -----------------------------
-        # LAYOUTS
-        # -----------------------------
+        import android.content.Context
+        import android.media.AudioManager
+        import android.os.Bundle
+        import android.view.MotionEvent
+        import android.view.View
+        import android.view.WindowManager
+        import android.widget.ImageButton
+        import android.widget.TextView
+        import android.widget.Toast
+        import androidx.appcompat.app.AppCompatActivity
+        import androidx.media3.common.MediaItem
+        import androidx.media3.datasource.DefaultHttpDataSource
+        import androidx.media3.exoplayer.ExoPlayer
+        import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+        import androidx.media3.ui.AspectRatioFrameLayout
+        import androidx.media3.ui.PlayerView
+        import kotlin.math.abs
+
+        class PlayerActivity : AppCompatActivity() {
+
+            private var player: ExoPlayer? = null
+            private var currentMode: Int = 0
+
+            private lateinit var playerView: PlayerView
+            private lateinit var leftOverlay: View
+            private lateinit var rightOverlay: View
+
+            private lateinit var tvCenterInfo: TextView
+            private lateinit var tvBrightness: TextView
+            private lateinit var tvVolume: TextView
+
+            private var audioManager: AudioManager? = null
+            private var maxVolume: Int = 0
+            private var gestureStartVolume: Int = 0
+
+            private var currentBrightness: Float = 0.5f
+            private var gestureStartBrightness: Float = 0.5f
+
+            private var gestureStartY: Float = 0f
+            private var isGesture: Boolean = false
+
+            private var lastTapLeft: Long = 0
+            private var lastTapRight: Long = 0
+            private var tapCountLeft: Int = 0
+            private var tapCountRight: Int = 0
+
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+
+                window.setFlags(
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN
+                )
+                window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+
+                window.decorView.systemUiVisibility =
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+
+                setContentView(R.layout.activity_player_pro)
+
+                val url = intent.getStringExtra("URL") ?: ""
+                val ref = intent.getStringExtra("REF") ?: ""
+                val org = intent.getStringExtra("ORG") ?: ""
+
+                if (url.isEmpty()) {
+                    Toast.makeText(this, "Geçersiz yayın URL'si.", Toast.LENGTH_SHORT).show()
+                    finish()
+                    return
+                }
+
+                playerView = findViewById(R.id.pvMain)
+                val btnMode = findViewById<ImageButton>(R.id.btnMode)
+                leftOverlay = findViewById(R.id.overlayLeft)
+                rightOverlay = findViewById(R.id.overlayRight)
+                tvCenterInfo = findViewById(R.id.tvInfoCenter)
+                tvBrightness = findViewById(R.id.tvBrightness)
+                tvVolume = findViewById(R.id.tvVolume)
+
+                audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
+
+                val lp = window.attributes
+                currentBrightness = if (lp.screenBrightness in 0f..1f) {
+                    lp.screenBrightness
+                } else {
+                    0.5f
+                }
+
+                applyResizeMode(playerView)
+
+                btnMode.setOnClickListener {
+                    currentMode = (currentMode + 1) % 3
+                    applyResizeMode(playerView)
+                }
+
+                setupGestureOverlay(leftOverlay, true)
+                setupGestureOverlay(rightOverlay, false)
+
+                try {
+                    val headers = mutableMapOf<String, String>()
+                    headers["User-Agent"] = "Mozilla/5.0 (Android) ExoPlayer"
+                    if (ref.isNotEmpty()) {
+                        headers["Referer"] = ref
+                    }
+                    if (org.isNotEmpty()) {
+                        headers["Origin"] = org
+                    }
+
+                    val httpFactory = DefaultHttpDataSource.Factory()
+                        .setConnectTimeoutMs(15000)
+                        .setReadTimeoutMs(30000)
+                        .setDefaultRequestProperties(headers)
+
+                    val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
+
+                    player = ExoPlayer.Builder(this)
+                        .setMediaSourceFactory(mediaSourceFactory)
+                        .build()
+
+                    val exo = player!!
+                    playerView.player = exo
+                    val item = MediaItem.fromUri(url)
+                    exo.setMediaItem(item)
+                    exo.prepare()
+                    exo.play()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
+                    finish()
+                }
+            }
+
+            private fun setupGestureOverlay(view: View, isLeft: Boolean) {
+                view.setOnTouchListener { v, event ->
+                    val am = audioManager
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            gestureStartY = event.y
+                            isGesture = false
+                            gestureStartVolume = am?.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                ?: (maxVolume / 2)
+                            gestureStartBrightness = currentBrightness
+                            tvBrightness.visibility = View.GONE
+                            tvVolume.visibility = View.GONE
+                            true
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            val dy = event.y - gestureStartY
+                            if (abs(dy) > 50) {
+                                isGesture = true
+                                val percent = -dy / v.height.toFloat()
+
+                                if (isLeft) {
+                                    adjustBrightness(percent)
+                                } else {
+                                    adjustVolume(percent)
+                                }
+                            }
+                            true
+                        }
+                        MotionEvent.ACTION_UP -> {
+                            if (!isGesture) {
+                                val now = System.currentTimeMillis()
+                                if (isLeft) {
+                                    if (now - lastTapLeft < 350) {
+                                        tapCountLeft++
+                                    } else {
+                                        tapCountLeft = 1
+                                    }
+                                    lastTapLeft = now
+                                    if (tapCountLeft >= 2) {
+                                        tapCountLeft = 0
+                                        seekBy(-15000L)
+                                        showCenterInfo("15 saniye geri")
+                                    }
+                                } else {
+                                    if (now - lastTapRight < 350) {
+                                        tapCountRight++
+                                    } else {
+                                        tapCountRight = 1
+                                    }
+                                    lastTapRight = now
+                                    if (tapCountRight >= 2) {
+                                        tapCountRight = 0
+                                        seekBy(15000L)
+                                        showCenterInfo("15 saniye ileri")
+                                    }
+                                }
+
+                                try {
+                                    playerView.showController()
+                                } catch (_: Exception) { }
+                            }
+
+                            tvBrightness.visibility = View.GONE
+                            tvVolume.visibility = View.GONE
+                            true
+                        }
+                        else -> false
+                    }
+                }
+            }
+
+            private fun adjustVolume(percentDelta: Float) {
+                val am = audioManager ?: return
+                val change = (percentDelta * maxVolume).toInt()
+                var newVol = gestureStartVolume + change
+                if (newVol < 0) newVol = 0
+                if (newVol > maxVolume) newVol = maxVolume
+                am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+
+                val percent = if (maxVolume > 0) (newVol * 100 / maxVolume) else 0
+                tvVolume.text = "Ses: " + percent + "%"
+                tvVolume.visibility = View.VISIBLE
+            }
+
+            private fun adjustBrightness(percentDelta: Float) {
+                var newB = gestureStartBrightness + percentDelta
+                if (newB < 0f) newB = 0f
+                if (newB > 1f) newB = 1f
+                val lp = window.attributes
+                lp.screenBrightness = newB
+                window.attributes = lp
+                currentBrightness = newB
+
+                val percent = (currentBrightness * 100f).toInt()
+                tvBrightness.text = "Parlaklık: " + percent + "%"
+                tvBrightness.visibility = View.VISIBLE
+            }
+
+            private fun seekBy(deltaMs: Long) {
+                val p = player ?: return
+                var newPos = p.currentPosition + deltaMs
+                if (newPos < 0L) newPos = 0L
+                val duration = p.duration
+                if (duration > 0 && newPos > duration) {
+                    newPos = duration
+                }
+                p.seekTo(newPos)
+            }
+
+            private fun applyResizeMode(pv: PlayerView) {
+                when (currentMode) {
+                    0 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    1 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+                    else -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                }
+            }
+
+            private fun showCenterInfo(text: String) {
+                tvCenterInfo.text = text
+                tvCenterInfo.visibility = View.VISIBLE
+                tvCenterInfo.postDelayed({
+                    tvCenterInfo.visibility = View.GONE
+                }, 1200)
+            }
+
+            override fun onDestroy() {
+                super.onDestroy()
+                player?.release()
+                player = null
+            }
+        }
+        EOF
+
+        # --- LAYOUTLAR ---
+
+        # LOGIN: üstte dil ikonlu, büyük alanlar
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -1450,112 +2340,111 @@ jobs:
                 android:layout_height="wrap_content"
                 ads:adSize="BANNER"
                 ads:adUnitId="@string/admob_banner_test"
-                android:layout_marginBottom="6dp"/>
-
-            <!-- Dil: açık sekme yok. Tek satır. Tıklayınca EN/TR sorar -->
-            <LinearLayout
-                android:id="@+id/layoutLang"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="10dp"
-                android:background="@drawable/bg_input_dark"
-                android:layout_marginBottom="10dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="LANG"
-                    android:textColor="@color/hint_yellow"
-                    android:textStyle="bold"/>
-
-                <TextView
-                    android:id="@+id/tvLangLine"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="EN"
-                    android:textColor="@color/white"
-                    android:paddingLeft="10dp"
-                    android:textStyle="bold"/>
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/app_name"
-                android:textColor="@color/accent_green"
-                android:textStyle="bold"
-                android:textSize="22sp"
-                android:layout_marginBottom="10dp"/>
-
-            <TextView
-                android:id="@+id/tvLoginType"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/login_type"
-                android:textColor="@color/white"
-                android:textSize="15sp"
-                android:layout_marginBottom="6dp"/>
+                android:layout_marginBottom="8dp"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="12dp">
+                android:gravity="center_vertical"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:id="@+id/tvTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Emin Xtream Player"
+                    android:textColor="@color/accent_green"
+                    android:textStyle="bold"
+                    android:textSize="22sp"/>
+
+                <ImageButton
+                    android:id="@+id/btnLangLogin"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@android:color/transparent"
+                    android:src="@android:drawable/ic_menu_manage"
+                    android:tint="@color/white"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvLoginType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Login Type"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:layout_marginBottom="4dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="14dp">
 
                 <LinearLayout
                     android:id="@+id/cardXtream"
                     android:layout_width="0dp"
-                    android:layout_height="64dp"
+                    android:layout_height="72dp"
                     android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="8dp"
-                    android:background="@drawable/bg_input_dark"
-                    android:layout_marginRight="6dp">
+                    android:background="@drawable/bg_header_card"
+                    android:layout_marginRight="6dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true">
 
                     <TextView
+                        android:id="@+id/tvXtream"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/xtream"
+                        android:text="Xtream"
                         android:textStyle="bold"
                         android:textColor="@color/white"
-                        android:textSize="15sp"/>
+                        android:textSize="16sp"/>
                 </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/cardM3u"
                     android:layout_width="0dp"
-                    android:layout_height="64dp"
+                    android:layout_height="72dp"
                     android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="8dp"
                     android:background="@drawable/bg_input_dark"
-                    android:layout_marginLeft="6dp">
+                    android:layout_marginLeft="6dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true">
 
                     <TextView
+                        android:id="@+id/tvM3u"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/m3u"
+                        android:text="M3U"
                         android:textStyle="bold"
                         android:textColor="@color/white"
-                        android:textSize="15sp"/>
+                        android:textSize="16sp"/>
                 </LinearLayout>
             </LinearLayout>
 
             <EditText
                 android:id="@+id/etName"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:hint="@string/example_name"
+                android:layout_height="56dp"
+                android:hint="example name"
                 android:background="@drawable/bg_input_dark"
-                android:padding="10dp"
+                android:padding="12dp"
                 android:textColor="@color/white"
                 android:textColorHint="@color/white"
                 android:inputType="textPersonName"
-                android:layout_marginBottom="8dp"/>
+                android:layout_marginBottom="10dp"
+                android:focusable="true"
+                android:focusableInTouchMode="true"/>
 
             <LinearLayout
                 android:id="@+id/layoutXtream"
@@ -1566,38 +2455,44 @@ jobs:
                 <EditText
                     android:id="@+id/etDns"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:hint="@string/enter_xtream_url"
+                    android:layout_height="56dp"
+                    android:hint="Enter Xtream URL"
                     android:background="@drawable/bg_input_dark"
-                    android:padding="10dp"
+                    android:padding="12dp"
                     android:textColor="@color/white"
                     android:textColorHint="@color/white"
                     android:inputType="textUri"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="8dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"/>
 
                 <EditText
                     android:id="@+id/etUser"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:hint="@string/username"
+                    android:layout_height="56dp"
+                    android:hint="Username"
                     android:background="@drawable/bg_input_dark"
-                    android:padding="10dp"
+                    android:padding="12dp"
                     android:textColor="@color/white"
                     android:textColorHint="@color/white"
                     android:inputType="textEmailAddress"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="8dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"/>
 
                 <EditText
                     android:id="@+id/etPass"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:hint="@string/password"
+                    android:layout_height="56dp"
+                    android:hint="Password"
                     android:inputType="textVisiblePassword"
                     android:background="@drawable/bg_input_dark"
-                    android:padding="10dp"
+                    android:padding="12dp"
                     android:textColor="@color/white"
                     android:textColorHint="@color/white"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="8dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"/>
             </LinearLayout>
 
             <LinearLayout
@@ -1610,31 +2505,36 @@ jobs:
                 <EditText
                     android:id="@+id/etM3u"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:hint="@string/enter_m3u"
+                    android:layout_height="56dp"
+                    android:hint="Enter M3U URL"
                     android:background="@drawable/bg_input_dark"
-                    android:padding="10dp"
+                    android:padding="12dp"
                     android:textColor="@color/white"
                     android:textColorHint="@color/hint_yellow"
                     android:inputType="textUri"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="10dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"/>
             </LinearLayout>
 
             <Button
                 android:id="@+id/btnAddAccount"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="@string/add_account"
+                android:layout_height="60dp"
+                android:text="Add Account"
                 android:textStyle="bold"
                 android:textColor="@color/black"
+                android:textSize="16sp"
                 android:background="@color/accent_green"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="16dp"
+                android:focusable="true"
+                android:focusableInTouchMode="true"/>
 
             <TextView
                 android:id="@+id/tvAccountsTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/saved_accounts"
+                android:text="Saved Accounts"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:textStyle="bold"
@@ -1644,7 +2544,7 @@ jobs:
                 android:id="@+id/tvAccountsHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/saved_accounts_hint"
+                android:text="Select an account below to continue"
                 android:textColor="@color/hint_yellow"
                 android:textSize="13sp"
                 android:layout_marginBottom="6dp"/>
@@ -1655,78 +2555,273 @@ jobs:
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:divider="@android:color/transparent"
-                android:dividerHeight="10dp"/>
+                android:dividerHeight="10dp"
+                android:focusable="true"
+                android:focusableInTouchMode="true"/>
+        </LinearLayout>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/activity_dashboard.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@color/bg_dark"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/tvInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AKTİF HESAP:"
+                android:textColor="@color/accent_green"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="24dp"/>
+
+            <Button
+                android:id="@+id/btnLive"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="📺 CANLI TV"
+                android:layout_marginBottom="12dp"/>
+
+            <Button
+                android:id="@+id/btnVod"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="🎬 FİLMLER"
+                android:layout_marginBottom="12dp"/>
+
+            <Button
+                android:id="@+id/btnSeries"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="🍿 DİZİLER"
+                android:layout_marginBottom="12dp"/>
+
+            <Button
+                android:id="@+id/btnExit"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="❌ ÇIKIŞ"
+                android:layout_marginTop="12dp"/>
         </LinearLayout>
         EOF
 
         cat <<EOF > app/src/main/res/layout/activity_content.xml
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/drawerLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:background="@color/bg_dark">
+
+                <com.google.android.gms.ads.AdView
+                    android:id="@+id/adViewTopContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    ads:adSize="BANNER"
+                    ads:adUnitId="@string/admob_banner_test"
+                    android:layout_marginBottom="4dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="@color/bordo">
+
+                    <TextView
+                        android:id="@+id/tvHeader"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="☰ Canlı TV"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:padding="16dp"/>
+
+                    <TextView
+                        android:id="@+id/tvAccounts"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:paddingLeft="12dp"
+                        android:paddingRight="16dp"
+                        android:text="Hesaplar / Çıkış"
+                        android:textColor="@color/white"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/pbLoading"
+                    style="?android:attr/progressBarStyleLarge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone"/>
+
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/error_red"
+                    android:textSize="14sp"
+                    android:padding="8dp"
+                    android:visibility="gone"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:padding="8dp"/>
+
+                <com.google.android.gms.ads.AdView
+                    android:id="@+id/adViewBottomContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    ads:adSize="BANNER"
+                    ads:adUnitId="@string/admob_banner_test"
+                    android:layout_marginTop="4dp"/>
+
+                <com.google.android.material.bottomnavigation.BottomNavigationView
+                    android:id="@+id/bottomNav"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/gray_800"
+                    app:menu="@menu/bottom_nav_menu" />
+            </LinearLayout>
+
+            <com.google.android.material.navigation.NavigationView
+                android:id="@+id/navView"
+                android:layout_width="260dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="start"
+                android:background="@color/drawer_bg"
+                app:headerLayout="@layout/nav_header"
+                app:itemTextColor="@color/nav_item_text"
+                app:itemIconTint="@color/nav_item_text" />
+        </androidx.drawerlayout.widget.DrawerLayout>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="72dp"
+                android:orientation="horizontal"
+                android:background="@color/gray_800"
+                android:padding="12dp">
+
+                <View
+                    android:layout_width="4dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/accent_green" />
+
+                <TextView
+                    android:id="@+id/txtName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:paddingLeft="10dp"
+                    android:paddingRight="6dp"/>
+            </LinearLayout>
+        </LinearLayout>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/item_account.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/bg_account_card"
+            android:gravity="center_vertical"
+            android:minHeight="72dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvAccountName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hesap Adı"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="16sp"/>
+
+                <TextView
+                    android:id="@+id/tvAccountType"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Xtream"
+                    android:textColor="@color/accent_green"
+                    android:textSize="13sp"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnDeleteAccount"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_menu_delete"
+                android:tint="@color/error_red"/>
+        </LinearLayout>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:background="@color/bg_dark">
 
-            <com.google.android.gms.ads.AdView
-                android:id="@+id/adViewTopContent"
+            <TextView
+                android:id="@+id/tvSeriesTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                ads:adSize="BANNER"
-                ads:adUnitId="@string/admob_banner_test"
-                android:layout_marginBottom="4dp"/>
-
-            <!-- Header: Back/Categories + Mode + Account -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:background="@color/bordo">
-
-                <TextView
-                    android:id="@+id/tvHeader"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/categories"
-                    android:textColor="@color/white"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:padding="14dp"/>
-
-                <TextView
-                    android:id="@+id/tvSub"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="@string/live_tv"
-                    android:textColor="@color/white"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    android:padding="14dp"/>
-
-                <TextView
-                    android:id="@+id/tvAccount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/account"
-                    android:textColor="@color/hint_yellow"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:padding="14dp"/>
-            </LinearLayout>
+                android:textColor="@color/white"
+                android:background="@color/bordo"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:padding="16dp"/>
 
             <ProgressBar
-                android:id="@+id/pbLoading"
+                android:id="@+id/pbSeries"
                 style="?android:attr/progressBarStyleLarge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
                 android:visibility="gone"/>
 
             <TextView
-                android:id="@+id/tvStatus"
+                android:id="@+id/tvSeriesStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/error_red"
@@ -1734,90 +2829,101 @@ jobs:
                 android:padding="8dp"
                 android:visibility="gone"/>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvContent"
+            <ListView
+                android:id="@+id/lvEpisodes"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:padding="10dp"/>
-
-            <com.google.android.gms.ads.AdView
-                android:id="@+id/adViewBottomContent"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                ads:adSize="BANNER"
-                ads:adUnitId="@string/admob_banner_test"
-                android:layout_marginTop="4dp"/>
-        </LinearLayout>
-        EOF
-
-        cat <<EOF > app/src/main/res/layout/item_row.xml
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:background="@drawable/bg_row_focus"
-            android:padding="14dp"
-            android:layout_marginBottom="10dp"
-            android:focusable="true"
-            android:focusableInTouchMode="true">
-
-            <View
-                android:layout_width="4dp"
                 android:layout_height="match_parent"
-                android:background="@color/accent_green" />
-
-            <TextView
-                android:id="@+id/txtRow"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:maxLines="2"
-                android:ellipsize="end"
-                android:paddingLeft="12dp" />
+                android:divider="@color/gray_800"
+                android:dividerHeight="1dp"/>
         </LinearLayout>
         EOF
 
-        cat <<EOF > app/src/main/res/layout/activity_account.xml
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
+        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="@color/bg_dark">
+            android:background="@color/black">
 
-            <TextView
-                android:id="@+id/tvAccountTop"
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/pvMain"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="← Account"
-                android:textColor="@color/white"
-                android:background="@color/bordo"
-                android:textStyle="bold"
-                android:textSize="18sp"
-                android:padding="16dp"/>
+                android:layout_height="match_parent"/>
 
-            <TextView
-                android:id="@+id/tvAccountInfo"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/hint_yellow"
-                android:textSize="14sp"
-                android:padding="14dp"
-                android:text=""/>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvAccount"
+            <LinearLayout
+                android:id="@+id/overlayContainer"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:padding="10dp"/>
-        </LinearLayout>
+                android:orientation="horizontal"
+                android:layout_marginBottom="72dp">
+
+                <View
+                    android:id="@+id/overlayLeft"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+
+                <View
+                    android:id="@+id/overlayRight"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvInfoCenter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:background="#80000000"
+                android:padding="8dp"
+                android:layout_gravity="center"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/tvBrightness"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:background="#80000000"
+                android:padding="6dp"
+                android:layout_gravity="top|left"
+                android:layout_margin="12dp"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/tvVolume"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:background="#80000000"
+                android:padding="6dp"
+                android:layout_gravity="top|right"
+                android:layout_margin="12dp"
+                android:visibility="gone"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="8dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:gravity="right">
+
+                <ImageButton
+                    android:id="@+id/btnMode"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@android:color/transparent"
+                    android:src="@android:drawable/ic_menu_crop"
+                    android:padding="8dp"
+                    android:tint="@android:color/white"/>
+            </LinearLayout>
+        </FrameLayout>
         EOF
 
-        # -----------------------------
-        # ANDROID MANIFEST
-        # -----------------------------
         cat <<EOF > app/src/main/AndroidManifest.xml
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
@@ -1841,10 +2947,12 @@ jobs:
                     </intent-filter>
                 </activity>
 
+                <activity android:name=".DashboardActivity" />
                 <activity android:name=".ContentActivity" />
-                <activity android:name=".AccountActivity" />
                 <activity android:name=".SeriesDetailActivity" />
-                <activity android:name=".PlayerActivity"
+
+                <activity
+                    android:name=".PlayerActivity"
                     android:screenOrientation="fullSensor"
                     android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection|screenLayout|smallestScreenSize" />
             </application>
@@ -1878,8 +2986,16 @@ jobs:
 
     - name: 8. Artifact URL'lerini Göster
       run: |
-        echo "### ErdinPlayer Pro Outputs" >> $GITHUB_STEP_SUMMARY
+        echo "====================================="
+        echo " 📦 APK Artifact URL (GitHub):"
+        echo "${{ steps.upload_apk.outputs.artifact-url }}"
+        echo "-------------------------------------"
+        echo " 📦 AAB Artifact URL (GitHub):"
+        echo "${{ steps.upload_aab.outputs.artifact-url }}"
+        echo "====================================="
+
+        echo "### ErdinPlayer Pro Çıktılar" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [Download APK](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [Download AAB](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
