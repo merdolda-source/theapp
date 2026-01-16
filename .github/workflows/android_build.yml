@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Ultra Build   
+name: ErdinPlayer Pro Ultra Build  
 
 on:
   push:
@@ -815,57 +815,39 @@ jobs:
         EOF
 
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
-      package com.erdin.player.adapters
+        package $PACKAGE_NAME.adapters
 
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
-import androidx.recyclerview.widget.RecyclerView
-import com.erdin.player.models.StreamItem
+        import android.view.LayoutInflater
+        import android.view.View
+        import android.view.ViewGroup
+        import android.widget.TextView
+        import androidx.recyclerview.widget.RecyclerView
+        import $PACKAGE_NAME.R
+        import $PACKAGE_NAME.models.StreamItem
 
-class GridAdapter(
-    private val list: List<StreamItem>,
-    private val onClick: (StreamItem) -> Unit
-) : RecyclerView.Adapter<GridAdapter.VH>() {
+        class GridAdapter(
+            private val list: List<StreamItem>,
+            private val onClick: (StreamItem) -> Unit
+        ) : RecyclerView.Adapter<GridAdapter.VH>() {
 
-    class VH(v: View) : RecyclerView.ViewHolder(v) {
-        val txt: TextView = v.findViewById(android.R.id.text1)
+            class VH(v: View) : RecyclerView.ViewHolder(v) {
+                val txt: TextView = v.findViewById(R.id.txtName)
+            }
 
-        init {
-            // TV odak için:
-            itemView.isFocusable = true
-            itemView.isFocusableInTouchMode = true
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+                val v = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_grid_pro, parent, false)
+                return VH(v)
+            }
 
-            txt.isFocusable = false
-            txt.maxLines = 2
+            override fun onBindViewHolder(holder: VH, position: Int) {
+                val item = list[position]
+                holder.txt.text = item.name
+                holder.itemView.setOnClickListener { onClick(item) }
+            }
 
-            // Yazıyı biraz büyüt + satırı büyüt
-            txt.textSize = 18f
-            val p = txt.paddingLeft
-            txt.setPadding(p, p, p, p)
-            itemView.minimumHeight = (72 * v.resources.displayMetrics.density).toInt()
+            override fun getItemCount(): Int = list.size
         }
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val v = LayoutInflater.from(parent.context)
-            .inflate(android.R.layout.simple_list_item_1, parent, false)
-        return VH(v)
-    }
-
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val item = list[position]
-        holder.txt.text = item.name
-
-        holder.itemView.setOnClickListener {
-            onClick(item)
-        }
-    }
-
-    override fun getItemCount(): Int = list.size
-}
-
         EOF
 
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
@@ -1270,18 +1252,16 @@ class GridAdapter(
         }
         EOF
 
-              cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
+        cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
         import android.content.Intent
         import android.os.Bundle
         import android.view.Menu
         import android.view.View
-        import android.widget.ImageButton
         import android.widget.ProgressBar
         import android.widget.TextView
         import android.widget.Toast
-        import androidx.appcompat.app.AlertDialog
         import androidx.appcompat.app.AppCompatActivity
         import androidx.core.view.GravityCompat
         import androidx.drawerlayout.widget.DrawerLayout
@@ -1297,7 +1277,6 @@ class GridAdapter(
         import java.text.SimpleDateFormat
         import java.util.ArrayList
         import java.util.Date
-        import java.util.LinkedHashMap
         import java.util.Locale
         import $PACKAGE_NAME.adapters.GridAdapter
         import $PACKAGE_NAME.models.AccountProfile
@@ -1319,7 +1298,6 @@ class GridAdapter(
             private lateinit var tvHeaderAccounts: TextView
             private lateinit var tvStatus: TextView
             private lateinit var pb: ProgressBar
-            private lateinit var btnSearch: ImageButton
 
             private lateinit var headerUser: TextView
             private lateinit var headerExpire: TextView
@@ -1357,7 +1335,6 @@ class GridAdapter(
                 tvHeaderAccounts = findViewById(R.id.tvAccounts)
                 tvStatus = findViewById(R.id.tvStatus)
                 pb = findViewById(R.id.pbLoading)
-                btnSearch = findViewById(R.id.btnSearch)
 
                 rv.layoutManager = LinearLayoutManager(this)
 
@@ -1368,7 +1345,7 @@ class GridAdapter(
                 tvHeaderAccounts.text = LangManager.t(
                     this,
                     "content_accounts",
-                    "Hesap / Dil / Çıkış"
+                    "Hesaplar / Çıkış"
                 )
 
                 tvHeader.setOnClickListener {
@@ -1383,47 +1360,17 @@ class GridAdapter(
                     finish()
                 }
 
-                btnSearch.setOnClickListener {
-                    showSearchDialog()
-                }
-
                 navView.setNavigationItemSelectedListener { item ->
-                    when (item.groupId) {
-                        0 -> { // Kategori
-                            val idx = item.itemId
-                            if (idx in categories.indices) {
-                                val cat = categories[idx]
-                                item.isCheckable = true
-                                item.isChecked = true
-                                filterAndShow(cat.category_id)
-                                drawer.closeDrawer(GravityCompat.START)
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                        1 -> { // Sabit menü (Hesap / Dil / Çıkış)
-                            when (item.itemId) {
-                                1001 -> { // Hesaplar
-                                    prefs.setLastScreen("LOGIN")
-                                    val i = Intent(this, LoginActivity::class.java)
-                                    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    startActivity(i)
-                                    finish()
-                                    true
-                                }
-                                1002 -> { // Dil
-                                    showLanguageDialog()
-                                    true
-                                }
-                                1003 -> { // Çıkış
-                                    finishAffinity()
-                                    true
-                                }
-                                else -> false
-                            }
-                        }
-                        else -> false
+                    val idx = item.itemId
+                    if (idx in categories.indices) {
+                        val cat = categories[idx]
+                        item.isCheckable = true
+                        item.isChecked = true
+                        filterAndShow(cat.category_id)
+                        drawer.closeDrawer(GravityCompat.START)
+                        true
+                    } else {
+                        false
                     }
                 }
 
@@ -1468,37 +1415,17 @@ class GridAdapter(
                     }
                 }
 
-                // Açılışta her zaman CANLI
-                currentMode = "LIVE"
-                bottomNav.selectedItemId = R.id.nav_live
-                loadMode("LIVE")
-            }
+                val lastMode = prefs.getLastMode()
+                val initialMode = if (accountType == "M3U") "LIVE" else lastMode
+                currentMode = initialMode
 
-            private fun showLanguageDialog() {
-                val items = arrayOf("English", "Türkçe")
-                val codes = arrayOf("en", "tr")
-                val current = prefs.getLang()
-                var checkedIndex = if (current == "tr") 1 else 0
+                bottomNav.selectedItemId = when (initialMode) {
+                    "VOD" -> R.id.nav_vod
+                    "SERIES" -> R.id.nav_series
+                    else -> R.id.nav_live
+                }
 
-                val dialog = AlertDialog.Builder(this)
-                    .setTitle("Dil / Language")
-                    .setSingleChoiceItems(items, checkedIndex) { _, which ->
-                        checkedIndex = which
-                    }
-                    .setPositiveButton("OK") { d, _ ->
-                        val newLang = codes[checkedIndex]
-                        if (newLang != current) {
-                            prefs.setLang(newLang)
-                            LangManager.restoreFromPrefs(this, newLang)
-                            LangManager.init(this, newLang)
-                            recreate()
-                        }
-                        d.dismiss()
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .create()
-
-                dialog.show()
+                loadMode(initialMode)
             }
 
             private fun loadMode(mode: String) {
@@ -1841,16 +1768,18 @@ class GridAdapter(
                     }
                     index++
                 }
-
-                // Sabit menü: Hesap / Dil / Çıkış
-                menu.add(1, 1001, 1, LangManager.t(this, "drawer_accounts", "Hesap Yönetimi"))
-                menu.add(1, 1002, 2, LangManager.t(this, "drawer_language", "Dili Değiştir"))
-                menu.add(1, 1003, 3, LangManager.t(this, "drawer_exit", "Çıkış"))
             }
 
-            private fun showItems(list: List<StreamItem>) {
+            private fun filterAndShow(categoryId: String?) {
+                val filtered = if (categoryId == null || categoryId.length == 0) {
+                    streams
+                } else {
+                    streams.filter { it.category_id == categoryId }
+                }
+
                 val acc = activeAcc ?: return
-                rv.adapter = GridAdapter(list) { item ->
+
+                rv.adapter = GridAdapter(filtered) { item ->
                     if (acc.type == "M3U") {
                         val url = item.full_url
                         if (url.isNullOrEmpty()) {
@@ -1931,49 +1860,6 @@ class GridAdapter(
                         }
                     }
                 }
-            }
-
-            private fun filterAndShow(categoryId: String?) {
-                val filtered = if (categoryId == null || categoryId.isEmpty()) {
-                    streams
-                } else {
-                    streams.filter { it.category_id == categoryId }
-                }
-                showItems(filtered)
-            }
-
-            private fun showSearchDialog() {
-                if (streams.isEmpty()) {
-                    Toast.makeText(this, "Aranacak içerik yok.", Toast.LENGTH_SHORT).show()
-                    return
-                }
-
-                val et = android.widget.EditText(this)
-                et.hint = "Kanal / film / dizi ara"
-                et.setTextColor(resources.getColor(android.R.color.white))
-                et.setHintTextColor(resources.getColor(android.R.color.darker_gray))
-
-                val dialog = AlertDialog.Builder(this)
-                    .setTitle("Genel Arama")
-                    .setView(et)
-                    .setPositiveButton("Ara") { d, _ ->
-                        val q = et.text.toString().trim()
-                        if (q.isNotEmpty()) {
-                            val result = streams.filter {
-                                it.name.contains(q, ignoreCase = true)
-                            }
-                            if (result.isEmpty()) {
-                                Toast.makeText(this, "Sonuç bulunamadı.", Toast.LENGTH_SHORT).show()
-                            } else {
-                                showItems(result)
-                            }
-                        }
-                        d.dismiss()
-                    }
-                    .setNegativeButton("İptal", null)
-                    .create()
-
-                dialog.show()
             }
         }
         EOF
@@ -2163,13 +2049,12 @@ class GridAdapter(
         }
         EOF
 
-             cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
+        cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
         import android.content.Context
         import android.media.AudioManager
         import android.os.Bundle
-        import android.view.KeyEvent
         import android.view.MotionEvent
         import android.view.View
         import android.view.WindowManager
@@ -2224,11 +2109,11 @@ class GridAdapter(
 
                 window.decorView.systemUiVisibility =
                     View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                            View.SYSTEM_UI_FLAG_FULLSCREEN or
-                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
 
                 setContentView(R.layout.activity_player_pro)
 
@@ -2302,24 +2187,6 @@ class GridAdapter(
                     Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
                     finish()
                 }
-            }
-
-            // TV kumandası play/pause ve OK tuşu ile oynat/durdur
-            override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-                val p = player
-                if (p != null &&
-                    (event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE ||
-                            event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-                            event.keyCode == KeyEvent.KEYCODE_ENTER) &&
-                    event.action == KeyEvent.ACTION_UP
-                ) {
-                    if (p.isPlaying) p.pause() else p.play()
-                    try {
-                        playerView.showController()
-                    } catch (_: Exception) { }
-                    return true
-                }
-                return super.dispatchKeyEvent(event)
             }
 
             private fun setupGestureOverlay(view: View, isLeft: Boolean) {
@@ -2742,7 +2609,7 @@ class GridAdapter(
         </LinearLayout>
         EOF
 
-              cat <<EOF > app/src/main/res/layout/activity_content.xml
+        cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -2768,8 +2635,7 @@ class GridAdapter(
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:background="@color/bordo"
-                    android:gravity="center_vertical">
+                    android:background="@color/bordo">
 
                     <TextView
                         android:id="@+id/tvHeader"
@@ -2780,20 +2646,7 @@ class GridAdapter(
                         android:textColor="@color/white"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:padding="16dp"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"/>
-
-                    <ImageButton
-                        android:id="@+id/btnSearch"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@android:color/transparent"
-                        android:src="@android:drawable/ic_menu_search"
-                        android:tint="@color/white"
-                        android:padding="4dp"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"/>
+                        android:padding="16dp"/>
 
                     <TextView
                         android:id="@+id/tvAccounts"
@@ -2804,9 +2657,7 @@ class GridAdapter(
                         android:paddingRight="16dp"
                         android:text="Hesaplar / Çıkış"
                         android:textColor="@color/white"
-                        android:textSize="13sp"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"/>
+                        android:textSize="13sp"/>
                 </LinearLayout>
 
                 <ProgressBar
@@ -2833,9 +2684,7 @@ class GridAdapter(
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
-                    android:padding="8dp"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"/>
+                    android:padding="8dp"/>
 
                 <com.google.android.gms.ads.AdView
                     android:id="@+id/adViewBottomContent"
@@ -2863,6 +2712,41 @@ class GridAdapter(
                 app:itemTextColor="@color/nav_item_text"
                 app:itemIconTint="@color/nav_item_text" />
         </androidx.drawerlayout.widget.DrawerLayout>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="72dp"
+                android:orientation="horizontal"
+                android:background="@color/gray_800"
+                android:padding="12dp">
+
+                <View
+                    android:layout_width="4dp"
+                    android:layout_height="match_parent"
+                    android:background="@color/accent_green" />
+
+                <TextView
+                    android:id="@+id/txtName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:paddingLeft="10dp"
+                    android:paddingRight="6dp"/>
+            </LinearLayout>
+        </LinearLayout>
         EOF
 
         cat <<EOF > app/src/main/res/layout/item_account.xml
