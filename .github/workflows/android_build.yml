@@ -813,9 +813,7 @@ jobs:
             }
         }
         EOF
-
-        
-                                            # --- LOGIN ACTIVITY ---
+                # --- LOGIN ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -835,7 +833,7 @@ jobs:
 
         class LoginActivity : AppCompatActivity() {
 
-            private var isXtream = true
+            private var isXtream: Boolean = true
             private var accountsAdapter: AccountsAdapter? = null
 
             override fun onCreate(savedInstanceState: Bundle?) {
@@ -844,14 +842,16 @@ jobs:
 
                 val prefs = Prefs(this)
 
-                // EKRAN AÇILIŞ EVENTİ
+                // 🔹 Login ekranı açıldı
                 RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
 
+                // Reklam
                 AdsHelper.init(this)
                 val adTop = findViewById<AdView>(R.id.adViewTopLogin)
                 AdsHelper.loadBanner(adTop)
                 AdsHelper.loadInterstitial(this)
 
+                // View referansları
                 val etName = findViewById<EditText>(R.id.etName)
                 val etDns = findViewById<EditText>(R.id.etDns)
                 val etUser = findViewById<EditText>(R.id.etUser)
@@ -869,13 +869,18 @@ jobs:
                 val btnAdd = findViewById<Button>(R.id.btnAddAccount)
                 val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
 
+                // ------------------------------
+                //  GÖRÜNÜM: Xtream / M3U toggle
+                // ------------------------------
                 fun updateTypeUI() {
                     if (isXtream) {
                         layoutXtream.visibility = View.VISIBLE
                         layoutM3u.visibility = View.GONE
 
-                        cardXtream.background = ContextCompat.getDrawable(this, R.drawable.bg_header_card)
-                        cardM3u.background = ContextCompat.getDrawable(this, R.drawable.bg_input_dark)
+                        cardXtream.background =
+                            ContextCompat.getDrawable(this, R.drawable.bg_header_card)
+                        cardM3u.background =
+                            ContextCompat.getDrawable(this, R.drawable.bg_input_dark)
 
                         tvXtream.setTextColor(ContextCompat.getColor(this, R.color.white))
                         tvM3u.setTextColor(ContextCompat.getColor(this, R.color.white))
@@ -883,8 +888,10 @@ jobs:
                         layoutXtream.visibility = View.GONE
                         layoutM3u.visibility = View.VISIBLE
 
-                        cardM3u.background = ContextCompat.getDrawable(this, R.drawable.bg_header_card)
-                        cardXtream.background = ContextCompat.getDrawable(this, R.drawable.bg_input_dark)
+                        cardM3u.background =
+                            ContextCompat.getDrawable(this, R.drawable.bg_header_card)
+                        cardXtream.background =
+                            ContextCompat.getDrawable(this, R.drawable.bg_input_dark)
 
                         tvXtream.setTextColor(ContextCompat.getColor(this, R.color.white))
                         tvM3u.setTextColor(ContextCompat.getColor(this, R.color.white))
@@ -903,21 +910,26 @@ jobs:
 
                 updateTypeUI()
 
+                // ------------------------------
+                //  KAYITLI HESAPLAR LİSTESİ
+                // ------------------------------
                 fun refreshList() {
-                    val accounts: MutableList<AccountProfile> = prefs.getAccounts().toMutableList()
+                    val accounts: MutableList<AccountProfile> =
+                        prefs.getAccounts().toMutableList()
 
                     if (accountsAdapter == null) {
                         accountsAdapter = AccountsAdapter(
                             this,
                             accounts,
                             onOpen = { acc ->
+                                // Aktif yap ve içeriğe git
                                 prefs.setActive(acc.id)
                                 startActivity(Intent(this, ContentActivity::class.java))
                             },
                             onDelete = { acc ->
                                 val dialog = AlertDialog.Builder(this)
                                     .setTitle("Hesabı Sil")
-                                    .setMessage("\"" + acc.name + "\" hesabını silmek istiyor musun?")
+                                    .setMessage("\"${acc.name}\" hesabını silmek istiyor musun?")
                                     .setPositiveButton("Evet") { _, _ ->
                                         prefs.deleteAccount(acc.id)
                                         refreshList()
@@ -925,16 +937,24 @@ jobs:
                                     .setNegativeButton("Hayır", null)
                                     .create()
 
-                                // ✅ Evet / Hayır butonlarına renk
+                                // ✅ Evet / Hayır renkleri
                                 dialog.setOnShowListener {
-                                    val positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                                    val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                                    val positive =
+                                        dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                                    val negative =
+                                        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
 
                                     positive?.setTextColor(
-                                        ContextCompat.getColor(this, R.color.accent_green)
+                                        ContextCompat.getColor(
+                                            this,
+                                            R.color.accent_green
+                                        )
                                     )
                                     negative?.setTextColor(
-                                        ContextCompat.getColor(this, R.color.error_red)
+                                        ContextCompat.getColor(
+                                            this,
+                                            R.color.error_red
+                                        )
                                     )
                                 }
 
@@ -949,6 +969,9 @@ jobs:
 
                 refreshList()
 
+                // ------------------------------
+                //  HESAP EKLE BUTONU
+                // ------------------------------
                 btnAdd.setOnClickListener {
                     val name = etName.text.toString().trim()
                     val finalName = if (name.isNotEmpty()) name else "Hesap"
@@ -959,14 +982,18 @@ jobs:
                         val p = etPass.text.toString().trim()
 
                         if (d.isEmpty() || u.isEmpty()) {
-                            Toast.makeText(this, "Xtream için DNS ve kullanıcı zorunlu.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this,
+                                "Xtream için DNS ve kullanıcı zorunlu.",
+                                Toast.LENGTH_SHORT
+                            ).show()
                             return@setOnClickListener
                         }
 
                         // HESAP OLUŞTUR
                         prefs.createXtreamAccount(finalName, d, u, p)
 
-                        // ✅ XTREAM HESAP LOG (ŞİFRE YOK!)
+                        // ✅ XTREAM HESAP LOG (ŞİFRE GÖNDERİLMİYOR)
                         RemoteLogger.sendEvent(
                             this,
                             "account_xtream_created",
@@ -985,7 +1012,11 @@ jobs:
                     } else {
                         val m = etM3u.text.toString().trim()
                         if (m.isEmpty()) {
-                            Toast.makeText(this, "M3U linki boş olamaz.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this,
+                                "M3U linki boş olamaz.",
+                                Toast.LENGTH_SHORT
+                            ).show()
                             return@setOnClickListener
                         }
 
@@ -998,7 +1029,6 @@ jobs:
                             "account_m3u_created",
                             mapOf(
                                 "name" to finalName,
-                                // Tam M3U'yu göndermeyelim, sadece ilk kısmı
                                 "m3u_prefix" to m.take(160)
                             )
                         )
@@ -1020,7 +1050,7 @@ jobs:
                     refreshList()
                 }
             }
-        
+        }
         EOF
 
         # --- DASHBOARD ---
