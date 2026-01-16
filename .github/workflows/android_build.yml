@@ -813,7 +813,8 @@ jobs:
             }
         }
         EOF
-                # --- LOGIN ACTIVITY ---
+
+        # --- LOGIN ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -845,13 +846,11 @@ jobs:
                 // 🔹 Login ekranı açıldı
                 RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
 
-                // Reklam
                 AdsHelper.init(this)
                 val adTop = findViewById<AdView>(R.id.adViewTopLogin)
                 AdsHelper.loadBanner(adTop)
                 AdsHelper.loadInterstitial(this)
 
-                // View referansları
                 val etName = findViewById<EditText>(R.id.etName)
                 val etDns = findViewById<EditText>(R.id.etDns)
                 val etUser = findViewById<EditText>(R.id.etUser)
@@ -869,9 +868,6 @@ jobs:
                 val btnAdd = findViewById<Button>(R.id.btnAddAccount)
                 val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
 
-                // ------------------------------
-                //  GÖRÜNÜM: Xtream / M3U toggle
-                // ------------------------------
                 fun updateTypeUI() {
                     if (isXtream) {
                         layoutXtream.visibility = View.VISIBLE
@@ -910,9 +906,6 @@ jobs:
 
                 updateTypeUI()
 
-                // ------------------------------
-                //  KAYITLI HESAPLAR LİSTESİ
-                // ------------------------------
                 fun refreshList() {
                     val accounts: MutableList<AccountProfile> =
                         prefs.getAccounts().toMutableList()
@@ -922,7 +915,6 @@ jobs:
                             this,
                             accounts,
                             onOpen = { acc ->
-                                // Aktif yap ve içeriğe git
                                 prefs.setActive(acc.id)
                                 startActivity(Intent(this, ContentActivity::class.java))
                             },
@@ -937,7 +929,7 @@ jobs:
                                     .setNegativeButton("Hayır", null)
                                     .create()
 
-                                // ✅ Evet / Hayır renkleri
+                                // ✅ Evet / Hayır butonlarına renk ver
                                 dialog.setOnShowListener {
                                     val positive =
                                         dialog.getButton(AlertDialog.BUTTON_POSITIVE)
@@ -969,9 +961,6 @@ jobs:
 
                 refreshList()
 
-                // ------------------------------
-                //  HESAP EKLE BUTONU
-                // ------------------------------
                 btnAdd.setOnClickListener {
                     val name = etName.text.toString().trim()
                     val finalName = if (name.isNotEmpty()) name else "Hesap"
