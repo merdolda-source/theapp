@@ -186,11 +186,6 @@ jobs:
                 <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
                 <item name="android:windowFullscreen">true</item>
             </style>
-
-            <!-- Kayıtlı hesap silme için özel dialog -->
-            <style name="ErdinAlertDialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
-                <item name="android:background">@color/gray_800</item>
-            </style>
         </resources>
         EOF
 
@@ -206,7 +201,7 @@ jobs:
         </resources>
         EOF
 
-        # TR (şimdilik aynı ID'ler; yazıları sonra ayrı taşıyabiliriz)
+        # TR
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
@@ -862,7 +857,6 @@ jobs:
         import androidx.appcompat.app.AppCompatActivity
         import androidx.core.content.ContextCompat
         import com.google.android.gms.ads.AdView
-        import com.google.android.material.dialog.MaterialAlertDialogBuilder
         import $PACKAGE_NAME.adapters.AccountsAdapter
         import $PACKAGE_NAME.models.AccountProfile
         import $PACKAGE_NAME.utils.AdsHelper
@@ -952,7 +946,7 @@ jobs:
                                 startActivity(Intent(this, ContentActivity::class.java))
                             },
                             onDelete = { acc ->
-                                val dialog = MaterialAlertDialogBuilder(this, R.style.ErdinAlertDialog)
+                                AlertDialog.Builder(this)
                                     .setTitle("Hesabı Sil")
                                     .setMessage("\"" + acc.name + "\" hesabını silmek istiyor musun?")
                                     .setPositiveButton("Evet") { _, _ ->
@@ -960,16 +954,7 @@ jobs:
                                         refreshList()
                                     }
                                     .setNegativeButton("Hayır", null)
-                                    .create()
-
-                                dialog.setOnShowListener {
-                                    val positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                                    val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-                                    positive?.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
-                                    negative?.setTextColor(ContextCompat.getColor(this, R.color.hint_yellow))
-                                }
-
-                                dialog.show()
+                                    .show()
                             }
                         )
                         lvAccounts.adapter = accountsAdapter
@@ -1052,7 +1037,7 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY (RemoteLogger + Ads) ---
+        # --- CONTENT ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1130,6 +1115,7 @@ jobs:
                 pb = findViewById(R.id.pbLoading)
 
                 rv.layoutManager = LinearLayoutManager(this)
+                rv.setHasFixedSize(true)
 
                 val headerView = navView.getHeaderView(0)
                 headerUser = headerView.findViewById(R.id.tvHeaderUser)
@@ -1631,7 +1617,7 @@ jobs:
         }
         EOF
 
-        # --- SERIES DETAIL (aynı mantık) ---
+        # --- SERIES DETAIL ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1816,7 +1802,7 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY (scrub + gesture uyumlu) ---
+        # --- PLAYER ACTIVITY (ekran kilidi kapanmaz + controller timeout koddan) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1872,7 +1858,10 @@ jobs:
                     WindowManager.LayoutParams.FLAG_FULLSCREEN,
                     WindowManager.LayoutParams.FLAG_FULLSCREEN
                 )
-                window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+                window.addFlags(
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                )
 
                 window.decorView.systemUiVisibility =
                     View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
@@ -1895,6 +1884,9 @@ jobs:
                 }
 
                 val pv = findViewById<PlayerView>(R.id.pvMain)
+                // XML'de attribute kullanmak yerine, timeout'u burada koddan ayarlıyoruz
+                pv.controllerShowTimeoutMs = 3000
+
                 val btnMode = findViewById<ImageButton>(R.id.btnMode)
                 leftOverlay = findViewById(R.id.overlayLeft)
                 rightOverlay = findViewById(R.id.overlayRight)
@@ -1957,20 +1949,12 @@ jobs:
             }
 
             private fun setupGestureOverlay(view: View, isLeft: Boolean) {
-                // Alt taraftaki player kontrol barına dokunmayı PlayerView'a bırak
-                val bottomIgnorePx = dpToPx(80)
-
                 view.setOnTouchListener { v, event ->
-                    val height = v.height
+                    val am = audioManager
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> {
-                            if (event.y > height - bottomIgnorePx) {
-                                // Zaman çubuğu / oynatma kontrolleri için dokunmayı engelleme
-                                return@setOnTouchListener false
-                            }
                             gestureStartY = event.y
                             isGesture = false
-                            val am = audioManager
                             gestureStartVolume = am?.getStreamVolume(AudioManager.STREAM_MUSIC)
                                 ?: (maxVolume / 2)
                             gestureStartBrightness = currentBrightness
@@ -2019,8 +2003,6 @@ jobs:
                                     }
                                 }
                             }
-                            tvBrightness.visibility = View.GONE
-                            tvVolume.visibility = View.GONE
                             true
                         }
                         else -> false
@@ -2072,11 +2054,6 @@ jobs:
                     1 -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
                     else -> pv.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 }
-            }
-
-            private fun dpToPx(dp: Int): Int {
-                val scale = resources.displayMetrics.density
-                return (dp * scale + 0.5f).toInt()
             }
 
             private fun showCenterInfo(text: String) {
@@ -2552,10 +2529,9 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player layout
+        # Player layout (XML'de extra attribute yok, hata vermez)
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/black">
@@ -2563,10 +2539,7 @@ jobs:
             <androidx.media3.ui.PlayerView
                 android:id="@+id/pvMain"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:use_controller="true"
-                app:show_buffering="when_playing"
-                app:controller_show_timeout="4000"/>
+                android:layout_height="match_parent" />
 
             <LinearLayout
                 android:id="@+id/overlayContainer"
