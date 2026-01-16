@@ -964,7 +964,8 @@ jobs:
                                     dialogView.findViewById<Button>(R.id.btnNo)
 
                                 tvMessage.text =
-                                    "\"${acc.name}\" hesabını silmek istiyor musun?"
+    "\"" + acc.name + "\" hesabını silmek istiyor musun?"
+
 
                                 val dialog = AlertDialog.Builder(this)
                                     .setView(dialogView)
