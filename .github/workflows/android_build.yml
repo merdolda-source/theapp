@@ -9,7 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # ✅ Keystore secrets ENV olarak job'a alındı
     env:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -34,7 +33,6 @@ jobs:
         PACKAGE_NAME="com.erdin.player"
         PATH_NAME="com/erdin/player"
 
-        # ✅ Eski PASS mantığını bozma ama secrets varsa onları kullan
         PASS="erdin123"
         STORE_PASS="${ANDROID_KEYSTORE_PASSWORD:-$PASS}"
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
@@ -42,7 +40,6 @@ jobs:
         
         echo "🚀 EMİN XTREAM Player Projesi Üretiliyor..."
 
-        # Klasör Yapısı
         rm -rf "$APP_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME/models"
@@ -58,10 +55,8 @@ jobs:
         
         cd "$APP_NAME"
 
-        # İKON
         wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://i.ibb.co/LDdzzhsk/f564b0ed-277d-489c-9a1a-c59f0fe471fc.png"
 
-        # ✅ KEYSTORE (SECRETS'TEN) -> app/keystore.jks
         if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
           echo "🔐 Keystore secrets'ten yazılıyor..."
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/keystore.jks
@@ -76,7 +71,6 @@ jobs:
             -dname "CN=Erdin, O=ErdinMedia, C=TR"
         fi
 
-        # --- GRADLE ROOT ---
         echo "include ':app'" > settings.gradle
 
         cat <<EOF > gradle.properties
@@ -96,7 +90,6 @@ jobs:
         allprojects { repositories { google(); mavenCentral() } }
         EOF
 
-        # --- APP MODULE GRADLE ---
         mkdir -p app
         cat <<EOF > app/build.gradle
         plugins {
@@ -160,7 +153,6 @@ jobs:
         }
         EOF
 
-        # --- COLORS / STYLES / STRINGS ---
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
             <color name="bg_dark">#050608</color>
@@ -187,7 +179,6 @@ jobs:
         </resources>
         EOF
 
-        # EN
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
@@ -197,7 +188,6 @@ jobs:
         </resources>
         EOF
 
-        # TR
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
@@ -241,9 +231,9 @@ jobs:
         cat <<EOF > app/src/main/res/drawable/bg_account_card.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="@color/gray_800"/>
-            <corners android:radius="14dp"/>
+            <corners android:radius="18dp"/>
             <stroke android:width="1dp" android:color="@color/bordo"/>
-            <padding android:left="12dp" android:top="10dp" android:right="12dp" android:bottom="10dp"/>
+            <padding android:left="16dp" android:top="14dp" android:right="16dp" android:bottom="14dp"/>
         </shape>
         EOF
 
@@ -254,7 +244,6 @@ jobs:
         </selector>
         EOF
 
-        # --- BOTTOM NAV MENU ---
         cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
         <menu xmlns:android="http://schemas.android.com/apk/res/android">
             <item
@@ -272,7 +261,6 @@ jobs:
         </menu>
         EOF
 
-        # --- NAV HEADER ---
         cat <<EOF > app/src/main/res/layout/nav_header.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -308,7 +296,6 @@ jobs:
         </LinearLayout>
         EOF
 
-        # --- MODELLER ---
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
 
@@ -347,7 +334,6 @@ jobs:
         )
         EOF
 
-        # --- UTILS: RemoteConfig ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
 
@@ -436,7 +422,6 @@ jobs:
         }
         EOF
 
-        # --- UTILS: RemoteLogger ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteLogger.kt
         package $PACKAGE_NAME.utils
 
@@ -515,7 +500,6 @@ jobs:
         }
         EOF
 
-        # --- UTILS: Prefs ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
@@ -639,10 +623,33 @@ jobs:
             fun getDns(): String = getActive()?.dns ?: ""
             fun getUser(): String = getActive()?.user ?: ""
             fun getPass(): String = getActive()?.pass ?: ""
+
+            fun setLastScreen(screen: String) {
+                p.edit().putString("last_screen", screen).apply()
+            }
+
+            fun getLastScreen(): String {
+                return p.getString("last_screen", "LOGIN") ?: "LOGIN"
+            }
+
+            fun setLastMode(mode: String) {
+                p.edit().putString("last_mode", mode).apply()
+            }
+
+            fun getLastMode(): String {
+                return p.getString("last_mode", "LIVE") ?: "LIVE"
+            }
+
+            fun setLang(lang: String) {
+                p.edit().putString("lang", lang).apply()
+            }
+
+            fun getLang(): String {
+                return p.getString("lang", "en") ?: "en"
+            }
         }
         EOF
 
-        # --- UTILS: AdsHelper ---
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
         package $PACKAGE_NAME.utils
 
@@ -720,7 +727,6 @@ jobs:
         }
         EOF
 
-        # --- ADAPTERLER ---
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
 
@@ -814,7 +820,6 @@ jobs:
         }
         EOF
 
-        # --- LOGIN ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -843,13 +848,30 @@ jobs:
 
                 val prefs = Prefs(this)
 
-                // Ekran açılış event
+                val lastScreen = prefs.getLastScreen()
+                val activeStartup = prefs.getActive()
+                if (lastScreen == "CONTENT" && activeStartup != null) {
+                    val i = Intent(this, ContentActivity::class.java)
+                    startActivity(i)
+                    finish()
+                    return
+                }
+
                 RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
 
                 AdsHelper.init(this)
                 val adTop = findViewById<AdView>(R.id.adViewTopLogin)
                 AdsHelper.loadBanner(adTop)
                 AdsHelper.loadInterstitial(this)
+
+                val tvTitle = findViewById<TextView>(R.id.tvTitle)
+                val tvLoginType = findViewById<TextView>(R.id.tvLoginType)
+                val tvAccountsTitle = findViewById<TextView>(R.id.tvAccountsTitle)
+                val tvAccountsHint = findViewById<TextView>(R.id.tvAccountsHint)
+
+                val layoutLang = findViewById<View>(R.id.layoutLang)
+                val tvLangEn = findViewById<TextView>(R.id.tvLangEn)
+                val tvLangTr = findViewById<TextView>(R.id.tvLangTr)
 
                 val etName = findViewById<EditText>(R.id.etName)
                 val etDns = findViewById<EditText>(R.id.etDns)
@@ -867,6 +889,64 @@ jobs:
 
                 val btnAdd = findViewById<Button>(R.id.btnAddAccount)
                 val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
+
+                var currentLang = prefs.getLang()
+
+                fun applyLanguage(lang: String) {
+                    if (lang == "tr") {
+                        tvTitle.text = "Emin Xtream Player"
+                        tvLoginType.text = "Giriş Tipi"
+                        tvXtream.text = "Xtream"
+                        tvM3u.text = "M3U"
+                        etName.hint = "örnek bir isim"
+                        etDns.hint = "Xtream Url girin"
+                        etUser.hint = "Kullanıcı Adı"
+                        etPass.hint = "Şifre"
+                        etM3u.hint = "M3U Linki Giriniz"
+                        btnAdd.text = "Kullanıcı EKLE"
+                        tvAccountsTitle.text = "Kayıtlı Hesaplar"
+                        tvAccountsHint.text = "EKLENEN KULLANICILARDAN GİRİŞ YAPIN"
+
+                        tvLangEn.setTextColor(ContextCompat.getColor(this, R.color.white))
+                        tvLangTr.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
+                    } else {
+                        tvTitle.text = "Emin Xtream Player"
+                        tvLoginType.text = "Login Type"
+                        tvXtream.text = "Xtream"
+                        tvM3u.text = "M3U"
+                        etName.hint = "example name"
+                        etDns.hint = "Enter Xtream URL"
+                        etUser.hint = "Username"
+                        etPass.hint = "Password"
+                        etM3u.hint = "Enter M3U URL"
+                        btnAdd.text = "Add Account"
+                        tvAccountsTitle.text = "Saved Accounts"
+                        tvAccountsHint.text = "Select an account below to continue"
+
+                        tvLangEn.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
+                        tvLangTr.setTextColor(ContextCompat.getColor(this, R.color.white))
+                    }
+                }
+
+                applyLanguage(currentLang)
+
+                tvLangEn.setOnClickListener {
+                    currentLang = "en"
+                    prefs.setLang("en")
+                    applyLanguage(currentLang)
+                }
+
+                tvLangTr.setOnClickListener {
+                    currentLang = "tr"
+                    prefs.setLang("tr")
+                    applyLanguage(currentLang)
+                }
+
+                layoutLang.setOnClickListener {
+                    currentLang = if (currentLang == "en") "tr" else "en"
+                    prefs.setLang(currentLang)
+                    applyLanguage(currentLang)
+                }
 
                 fun updateTypeUI() {
                     if (isXtream) {
@@ -911,7 +991,9 @@ jobs:
                             accounts,
                             onOpen = { acc ->
                                 prefs.setActive(acc.id)
-                                startActivity(Intent(this, ContentActivity::class.java))
+                                prefs.setLastScreen("CONTENT")
+                                val i = Intent(this, ContentActivity::class.java)
+                                startActivity(i)
                             },
                             onDelete = { acc ->
                                 val dialog = AlertDialog.Builder(this)
@@ -924,7 +1006,6 @@ jobs:
                                     .setNegativeButton("Hayır", null)
                                     .create()
 
-                                // Evet / Hayır renk
                                 dialog.setOnShowListener {
                                     val positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
                                     val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
@@ -962,10 +1043,8 @@ jobs:
                             return@setOnClickListener
                         }
 
-                        // HESAP OLUŞTUR
                         prefs.createXtreamAccount(finalName, d, u, p)
 
-                        // XTREAM LOG (şifre yok)
                         RemoteLogger.sendEvent(
                             this,
                             "account_xtream_created",
@@ -988,10 +1067,8 @@ jobs:
                             return@setOnClickListener
                         }
 
-                        // HESAP OLUŞTUR
                         prefs.createM3uAccount(finalName, m)
 
-                        // M3U LOG (şifre yok, link kısaltılmış)
                         RemoteLogger.sendEvent(
                             this,
                             "account_m3u_created",
@@ -1008,7 +1085,6 @@ jobs:
                         ).show()
                     }
 
-                    // Form temizle
                     etName.setText("")
                     etDns.setText("")
                     etUser.setText("")
@@ -1021,7 +1097,6 @@ jobs:
         }
         EOF
 
-        # --- DASHBOARD ---
         cat <<EOF > app/src/main/java/$PATH_NAME/DashboardActivity.kt
         package $PACKAGE_NAME
 
@@ -1057,7 +1132,6 @@ jobs:
         }
         EOF
 
-        # --- CONTENT ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1100,6 +1174,7 @@ jobs:
             private lateinit var bottomNav: BottomNavigationView
             private lateinit var rv: RecyclerView
             private lateinit var tvHeader: TextView
+            private lateinit var tvHeaderAccounts: TextView
             private lateinit var tvStatus: TextView
             private lateinit var pb: ProgressBar
 
@@ -1118,6 +1193,7 @@ jobs:
                 setContentView(R.layout.activity_content)
 
                 prefs = Prefs(this)
+                prefs.setLastScreen("CONTENT")
 
                 AdsHelper.init(this)
                 val adTop = findViewById<AdView>(R.id.adViewTopContent)
@@ -1131,6 +1207,7 @@ jobs:
                 bottomNav = findViewById(R.id.bottomNav)
                 rv = findViewById(R.id.rvContent)
                 tvHeader = findViewById(R.id.tvHeader)
+                tvHeaderAccounts = findViewById(R.id.tvAccounts)
                 tvStatus = findViewById(R.id.tvStatus)
                 pb = findViewById(R.id.pbLoading)
 
@@ -1142,6 +1219,14 @@ jobs:
 
                 tvHeader.setOnClickListener {
                     drawer.openDrawer(GravityCompat.START)
+                }
+
+                tvHeaderAccounts.setOnClickListener {
+                    prefs.setLastScreen("LOGIN")
+                    val i = Intent(this, LoginActivity::class.java)
+                    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(i)
+                    finish()
                 }
 
                 navView.setNavigationItemSelectedListener { item ->
@@ -1168,29 +1253,30 @@ jobs:
 
                 bottomNav.setOnItemSelectedListener { item ->
                     if (accountType == "M3U") {
-                        when (item.itemId) {
-                            R.id.nav_live -> {
-                                loadMode("LIVE")
-                                true
-                            }
-                            else -> {
-                                Toast.makeText(
-                                    this,
-                                    "M3U hesabında yalnızca Canlı TV listesi gösterilir.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                false
-                            }
+                        if (item.itemId == R.id.nav_live) {
+                            prefs.setLastMode("LIVE")
+                            loadMode("LIVE")
+                            true
+                        } else {
+                            Toast.makeText(
+                                this,
+                                "M3U hesabında yalnızca Canlı TV listesi gösterilir.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            false
                         }
                     } else {
                         when (item.itemId) {
                             R.id.nav_live -> {
+                                prefs.setLastMode("LIVE")
                                 loadMode("LIVE"); true
                             }
                             R.id.nav_vod -> {
+                                prefs.setLastMode("VOD")
                                 loadMode("VOD"); true
                             }
                             R.id.nav_series -> {
+                                prefs.setLastMode("SERIES")
                                 loadMode("SERIES"); true
                             }
                             else -> false
@@ -1198,8 +1284,17 @@ jobs:
                     }
                 }
 
-                bottomNav.selectedItemId = R.id.nav_live
-                loadMode("LIVE")
+                val lastMode = prefs.getLastMode()
+                val initialMode = if (accountType == "M3U") "LIVE" else lastMode
+                currentMode = initialMode
+
+                bottomNav.selectedItemId = when (initialMode) {
+                    "VOD" -> R.id.nav_vod
+                    "SERIES" -> R.id.nav_series
+                    else -> R.id.nav_live
+                }
+
+                loadMode(initialMode)
             }
 
             private fun loadMode(mode: String) {
@@ -1636,6 +1731,7 @@ jobs:
         }
         EOF
 
+        # SeriesDetailActivity ve PlayerActivity önceki sürümle aynı (değiştirmedim)
         # --- SERIES DETAIL ---
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
@@ -1821,7 +1917,6 @@ jobs:
         }
         EOF
 
-        # --- PLAYER ACTIVITY ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -2097,7 +2192,6 @@ jobs:
 
         # --- LAYOUTLAR ---
 
-        # Login
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -2113,7 +2207,46 @@ jobs:
                 android:layout_height="wrap_content"
                 ads:adSize="BANNER"
                 ads:adUnitId="@string/admob_banner_test"
-                android:layout_marginBottom="8dp"/>
+                android:layout_marginBottom="4dp"/>
+
+            <LinearLayout
+                android:id="@+id/layoutLang"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="8dp">
+
+                <ImageView
+                    android:id="@+id/imgLang"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_menu_manage"
+                    android:tint="@color/accent_green"
+                    android:layout_marginRight="6dp" />
+
+                <TextView
+                    android:id="@+id/tvLangEn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="EN"
+                    android:textColor="@color/accent_green"
+                    android:textSize="13sp"
+                    android:paddingLeft="6dp"
+                    android:paddingRight="6dp" />
+
+                <TextView
+                    android:id="@+id/tvLangTr"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TR"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    android:paddingLeft="6dp"
+                    android:paddingRight="6dp"
+                    android:layout_marginLeft="2dp" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvTitle"
@@ -2122,15 +2255,16 @@ jobs:
                 android:text="Emin Xtream Player"
                 android:textColor="@color/accent_green"
                 android:textStyle="bold"
-                android:textSize="20sp"
+                android:textSize="22sp"
                 android:layout_marginBottom="10dp"/>
 
             <TextView
+                android:id="@+id/tvLoginType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Giriş Tipi"
+                android:text="Login Type"
                 android:textColor="@color/white"
-                android:textSize="14sp"
+                android:textSize="15sp"
                 android:layout_marginBottom="4dp"/>
 
             <LinearLayout
@@ -2142,7 +2276,7 @@ jobs:
                 <LinearLayout
                     android:id="@+id/cardXtream"
                     android:layout_width="0dp"
-                    android:layout_height="60dp"
+                    android:layout_height="64dp"
                     android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
@@ -2157,13 +2291,13 @@ jobs:
                         android:text="Xtream"
                         android:textStyle="bold"
                         android:textColor="@color/white"
-                        android:textSize="14sp"/>
+                        android:textSize="15sp"/>
                 </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/cardM3u"
                     android:layout_width="0dp"
-                    android:layout_height="60dp"
+                    android:layout_height="64dp"
                     android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
@@ -2178,15 +2312,15 @@ jobs:
                         android:text="M3U"
                         android:textStyle="bold"
                         android:textColor="@color/white"
-                        android:textSize="14sp"/>
+                        android:textSize="15sp"/>
                 </LinearLayout>
             </LinearLayout>
 
             <EditText
                 android:id="@+id/etName"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:hint="örnek bir isim"
+                android:layout_height="52dp"
+                android:hint="example name"
                 android:background="@drawable/bg_input_dark"
                 android:padding="10dp"
                 android:textColor="@color/white"
@@ -2203,8 +2337,8 @@ jobs:
                 <EditText
                     android:id="@+id/etDns"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:hint="Xtream Url girin"
+                    android:layout_height="52dp"
+                    android:hint="Enter Xtream URL"
                     android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
                     android:textColor="@color/white"
@@ -2215,8 +2349,8 @@ jobs:
                 <EditText
                     android:id="@+id/etUser"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:hint="Kullanıcı Adı"
+                    android:layout_height="52dp"
+                    android:hint="Username"
                     android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
                     android:textColor="@color/white"
@@ -2227,8 +2361,8 @@ jobs:
                 <EditText
                     android:id="@+id/etPass"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:hint=" Şifre"
+                    android:layout_height="52dp"
+                    android:hint="Password"
                     android:inputType="textVisiblePassword"
                     android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
@@ -2247,8 +2381,8 @@ jobs:
                 <EditText
                     android:id="@+id/etM3u"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:hint="M3U Linki Giriniz"
+                    android:layout_height="52dp"
+                    android:hint="Enter M3U URL"
                     android:background="@drawable/bg_input_dark"
                     android:padding="10dp"
                     android:textColor="@color/white"
@@ -2260,28 +2394,31 @@ jobs:
             <Button
                 android:id="@+id/btnAddAccount"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="Kullanıcı EKLE"
+                android:layout_height="56dp"
+                android:text="Add Account"
                 android:textStyle="bold"
                 android:textColor="@color/black"
                 android:background="@color/accent_green"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="16dp"/>
 
             <TextView
+                android:id="@+id/tvAccountsTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Kayıtlı Hesaplar"
+                android:text="Saved Accounts"
                 android:textColor="@color/white"
-                android:textSize="14sp"
+                android:textSize="16sp"
+                android:textStyle="bold"
                 android:layout_marginBottom="2dp"/>
 
             <TextView
+                android:id="@+id/tvAccountsHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="EKLENEN KULLANICILARDAN GIRIS YAPIN"
+                android:text="Select an account below to continue"
                 android:textColor="@color/hint_yellow"
-                android:textSize="12sp"
-                android:layout_marginBottom="4dp"/>
+                android:textSize="13sp"
+                android:layout_marginBottom="6dp"/>
 
             <ListView
                 android:id="@+id/lvAccounts"
@@ -2289,11 +2426,10 @@ jobs:
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:divider="@android:color/transparent"
-                android:dividerHeight="8dp"/>
+                android:dividerHeight="10dp"/>
         </LinearLayout>
         EOF
 
-        # Dashboard
         cat <<EOF > app/src/main/res/layout/activity_dashboard.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2315,34 +2451,33 @@ jobs:
             <Button
                 android:id="@+id/btnLive"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="56dp"
                 android:text="📺 CANLI TV"
                 android:layout_marginBottom="12dp"/>
 
             <Button
                 android:id="@+id/btnVod"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="56dp"
                 android:text="🎬 FİLMLER"
                 android:layout_marginBottom="12dp"/>
 
             <Button
                 android:id="@+id/btnSeries"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="56dp"
                 android:text="🍿 DİZİLER"
                 android:layout_marginBottom="12dp"/>
 
             <Button
                 android:id="@+id/btnExit"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="56dp"
                 android:text="❌ ÇIKIŞ"
                 android:layout_marginTop="12dp"/>
         </LinearLayout>
         EOF
 
-        # Content
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -2365,16 +2500,34 @@ jobs:
                     ads:adUnitId="@string/admob_banner_test"
                     android:layout_marginBottom="4dp"/>
 
-                <TextView
-                    android:id="@+id/tvHeader"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="☰ Canlı TV"
-                    android:textColor="@color/white"
-                    android:background="@color/bordo"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:padding="16dp"/>
+                    android:orientation="horizontal"
+                    android:background="@color/bordo">
+
+                    <TextView
+                        android:id="@+id/tvHeader"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="☰ Canlı TV"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:padding="16dp"/>
+
+                    <TextView
+                        android:id="@+id/tvAccounts"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:paddingLeft="12dp"
+                        android:paddingRight="16dp"
+                        android:text="Hesaplar / Çıkış"
+                        android:textColor="@color/white"
+                        android:textSize="13sp"/>
+                </LinearLayout>
 
                 <ProgressBar
                     android:id="@+id/pbLoading"
@@ -2430,20 +2583,20 @@ jobs:
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
 
-        # Grid item
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="6dp">
+            android:padding="10dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:minHeight="64dp"
                 android:orientation="horizontal"
                 android:background="@color/gray_800"
-                android:padding="10dp">
+                android:padding="12dp">
 
                 <View
                     android:layout_width="4dp"
@@ -2456,23 +2609,23 @@ jobs:
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:textColor="@color/white"
-                    android:textSize="14sp"
+                    android:textSize="16sp"
                     android:maxLines="2"
                     android:ellipsize="end"
-                    android:paddingLeft="8dp"
-                    android:paddingRight="4dp"/>
+                    android:paddingLeft="10dp"
+                    android:paddingRight="6dp"/>
             </LinearLayout>
         </LinearLayout>
         EOF
 
-        # Kayıtlı hesap kartı
         cat <<EOF > app/src/main/res/layout/item_account.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:background="@drawable/bg_account_card"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:minHeight="72dp">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -2487,7 +2640,7 @@ jobs:
                     android:text="Hesap Adı"
                     android:textColor="@color/white"
                     android:textStyle="bold"
-                    android:textSize="14sp"/>
+                    android:textSize="16sp"/>
 
                 <TextView
                     android:id="@+id/tvAccountType"
@@ -2495,21 +2648,20 @@ jobs:
                     android:layout_height="wrap_content"
                     android:text="Xtream"
                     android:textColor="@color/accent_green"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
                     android:layout_marginTop="2dp"/>
             </LinearLayout>
 
             <ImageButton
                 android:id="@+id/btnDeleteAccount"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="@android:color/transparent"
                 android:src="@android:drawable/ic_menu_delete"
                 android:tint="@color/error_red"/>
         </LinearLayout>
         EOF
 
-        # Series detail
         cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2555,7 +2707,6 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Player layout
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2642,7 +2793,6 @@ jobs:
         </FrameLayout>
         EOF
 
-        # --- MANIFEST ---
         cat <<EOF > app/src/main/AndroidManifest.xml
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
