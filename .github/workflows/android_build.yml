@@ -814,6 +814,7 @@ jobs:
         }
         EOF
 
+        cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
       package com.erdin.player.adapters
 
 import android.view.LayoutInflater
@@ -864,7 +865,8 @@ class GridAdapter(
 
     override fun getItemCount(): Int = list.size
 }
- EOF
+
+        EOF
 
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
         package $PACKAGE_NAME.adapters
@@ -3113,4 +3115,3 @@ class GridAdapter(
         echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
-
