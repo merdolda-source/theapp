@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Ultra Build  
+name: ErdinPlayer Pro Ultra Build
 
 on:
   push:
@@ -55,7 +55,7 @@ jobs:
         
         cd "$APP_NAME"
 
-        wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://i.ibb.co/LDdzzhsk/f564b0ed-277d-489c-9a1a-c59f0fe471fc.png"
+        wget -U "Mozilla/5.0" -O app/src/main/res/mipmap-hdpi/ic_launcher.png "https://i.ibb.co/LDdzzhsk/f564b0ed-277d-489c-9a1a-c59f0fe471fc.png" || true
 
         if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
           echo "🔐 Keystore secrets'ten yazılıyor..."
@@ -179,6 +179,7 @@ jobs:
         </resources>
         EOF
 
+        # TR varsayılan stringler
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
@@ -188,6 +189,7 @@ jobs:
         </resources>
         EOF
 
+        # values-tr klasörü dursa da aynı TR içerik
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">EMIN XTREAM PLAYER</string>
@@ -645,12 +647,13 @@ jobs:
             }
 
             fun getLang(): String {
-                return p.getString("lang", "en") ?: "en"
+                // Varsayılan dil: TR
+                return p.getString("lang", "tr") ?: "tr"
             }
         }
         EOF
 
-        # --- DİL YÖNETİCİSİ: API'den çeken LangManager ---
+        # Dil yöneticisi aynen kalsın, ama varsayılan da TR
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/LangManager.kt
         package $PACKAGE_NAME.utils
 
@@ -907,7 +910,7 @@ jobs:
         }
         EOF
 
-        # --- DİL İKONLU, API TABANLI LOGIN ACTIVITY ---
+        # LOGIN ACTIVITY – Dil ikonu var ama GÖRÜNMEZ, varsayılan TR
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -947,8 +950,9 @@ jobs:
                     return
                 }
 
-                // Dil ayarı
-                val lang = prefs.getLang()
+                // Varsayılan dil TR, buton gizli
+                val lang = "tr"
+                prefs.setLang(lang)
                 LangManager.restoreFromPrefs(this, lang)
                 LangManager.init(this, lang)
 
@@ -965,6 +969,7 @@ jobs:
                 val tvAccountsHint = findViewById<TextView>(R.id.tvAccountsHint)
 
                 val btnLang = findViewById<ImageButton>(R.id.btnLangLogin)
+                btnLang.visibility = View.GONE  // Dil tercihi gizli
 
                 val etName = findViewById<EditText>(R.id.etName)
                 val etDns = findViewById<EditText>(R.id.etDns)
@@ -985,26 +990,22 @@ jobs:
 
                 fun applyLanguageTexts() {
                     tvTitle.text = LangManager.t(this, "login_title", "Emin Xtream Player")
-                    tvLoginType.text = LangManager.t(this, "login_type", "Login Type")
+                    tvLoginType.text = LangManager.t(this, "login_type", "Giriş Tipi")
                     tvXtream.text = LangManager.t(this, "login_xtream", "Xtream")
                     tvM3u.text = LangManager.t(this, "login_m3u", "M3U")
 
-                    etName.hint = LangManager.t(this, "login_name_hint", "example name")
-                    etDns.hint = LangManager.t(this, "login_dns_hint", "Enter Xtream URL")
-                    etUser.hint = LangManager.t(this, "login_user_hint", "Username")
-                    etPass.hint = LangManager.t(this, "login_pass_hint", "Password")
-                    etM3u.hint = LangManager.t(this, "login_m3u_hint", "Enter M3U URL")
+                    etName.hint = LangManager.t(this, "login_name_hint", "Hesap adı")
+                    etDns.hint = LangManager.t(this, "login_dns_hint", "Xtream URL girin")
+                    etUser.hint = LangManager.t(this, "login_user_hint", "Kullanıcı adı")
+                    etPass.hint = LangManager.t(this, "login_pass_hint", "Şifre")
+                    etM3u.hint = LangManager.t(this, "login_m3u_hint", "M3U URL girin")
 
-                    btnAdd.text = LangManager.t(this, "login_add_button", "Add Account")
-                    tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "Saved Accounts")
-                    tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Select an account below to continue")
+                    btnAdd.text = LangManager.t(this, "login_add_button", "Hesap Ekle")
+                    tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "Kayıtlı Hesaplar")
+                    tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Devam etmek için alttan bir hesap seçin")
                 }
 
                 applyLanguageTexts()
-
-                btnLang.setOnClickListener {
-                    showLanguageDialog(prefs)
-                }
 
                 fun updateTypeUI() {
                     if (isXtream) {
@@ -1053,24 +1054,24 @@ jobs:
                                         LangManager.t(
                                             this,
                                             "login_delete_title",
-                                            "Delete Account"
+                                            "Hesabı Sil"
                                         )
                                     )
                                     .setMessage(
                                         LangManager.t(
                                             this,
                                             "login_delete_message",
-                                            "Delete account?"
+                                            "Hesap silinsin mi?"
                                         ) + " " + acc.name
                                     )
                                     .setPositiveButton(
-                                        LangManager.t(this, "login_yes", "Yes")
+                                        LangManager.t(this, "login_yes", "Evet")
                                     ) { _, _ ->
                                         prefs.deleteAccount(acc.id)
                                         refreshList()
                                     }
                                     .setNegativeButton(
-                                        LangManager.t(this, "login_no", "No"),
+                                        LangManager.t(this, "login_no", "Hayır"),
                                         null
                                     )
                                     .create()
@@ -1113,7 +1114,7 @@ jobs:
                                 LangManager.t(
                                     this,
                                     "login_xtream_required",
-                                    "Xtream URL and username required."
+                                    "Xtream URL ve kullanıcı adı zorunlu."
                                 ),
                                 Toast.LENGTH_SHORT
                             ).show()
@@ -1137,7 +1138,7 @@ jobs:
                             LangManager.t(
                                 this,
                                 "login_xtream_added",
-                                "Xtream account added. Select it below to continue."
+                                "Xtream hesabı eklendi. Aşağıdan seçerek devam edin."
                             ),
                             Toast.LENGTH_SHORT
                         ).show()
@@ -1149,7 +1150,7 @@ jobs:
                                 LangManager.t(
                                     this,
                                     "login_m3u_required",
-                                    "M3U URL cannot be empty."
+                                    "M3U URL boş olamaz."
                                 ),
                                 Toast.LENGTH_SHORT
                             ).show()
@@ -1172,7 +1173,7 @@ jobs:
                             LangManager.t(
                                 this,
                                 "login_m3u_added",
-                                "M3U account added. Select it below to continue."
+                                "M3U hesabı eklendi. Aşağıdan seçerek devam edin."
                             ),
                             Toast.LENGTH_SHORT
                         ).show()
@@ -1186,33 +1187,6 @@ jobs:
 
                     refreshList()
                 }
-            }
-
-            private fun showLanguageDialog(prefs: Prefs) {
-                val items = arrayOf("English", "Türkçe")
-                val codes = arrayOf("en", "tr")
-                val current = prefs.getLang()
-                var checkedIndex = if (current == "tr") 1 else 0
-
-                val dialog = AlertDialog.Builder(this)
-                    .setTitle("Dil / Language")
-                    .setSingleChoiceItems(items, checkedIndex) { _, which ->
-                        checkedIndex = which
-                    }
-                    .setPositiveButton("OK") { d, _ ->
-                        val newLang = codes[checkedIndex]
-                        if (newLang != current) {
-                            prefs.setLang(newLang)
-                            LangManager.restoreFromPrefs(this, newLang)
-                            LangManager.init(this, newLang)
-                            recreate()
-                        }
-                        d.dismiss()
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .create()
-
-                dialog.show()
             }
         }
         EOF
@@ -1342,11 +1316,7 @@ jobs:
                 headerUser = headerView.findViewById(R.id.tvHeaderUser)
                 headerExpire = headerView.findViewById(R.id.tvHeaderExpire)
 
-                tvHeaderAccounts.text = LangManager.t(
-                    this,
-                    "content_accounts",
-                    "Hesaplar / Çıkış"
-                )
+                tvHeaderAccounts.text = "Hesaplar / Çıkış"
 
                 tvHeader.setOnClickListener {
                     drawer.openDrawer(GravityCompat.START)
@@ -1432,9 +1402,9 @@ jobs:
                 currentMode = if (accountType == "M3U") "LIVE" else mode
 
                 tvHeader.text = when (currentMode) {
-                    "VOD" -> LangManager.t(this, "header_vod", "☰ Filmler")
-                    "SERIES" -> LangManager.t(this, "header_series", "☰ Diziler")
-                    else -> LangManager.t(this, "header_live", "☰ Canlı TV")
+                    "VOD" -> "☰ Filmler"
+                    "SERIES" -> "☰ Diziler"
+                    else -> "☰ Canlı TV"
                 }
 
                 fetchCategoriesAndStreams()
@@ -1864,7 +1834,6 @@ jobs:
         }
         EOF
 
-        # SeriesDetailActivity ve PlayerActivity aynı
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -2322,9 +2291,8 @@ jobs:
         }
         EOF
 
-        # --- LAYOUTLAR ---
+        # LAYOUTLAR
 
-        # LOGIN: üstte dil ikonlu, büyük alanlar
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -2374,7 +2342,7 @@ jobs:
                 android:id="@+id/tvLoginType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Login Type"
+                android:text="Login Tipi"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:layout_marginBottom="4dp"/>
@@ -2436,7 +2404,7 @@ jobs:
                 android:id="@+id/etName"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:hint="example name"
+                android:hint="Hesap adı"
                 android:background="@drawable/bg_input_dark"
                 android:padding="12dp"
                 android:textColor="@color/white"
@@ -2456,7 +2424,7 @@ jobs:
                     android:id="@+id/etDns"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:hint="Enter Xtream URL"
+                    android:hint="Xtream URL girin"
                     android:background="@drawable/bg_input_dark"
                     android:padding="12dp"
                     android:textColor="@color/white"
@@ -2470,7 +2438,7 @@ jobs:
                     android:id="@+id/etUser"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:hint="Username"
+                    android:hint="Kullanıcı adı"
                     android:background="@drawable/bg_input_dark"
                     android:padding="12dp"
                     android:textColor="@color/white"
@@ -2484,7 +2452,7 @@ jobs:
                     android:id="@+id/etPass"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:hint="Password"
+                    android:hint="Şifre"
                     android:inputType="textVisiblePassword"
                     android:background="@drawable/bg_input_dark"
                     android:padding="12dp"
@@ -2506,7 +2474,7 @@ jobs:
                     android:id="@+id/etM3u"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:hint="Enter M3U URL"
+                    android:hint="M3U URL girin"
                     android:background="@drawable/bg_input_dark"
                     android:padding="12dp"
                     android:textColor="@color/white"
@@ -2521,7 +2489,7 @@ jobs:
                 android:id="@+id/btnAddAccount"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
-                android:text="Add Account"
+                android:text="Hesap Ekle"
                 android:textStyle="bold"
                 android:textColor="@color/black"
                 android:textSize="16sp"
@@ -2534,7 +2502,7 @@ jobs:
                 android:id="@+id/tvAccountsTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Saved Accounts"
+                android:text="Kayıtlı Hesaplar"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:textStyle="bold"
@@ -2544,7 +2512,7 @@ jobs:
                 android:id="@+id/tvAccountsHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Select an account below to continue"
+                android:text="Devam etmek için alttan hesap seçin"
                 android:textColor="@color/hint_yellow"
                 android:textSize="13sp"
                 android:layout_marginBottom="6dp"/>
