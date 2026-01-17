@@ -2150,56 +2150,319 @@ jobs:
         }
         EOF
 
-        # LAYOUTLAR (öncekiyle aynı, sadece focus stilleri ve tv uyumu için ayarlı)
+              # LAYOUTLAR (öncekiyle aynı, sadece focus stilleri ve tv uyumu için ayarlı)
 
+        # BURADAN İTİBAREN LOGIN LAYOUT
         cat <<EOF > app/src/main/res/layout/activity_login.xml
-        <!-- aynı önceki sürüm: login layout -->
-        ... (BURAYA daha önce kullandığın tam activity_login.xml içerğini bırakabilirsin,
-        yukarıdaki sürüm zaten senin paylaştığın ile birebir uyumlu.
-        İstersen benim önce verdiğimle de devam edebilirsin.) 
+        <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            xmlns:ads="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/rootLogin"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/bg_dark">
+
+            <!-- Üst Banner Reklam -->
+            <com.google.android.gms.ads.AdView
+                android:id="@+id/adViewTopLogin"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                ads:adSize="BANNER"
+                ads:adUnitId="@string/admob_banner_test"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- Başlık -->
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:text="ErdinPlayer Pro"
+                android:textColor="@color/white"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toBottomOf="@id/adViewTopLogin"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/btnLangLogin" />
+
+            <!-- Dil butonu -->
+            <ImageButton
+                android:id="@+id/btnLangLogin"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="16dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="Dil"
+                android:src="@android:drawable/ic_menu_manage"
+                app:layout_constraintTop_toTopOf="@id/tvTitle"
+                app:layout_constraintBottom_toBottomOf="@id/tvTitle"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- Giriş Tipi Başlığı -->
+            <TextView
+                android:id="@+id/tvLoginType"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginEnd="16dp"
+                android:text="Giriş Tipi"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                app:layout_constraintTop_toBottomOf="@id/tvTitle"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- Xtream / M3U Kartları -->
+            <LinearLayout
+                android:id="@+id/layoutTypeTabs"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:orientation="horizontal"
+                app:layout_constraintTop_toBottomOf="@id/tvLoginType"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <LinearLayout
+                    android:id="@+id/cardXtream"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_header_card"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:clickable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:id="@+id/tvXtream"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Xtream"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardM3u"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_input_dark"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:clickable="true"
+                    android:foreground="?android:attr/selectableItemBackground"
+                    android:layout_weight="1">
+
+                    <TextView
+                        android:id="@+id/tvM3u"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="M3U"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Ortak Hesap Adı -->
+            <EditText
+                android:id="@+id/etName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/bg_input_dark"
+                android:hint="Hesap adı"
+                android:inputType="textPersonName"
+                android:padding="10dp"
+                android:textColor="@color/white"
+                android:textColorHint="@color/gray_700"
+                app:layout_constraintTop_toBottomOf="@id/layoutTypeTabs"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- Form Container -->
+            <LinearLayout
+                android:id="@+id/layoutForm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="16dp"
+                android:orientation="vertical"
+                app:layout_constraintTop_toBottomOf="@id/etName"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <!-- Xtream Formu -->
+                <LinearLayout
+                    android:id="@+id/layoutXtream"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <EditText
+                        android:id="@+id/etDns"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_dark"
+                        android:hint="Xtream URL"
+                        android:inputType="textUri"
+                        android:padding="10dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/gray_700" />
+
+                    <EditText
+                        android:id="@+id/etUser"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_dark"
+                        android:hint="Kullanıcı adı"
+                        android:inputType="textPersonName"
+                        android:padding="10dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/gray_700" />
+
+                    <EditText
+                        android:id="@+id/etPass"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_dark"
+                        android:hint="Şifre"
+                        android:inputType="textPassword"
+                        android:padding="10dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/gray_700" />
+
+                    <CheckBox
+                        android:id="@+id/chkAdult"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="18+ İçerik (PIN ile koru)"
+                        android:textColor="@color/white" />
+
+                    <EditText
+                        android:id="@+id/etAdultPin"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_dark"
+                        android:hint="18+ PIN (4-6 hane)"
+                        android:inputType="numberPassword"
+                        android:padding="10dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/gray_700"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- M3U Formu -->
+                <LinearLayout
+                    android:id="@+id/layoutM3u"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <EditText
+                        android:id="@+id/etM3u"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_dark"
+                        android:hint="M3U URL"
+                        android:inputType="textUri"
+                        android:padding="10dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/gray_700" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Hesap Ekle -->
+            <Button
+                android:id="@+id/btnAddAccount"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginEnd="16dp"
+                android:backgroundTint="@color/accent_green"
+                android:text="Hesap Ekle"
+                android:textAllCaps="false"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                app:layout_constraintTop_toBottomOf="@id/layoutForm"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- Kayıtlı Hesaplar -->
+            <TextView
+                android:id="@+id/tvAccountsTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="16dp"
+                android:text="Kayıtlı Hesaplar"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:layout_constraintTop_toBottomOf="@id/btnAddAccount"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <TextView
+                android:id="@+id/tvAccountsHint"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginEnd="16dp"
+                android:text="Devam etmek için alttan bir hesap seçin"
+                android:textColor="@color/gray_700"
+                android:textSize="12sp"
+                app:layout_constraintTop_toBottomOf="@id/tvAccountsTitle"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <ListView
+                android:id="@+id/lvAccounts"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp"
+                android:divider="@android:color/transparent"
+                android:dividerHeight="8dp"
+                app:layout_constraintTop_toBottomOf="@id/tvAccountsHint"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
         EOF
-
-        # Kısaltmak için layout içeriklerini tekrar etmedim, ama sende zaten tam hali var.
-        # ContentActivity ve PlayerActivity tarafı asıl kritik kısım, onlar tam yukarıda güncellendi.
-
-        # AndroidManifest
-        cat <<EOF > app/src/main/AndroidManifest.xml
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-            <uses-permission android:name="android.permission.INTERNET" />
-
-            <uses-feature android:name="android.software.leanback" android:required="false" />
-
-            <application
-                android:theme="@style/Theme.ErdinPlayer"
-                android:icon="@mipmap/ic_launcher"
-                android:label="@string/app_name"
-                android:usesCleartextTraffic="true">
-
-                <meta-data
-                    android:name="com.google.android.gms.ads.APPLICATION_ID"
-                    android:value="@string/admob_app_id" />
-
-                <activity
-                    android:name=".LoginActivity"
-                    android:exported="true">
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN"/>
-                        <category android:name="android.intent.category.LAUNCHER"/>
-                        <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
-                    </intent-filter>
-                </activity>
-
-                <activity android:name=".ContentActivity" />
-                <activity android:name=".SeriesDetailActivity" />
-
-                <activity
-                    android:name=".PlayerActivity"
-                    android:screenOrientation="fullSensor"
-                    android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection|screenLayout|smallestScreenSize" />
-            </application>
-        </manifest>
-        EOF
-
     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
       with:
