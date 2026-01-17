@@ -700,10 +700,13 @@ jobs:
         }
         EOF
 
+        # --- GridAdapter (TEK TIK FIX: TV + Mobil) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
 
+        import android.view.KeyEvent
         import android.view.LayoutInflater
+        import android.view.MotionEvent
         import android.view.View
         import android.view.ViewGroup
         import android.widget.TextView
@@ -724,7 +727,8 @@ jobs:
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
                 val v = LayoutInflater.from(parent.context).inflate(R.layout.item_grid_pro, parent, false)
                 v.isFocusable = true
-                v.isFocusableInTouchMode = true
+                // TV'de touch/mouse ilk dokunuş focus yapıp ikinciyi beklemesin:
+                v.isFocusableInTouchMode = false
                 return VH(v)
             }
 
@@ -733,7 +737,30 @@ jobs:
                 val s = subtitles[position]
                 holder.sub.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
                 holder.sub.text = s
-                holder.itemView.setOnClickListener { onClick(position) }
+
+                fun fire() {
+                    val p = holder.bindingAdapterPosition
+                    if (p != RecyclerView.NO_POSITION) onClick(p)
+                }
+
+                // D-Pad / Enter
+                holder.itemView.setOnClickListener { fire() }
+                holder.itemView.setOnKeyListener { _, keyCode, event ->
+                    if (event.action == KeyEvent.ACTION_UP &&
+                        (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
+                    ) {
+                        fire()
+                        true
+                    } else false
+                }
+
+                // Touch/mouse: tek dokunuşta çalışsın
+                holder.itemView.setOnTouchListener { _, ev ->
+                    if (ev.action == MotionEvent.ACTION_UP) {
+                        fire()
+                        true
+                    } else false
+                }
             }
 
             override fun getItemCount(): Int = titles.size
@@ -746,10 +773,13 @@ jobs:
         }
         EOF
 
+        # --- AccountsAdapter (TEK TIK FIX: TV + Mobil) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
         package $PACKAGE_NAME.adapters
 
+        import android.view.KeyEvent
         import android.view.LayoutInflater
+        import android.view.MotionEvent
         import android.view.View
         import android.view.ViewGroup
         import android.widget.ImageButton
@@ -773,7 +803,7 @@ jobs:
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
                 val v = LayoutInflater.from(parent.context).inflate(R.layout.item_account, parent, false)
                 v.isFocusable = true
-                v.isFocusableInTouchMode = true
+                v.isFocusableInTouchMode = false
                 return VH(v)
             }
 
@@ -784,7 +814,29 @@ jobs:
                     "M3U" -> "M3U"
                     else -> if (item.adultEnabled) "Xtream (18+ PIN)" else "Xtream"
                 }
-                holder.itemView.setOnClickListener { onOpen(item) }
+
+                fun fireOpen() {
+                    val p = holder.bindingAdapterPosition
+                    if (p != RecyclerView.NO_POSITION) onOpen(items[p])
+                }
+
+                holder.itemView.setOnClickListener { fireOpen() }
+                holder.itemView.setOnKeyListener { _, keyCode, event ->
+                    if (event.action == KeyEvent.ACTION_UP &&
+                        (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
+                    ) {
+                        fireOpen()
+                        true
+                    } else false
+                }
+
+                holder.itemView.setOnTouchListener { _, ev ->
+                    if (ev.action == MotionEvent.ACTION_UP) {
+                        fireOpen()
+                        true
+                    } else false
+                }
+
                 holder.btnDelete.setOnClickListener { onDelete(item) }
             }
 
@@ -1876,6 +1928,7 @@ jobs:
         }
         EOF
 
+        # --- PlayerActivity (TEK DOKUNUS PLAY/PAUSE + double tap yok) ---
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1920,11 +1973,6 @@ jobs:
             private var gestureStartY: Float = 0f
             private var isGesture: Boolean = false
 
-            private var lastTapLeft: Long = 0
-            private var lastTapRight: Long = 0
-            private var tapCountLeft: Int = 0
-            private var tapCountRight: Int = 0
-
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
 
@@ -1959,6 +2007,10 @@ jobs:
                 tvBrightness = findViewById(R.id.tvBrightness)
                 tvVolume = findViewById(R.id.tvVolume)
 
+                // Controller + play/pause aktif
+                playerView.useController = true
+                playerView.controllerAutoShow = true
+
                 audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
 
@@ -1972,6 +2024,8 @@ jobs:
                     applyResizeMode(playerView)
                 }
 
+                // Sol: parlaklık swipe, Sağ: ses swipe
+                // Tek dokunuş: oynat/durdur (double tap yok)
                 setupGestureOverlay(leftOverlay, true)
                 setupGestureOverlay(rightOverlay, false)
 
@@ -2024,24 +2078,7 @@ jobs:
                         }
                         MotionEvent.ACTION_UP -> {
                             if (!isGesture) {
-                                val now = System.currentTimeMillis()
-                                if (isLeft) {
-                                    tapCountLeft = if (now - lastTapLeft < 350) tapCountLeft + 1 else 1
-                                    lastTapLeft = now
-                                    if (tapCountLeft >= 2) {
-                                        tapCountLeft = 0
-                                        seekBy(-15000L)
-                                        showCenterInfo("15 saniye geri")
-                                    }
-                                } else {
-                                    tapCountRight = if (now - lastTapRight < 350) tapCountRight + 1 else 1
-                                    lastTapRight = now
-                                    if (tapCountRight >= 2) {
-                                        tapCountRight = 0
-                                        seekBy(15000L)
-                                        showCenterInfo("15 saniye ileri")
-                                    }
-                                }
+                                togglePlayPause()
                                 try { playerView.showController() } catch (_: Exception) {}
                             }
                             tvBrightness.visibility = View.GONE
@@ -2050,6 +2087,17 @@ jobs:
                         }
                         else -> false
                     }
+                }
+            }
+
+            private fun togglePlayPause() {
+                val p = player ?: return
+                if (p.isPlaying) {
+                    p.pause()
+                    showCenterInfo("Duraklat")
+                } else {
+                    p.play()
+                    showCenterInfo("Oynat")
                 }
             }
 
@@ -2077,15 +2125,6 @@ jobs:
                 tvBrightness.visibility = View.VISIBLE
             }
 
-            private fun seekBy(deltaMs: Long) {
-                val p = player ?: return
-                var newPos = p.currentPosition + deltaMs
-                if (newPos < 0L) newPos = 0L
-                val duration = p.duration
-                if (duration > 0 && newPos > duration) newPos = duration
-                p.seekTo(newPos)
-            }
-
             private fun applyResizeMode(pv: PlayerView) {
                 pv.resizeMode = when (currentMode) {
                     0 -> AspectRatioFrameLayout.RESIZE_MODE_FIT
@@ -2097,7 +2136,7 @@ jobs:
             private fun showCenterInfo(text: String) {
                 tvCenterInfo.text = text
                 tvCenterInfo.visibility = View.VISIBLE
-                tvCenterInfo.postDelayed({ tvCenterInfo.visibility = View.GONE }, 1200)
+                tvCenterInfo.postDelayed({ tvCenterInfo.visibility = View.GONE }, 900)
             }
 
             override fun onDestroy() {
@@ -2560,6 +2599,7 @@ jobs:
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
 
+        # item_grid_pro.xml (focusableInTouchMode FALSE)
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2567,7 +2607,7 @@ jobs:
             android:orientation="vertical"
             android:padding="8dp"
             android:focusable="true"
-            android:focusableInTouchMode="true">
+            android:focusableInTouchMode="false">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -2599,6 +2639,7 @@ jobs:
         </LinearLayout>
         EOF
 
+        # item_account.xml (focusableInTouchMode FALSE)
         cat <<EOF > app/src/main/res/layout/item_account.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2609,7 +2650,7 @@ jobs:
             android:minHeight="72dp"
             android:padding="10dp"
             android:focusable="true"
-            android:focusableInTouchMode="true">
+            android:focusableInTouchMode="false">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -2697,8 +2738,10 @@ jobs:
         </LinearLayout>
         EOF
 
+        # activity_player_pro.xml (controller attrs + xmlns:app)
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/black">
@@ -2706,7 +2749,9 @@ jobs:
             <androidx.media3.ui.PlayerView
                 android:id="@+id/pvMain"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
+                android:layout_height="match_parent"
+                app:use_controller="true"
+                app:controller_auto_show="true"/>
 
             <LinearLayout
                 android:id="@+id/overlayContainer"
