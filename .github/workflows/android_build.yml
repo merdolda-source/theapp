@@ -1272,28 +1272,28 @@ jobs:
         class ContentActivity : AppCompatActivity() {
 
             private lateinit var prefs: Prefs
-            private lateinit var drawer: DrawerLayout
-            private lateinit var navView: NavigationView
-            private lateinit var bottomNav: BottomNavigationView
-            private lateinit var rv: RecyclerView
-            private lateinit var tvHeader: TextView
-            private lateinit var etSearch: EditText
-            private lateinit var tvStatus: TextView
-            private lateinit var pb: ProgressBar
+private lateinit var drawer: DrawerLayout
+private lateinit var navView: NavigationView
+private lateinit var bottomNav: BottomNavigationView
+private lateinit var rv: RecyclerView
+private lateinit var tvHeader: TextView
+private lateinit var etSearch: EditText
+private lateinit var tvStatus: TextView
+private lateinit var pb: ProgressBar
 
-            private lateinit var headerUser: TextView
-            private lateinit val headerExpire: TextView
-            private lateinit val tvLogout: TextView
-            private lateinit val lvAccounts: ListView
+private lateinit var headerUser: TextView
+private lateinit var headerExpire: TextView     // ← val → var yapıldı
+private lateinit var tvLogout: TextView         // ← val → var yapıldı
+private lateinit var lvAccounts: ListView       // ← val → var yapıldı
 
-            private var currentMode: String = "LIVE"
-            private var categories: List<Category> = emptyList()
-            private var streams: List<StreamItem> = emptyList()
-            private var filteredStreams: List<StreamItem> = emptyList()
+private var currentMode: String = "LIVE"
+private var categories: List<Category> = emptyList()
+private var streams: List<StreamItem> = emptyList()
+private var filteredStreams: List<StreamItem> = emptyList()
 
-            private var activeAcc: AccountProfile? = null
-            private var accountType: String = "XTREAM"
-            private var accountsAdapter: AccountsAdapter? = null
+private var activeAcc: AccountProfile? = null
+private var accountType: String = "XTREAM"
+private var accountsAdapter: AccountsAdapter? = null
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
