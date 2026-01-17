@@ -334,6 +334,11 @@ jobs:
             val episodeNumber: Int,
             val container_extension: String?
         )
+
+        data class SeasonItem(
+            val seasonNumber: Int,
+            val episodes: List<EpisodeItem>
+        )
         EOF
 
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
@@ -852,42 +857,6 @@ jobs:
             override fun getItemCount(): Int = list.size
         }
         EOF
-                cat <<EOF > app/src/main/java/$PATH_NAME/adapters/CategoryAdapter.kt
-        package $PACKAGE_NAME.adapters
-
-        import android.view.LayoutInflater
-        import android.view.View
-        import android.view.ViewGroup
-        import android.widget.TextView
-        import androidx.recyclerview.widget.RecyclerView
-        import $PACKAGE_NAME.R
-        import $PACKAGE_NAME.models.Category
-
-        class CategoryAdapter(
-            private val list: List<Category>,
-            private val onClick: (Category) -> Unit
-        ) : RecyclerView.Adapter<CategoryAdapter.VH>() {
-
-            class VH(v: View) : RecyclerView.ViewHolder(v) {
-                val txt: TextView = v.findViewById(R.id.txtName)
-            }
-
-            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-                val v = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.item_grid_pro, parent, false)
-                return VH(v)
-            }
-
-            override fun onBindViewHolder(holder: VH, position: Int) {
-                val item = list[position]
-                holder.txt.text = item.category_name
-                holder.itemView.setOnClickListener { onClick(item) }
-            }
-
-            override fun getItemCount(): Int = list.size
-        }
-        EOF
-
 
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
         package $PACKAGE_NAME.adapters
@@ -1261,13 +1230,16 @@ jobs:
             }
         }
         EOF
-                cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
+
+        cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
         import android.content.Intent
         import android.os.Bundle
         import android.text.Editable
         import android.text.TextWatcher
+        import android.view.Menu
+        import android.view.MenuItem
         import android.view.View
         import android.widget.EditText
         import android.widget.ProgressBar
@@ -1289,9 +1261,7 @@ jobs:
         import java.util.ArrayList
         import java.util.Date
         import java.util.Locale
-
         import $PACKAGE_NAME.adapters.GridAdapter
-        import $PACKAGE_NAME.adapters.CategoryAdapter
         import $PACKAGE_NAME.models.AccountProfile
         import $PACKAGE_NAME.models.Category
         import $PACKAGE_NAME.models.StreamItem
@@ -1308,21 +1278,23 @@ jobs:
             private lateinit var bottomNav: BottomNavigationView
             private lateinit var rv: RecyclerView
             private lateinit var tvHeader: TextView
+            private lateinit var etSearch: EditText
             private lateinit var tvStatus: TextView
             private lateinit var pb: ProgressBar
-            private lateinit var etSearch: EditText
 
             private lateinit var headerUser: TextView
-            private lateinit var headerExpire: TextView
+            private lateinit val headerExpire: TextView
+            private lateinit val tvLogout: TextView
+            private lateinit val lvAccounts: ListView
 
             private var currentMode: String = "LIVE"
             private var categories: List<Category> = emptyList()
-            private var allStreams: List<StreamItem> = emptyList()
+            private var streams: List<StreamItem> = emptyList()
+            private var filteredStreams: List<StreamItem> = emptyList()
+
             private var activeAcc: AccountProfile? = null
             private var accountType: String = "XTREAM"
-
-            private var selectedCategoryId: String? = null
-            private var inSearchMode: Boolean = false
+            private var accountsAdapter: AccountsAdapter? = null
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -1347,45 +1319,52 @@ jobs:
                 bottomNav = findViewById(R.id.bottomNav)
                 rv = findViewById(R.id.rvContent)
                 tvHeader = findViewById(R.id.tvHeader)
+                etSearch = findViewById(R.id.etSearch)
                 tvStatus = findViewById(R.id.tvStatus)
                 pb = findViewById(R.id.pbLoading)
-                etSearch = findViewById(R.id.etSearch)
 
                 rv.layoutManager = LinearLayoutManager(this)
 
                 val headerView = navView.getHeaderView(0)
                 headerUser = headerView.findViewById(R.id.tvHeaderUser)
                 headerExpire = headerView.findViewById(R.id.tvHeaderExpire)
+                tvLogout = headerView.findViewById(R.id.tvLogout)
+                lvAccounts = headerView.findViewById(R.id.lvAccounts)
+
+                tvLogout.text = "Çıkış"
+                tvLogout.setOnClickListener {
+                    prefs.setLastScreen("LOGIN")
+                    val i = Intent(this, LoginActivity::class.java)
+                    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(i)
+                    finish()
+                }
+
+                refreshAccountsInDrawer()
 
                 tvHeader.setOnClickListener {
                     drawer.openDrawer(GravityCompat.START)
                 }
 
-                // Drawer: sadece hesap yönetimi, çıkış ve ekli hesaplar
-                setupDrawerAccounts()
+                etSearch.addTextChangedListener(object : TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                        filterStreams(s.toString())
+                    }
+                    override fun afterTextChanged(s: Editable?) {}
+                })
+
                 navView.setNavigationItemSelectedListener { item ->
-                    when (item.itemId) {
-                        R.id.menu_accounts -> {
-                            openLogin()
-                            true
-                        }
-                        R.id.menu_logout -> {
-                            logoutToLogin()
-                            true
-                        }
-                        else -> {
-                            if (item.groupId == R.id.group_accounts) {
-                                val accId = item.itemId - 1000
-                                prefs.setActive(accId)
-                                prefs.setLastScreen("CONTENT")
-                                val i = Intent(this, ContentActivity::class.java)
-                                startActivity(i)
-                                finish()
-                                true
-                            } else {
-                                false
-                            }
-                        }
+                    val idx = item.itemId
+                    if (idx in categories.indices) {
+                        val cat = categories[idx]
+                        item.isCheckable = true
+                        item.isChecked = true
+                        filterAndShow(cat.category_id)
+                        drawer.closeDrawer(GravityCompat.START)
+                        true
+                    } else {
+                        false
                     }
                 }
 
@@ -1396,7 +1375,6 @@ jobs:
                     return
                 }
                 accountType = activeAcc?.type ?: "XTREAM"
-                updateHeaderAccountInfoPlaceholder()
 
                 bottomNav.setOnItemSelectedListener { item ->
                     if (accountType == "M3U") {
@@ -1416,18 +1394,15 @@ jobs:
                         when (item.itemId) {
                             R.id.nav_live -> {
                                 prefs.setLastMode("LIVE")
-                                loadMode("LIVE")
-                                true
+                                loadMode("LIVE"); true
                             }
                             R.id.nav_vod -> {
                                 prefs.setLastMode("VOD")
-                                loadMode("VOD")
-                                true
+                                loadMode("VOD"); true
                             }
                             R.id.nav_series -> {
                                 prefs.setLastMode("SERIES")
-                                loadMode("SERIES")
-                                true
+                                loadMode("SERIES"); true
                             }
                             else -> false
                         }
@@ -1444,60 +1419,29 @@ jobs:
                     else -> R.id.nav_live
                 }
 
-                // HEADER SAĞDA ARAMA – tüm içeriklerde (canlı/film/dizi) isim bazlı arama
-                etSearch.addTextChangedListener(object : TextWatcher {
-                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                    override fun afterTextChanged(s: Editable?) {
-                        val query = s?.toString()?.trim() ?: ""
-                        if (query.isEmpty()) {
-                            inSearchMode = false
-                            showCategories()
-                        } else {
-                            inSearchMode = true
-                            showSearchResults(query)
-                        }
-                    }
-                })
-
                 loadMode(initialMode)
             }
 
-            private fun openLogin() {
-                prefs.setLastScreen("LOGIN")
-                val i = Intent(this, LoginActivity::class.java)
-                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(i)
-                finish()
-            }
+            private fun refreshAccountsInDrawer() {
+                val accounts: MutableList<AccountProfile> = prefs.getAccounts().toMutableList()
 
-            private fun logoutToLogin() {
-                prefs.setLastScreen("LOGIN")
-                val i = Intent(this, LoginActivity::class.java)
-                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(i)
-                finish()
-            }
-
-            private fun setupDrawerAccounts() {
-                val menu = navView.menu
-                menu.removeGroup(R.id.group_accounts)
-
-                val accounts = Prefs(this).getAccounts()
-                for (acc in accounts) {
-                    val title = acc.name + " (" + acc.type + ")"
-                    menu.add(R.id.group_accounts, 1000 + acc.id, 0, title)
-                }
-            }
-
-            private fun updateHeaderAccountInfoPlaceholder() {
-                val acc = activeAcc
-                if (acc != null) {
-                    headerUser.text = "Hesap: " + acc.name
-                    headerExpire.text = if (acc.type == "M3U") "M3U Playlist" else "Bitiş: -"
+                if (accountsAdapter == null) {
+                    accountsAdapter = AccountsAdapter(
+                        this,
+                        accounts,
+                        onOpen = { acc ->
+                            prefs.setActive(acc.id)
+                            loadMode(currentMode)
+                            drawer.closeDrawer(GravityCompat.START)
+                        },
+                        onDelete = { acc ->
+                            prefs.deleteAccount(acc.id)
+                            refreshAccountsInDrawer()
+                        }
+                    )
+                    lvAccounts.adapter = accountsAdapter
                 } else {
-                    headerUser.text = "Hesap: -"
-                    headerExpire.text = "Bitiş: -"
+                    accountsAdapter?.update(accounts)
                 }
             }
 
@@ -1509,10 +1453,6 @@ jobs:
                     "SERIES" -> "☰ Diziler"
                     else -> "☰ Canlı TV"
                 }
-
-                etSearch.setText("")
-                inSearchMode = false
-                selectedCategoryId = null
 
                 fetchCategoriesAndStreams()
             }
@@ -1545,15 +1485,16 @@ jobs:
                             runOnUiThread {
                                 pb.visibility = View.GONE
                                 categories = cats
-                                allStreams = streamsList
+                                streams = streamsList
 
                                 headerUser.text = "Hesap: " + acc.name
                                 headerExpire.text = "M3U Playlist"
 
-                                if (inSearchMode && etSearch.text.isNotEmpty()) {
-                                    showSearchResults(etSearch.text.toString())
+                                populateDrawerCategories()
+                                if (categories.isNotEmpty()) {
+                                    filterAndShow(categories[0].category_id)
                                 } else {
-                                    showCategories()
+                                    filterAndShow(null)
                                 }
                             }
                         } catch (e: Exception) {
@@ -1606,21 +1547,19 @@ jobs:
                             runOnUiThread {
                                 pb.visibility = View.GONE
                                 categories = fetchedCategories
-                                allStreams = fetchedStreams
+                                streams = fetchedStreams
 
-                                val nameToShow: String =
-                                    if (acc.name.isNotEmpty()) acc.name
-                                    else (accInfo.first ?: user)
-
+                                val nameToShow = if (acc.name.isNotEmpty()) acc.name else (accInfo.first ?: user)
                                 val expText = formatExp(accInfo.second)
 
                                 headerUser.text = "Kullanıcı: " + nameToShow
                                 headerExpire.text = "Bitiş: " + expText
 
-                                if (inSearchMode && etSearch.text.isNotEmpty()) {
-                                    showSearchResults(etSearch.text.toString())
+                                populateDrawerCategories()
+                                if (categories.isNotEmpty()) {
+                                    filterAndShow(categories[0].category_id)
                                 } else {
-                                    showCategories()
+                                    filterAndShow(null)
                                 }
                             }
                         } catch (e: Exception) {
@@ -1634,144 +1573,6 @@ jobs:
                     }.start()
                 }
             }
-
-            /**  ÖNCE KATEGORİ LİSTESİ  **/
-            private fun showCategories() {
-                if (categories.isEmpty()) {
-                    tvStatus.text = "Kategori bulunamadı."
-                    tvStatus.visibility = View.VISIBLE
-                    rv.adapter = null
-                    return
-                }
-                tvStatus.visibility = View.GONE
-                selectedCategoryId = null
-
-                rv.adapter = CategoryAdapter(categories) { cat ->
-                    selectedCategoryId = cat.category_id
-                    showStreamsForCategory(cat.category_id)
-                }
-            }
-
-            /**  KATEGORİ SEÇİLİNCE KANAL / FİLM / DİZİ LİSTESİ  **/
-            private fun showStreamsForCategory(categoryId: String) {
-                val filtered = allStreams.filter { (it.category_id ?: "") == categoryId }
-                if (filtered.isEmpty()) {
-                    tvStatus.text = "Bu kategoride içerik bulunamadı."
-                    tvStatus.visibility = View.VISIBLE
-                } else {
-                    tvStatus.visibility = View.GONE
-                }
-
-                rv.adapter = GridAdapter(filtered) { item ->
-                    openStreamItem(item)
-                }
-            }
-
-            /**  HEADER SAĞDA ARAMA: TÜM İÇERİKLER  **/
-            private fun showSearchResults(query: String) {
-                val q = query.lowercase(Locale.getDefault())
-                val filtered = allStreams.filter {
-                    it.name.lowercase(Locale.getDefault()).contains(q)
-                }
-
-                if (filtered.isEmpty()) {
-                    tvStatus.text = "Arama sonucu bulunamadı."
-                    tvStatus.visibility = View.VISIBLE
-                } else {
-                    tvStatus.visibility = View.GONE
-                }
-
-                rv.adapter = GridAdapter(filtered) { item ->
-                    openStreamItem(item)
-                }
-            }
-
-            /**  TEK ITEM OYNATMA / AÇMA LOJİĞİ  **/
-            private fun openStreamItem(item: StreamItem) {
-                val acc = activeAcc ?: return
-
-                if (acc.type == "M3U") {
-                    val url = item.full_url
-                    if (url.isNullOrEmpty()) {
-                        Toast.makeText(this, "Geçersiz M3U kanalı.", Toast.LENGTH_SHORT).show()
-                        return
-                    }
-                    val itn = Intent(this, PlayerActivity::class.java)
-                    itn.putExtra("URL", url)
-                    itn.putExtra("REF", item.referer ?: "")
-                    itn.putExtra("ORG", item.origin ?: "")
-
-                    AdsHelper.maybeShowOnChannelClick(this) {
-                        RemoteLogger.sendEvent(
-                            this,
-                            "play_m3u",
-                            mapOf(
-                                "channel_name" to item.name,
-                                "category_id" to (item.category_id ?: ""),
-                                "url" to url.take(200)
-                            )
-                        )
-                        startActivity(itn)
-                    }
-                } else {
-                    if (currentMode == "SERIES") {
-                        val itn = Intent(this, SeriesDetailActivity::class.java)
-                        itn.putExtra("SERIES_ID", item.series_id ?: "")
-                        itn.putExtra("SERIES_NAME", item.name)
-
-                        AdsHelper.maybeShowOnChannelClick(this) {
-                            RemoteLogger.sendEvent(
-                                this,
-                                "open_series_detail",
-                                mapOf(
-                                    "series_id" to (item.series_id ?: ""),
-                                    "series_name" to item.name
-                                )
-                            )
-                            startActivity(itn)
-                        }
-                    } else {
-                        val dnsRaw = acc.dns?.trim() ?: ""
-                        val user = acc.user?.trim() ?: ""
-                        val pass = acc.pass?.trim() ?: ""
-                        val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
-
-                        val path = if (currentMode == "LIVE") "live" else "movie"
-                        val ext = if (currentMode == "LIVE") {
-                            ".ts"
-                        } else {
-                            if (!item.container_extension.isNullOrEmpty()) {
-                                "." + item.container_extension
-                            } else {
-                                ".mp4"
-                            }
-                        }
-                        val id = item.stream_id ?: ""
-                        val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
-
-                        val itn = Intent(this, PlayerActivity::class.java)
-                        itn.putExtra("URL", playUrl)
-                        itn.putExtra("REF", "")
-                        itn.putExtra("ORG", "")
-
-                        AdsHelper.maybeShowOnChannelClick(this) {
-                            RemoteLogger.sendEvent(
-                                this,
-                                "play_xtream",
-                                mapOf(
-                                    "channel_name" to item.name,
-                                    "category_id" to (item.category_id ?: ""),
-                                    "stream_id" to (item.stream_id ?: ""),
-                                    "mode" to currentMode
-                                )
-                            )
-                            startActivity(itn)
-                        }
-                    }
-                }
-            }
-
-            /** AŞAĞIDAKİLER ESKİ KODUN BİREBİR DEVAMI **/
 
             private fun fetchM3u(urlStr: String): Pair<List<Category>, List<StreamItem>> {
                 val categoriesMap = LinkedHashMap<String, Category>()
@@ -1799,6 +1600,7 @@ jobs:
                 for (raw in lines) {
                     val line = raw.trim()
                     if (line.isEmpty()) continue
+
                     if (line.startsWith("#EXTM3U", ignoreCase = true)) continue
 
                     if (line.startsWith("#EXTINF", ignoreCase = true)) {
@@ -1881,7 +1683,9 @@ jobs:
                             val uname = userInfo.optString("username", null)
                             val exp = userInfo.optString("exp_date", null)
                             Pair(uname, exp)
-                        } else Pair(null, null)
+                        } else {
+                            Pair(null, null)
+                        }
                     }
                 } catch (e: Exception) {
                     Pair(null, null)
@@ -1968,13 +1772,132 @@ jobs:
                 }
                 return list
             }
+
+            private fun populateDrawerCategories() {
+                val menu: Menu = navView.menu
+                menu.clear()
+                var index = 0
+                for (cat in categories) {
+                    val item = menu.add(0, index, 0, cat.category_name)
+                    item.isCheckable = true
+                    if (index == 0) {
+                        item.isChecked = true
+                    }
+                    index++
+                }
+            }
+
+            private fun filterAndShow(categoryId: String?) {
+                filteredStreams = if (categoryId == null || categoryId.length == 0) {
+                    streams
+                } else {
+                    streams.filter { it.category_id == categoryId }
+                }
+                updateRv(filteredStreams)
+            }
+
+            private fun filterStreams(query: String) {
+                val q = query.trim().lowercase()
+                if (q.isEmpty()) {
+                    updateRv(filteredStreams)
+                } else {
+                    val result = streams.filter { it.name.lowercase().contains(q) }
+                    updateRv(result)
+                }
+            }
+
+            private fun updateRv(list: List<StreamItem>) {
+                val acc = activeAcc ?: return
+
+                rv.adapter = GridAdapter(list) { item ->
+                    if (acc.type == "M3U") {
+                        val url = item.full_url
+                        if (url.isNullOrEmpty()) {
+                            Toast.makeText(this, "Geçersiz M3U kanalı.", Toast.LENGTH_SHORT).show()
+                            return@GridAdapter
+                        }
+                        val itn = Intent(this, PlayerActivity::class.java)
+                        itn.putExtra("URL", url)
+                        itn.putExtra("REF", item.referer ?: "")
+                        itn.putExtra("ORG", item.origin ?: "")
+
+                        AdsHelper.maybeShowOnChannelClick(this) {
+                            RemoteLogger.sendEvent(
+                                this,
+                                "play_m3u",
+                                mapOf(
+                                    "channel_name" to item.name,
+                                    "category_id" to (item.category_id ?: ""),
+                                    "url" to url.take(200)
+                                )
+                            )
+                            startActivity(itn)
+                        }
+                    } else {
+                        if (currentMode == "SERIES") {
+                            val itn = Intent(this, SeriesDetailActivity::class.java)
+                            itn.putExtra("SERIES_ID", item.series_id ?: "")
+                            itn.putExtra("SERIES_NAME", item.name)
+
+                            AdsHelper.maybeShowOnChannelClick(this) {
+                                RemoteLogger.sendEvent(
+                                    this,
+                                    "open_series_detail",
+                                    mapOf(
+                                        "series_id" to (item.series_id ?: ""),
+                                        "series_name" to item.name
+                                    )
+                                )
+                                startActivity(itn)
+                            }
+                        } else {
+                            val dnsRaw = acc.dns?.trim() ?: ""
+                            val user = acc.user?.trim() ?: ""
+                            val pass = acc.pass?.trim() ?: ""
+                            val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+
+                            val path = if (currentMode == "LIVE") "live" else "movie"
+                            val ext = if (currentMode == "LIVE") {
+                                ".ts"
+                            } else {
+                                if (item.container_extension != null && item.container_extension.length > 0) {
+                                    "." + item.container_extension
+                                } else {
+                                    ".mp4"
+                                }
+                            }
+                            val id = item.stream_id ?: ""
+                            val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
+
+                            val itn = Intent(this, PlayerActivity::class.java)
+                            itn.putExtra("URL", playUrl)
+                            itn.putExtra("REF", "")
+                            itn.putExtra("ORG", "")
+
+                            AdsHelper.maybeShowOnChannelClick(this) {
+                                RemoteLogger.sendEvent(
+                                    this,
+                                    "play_xtream",
+                                    mapOf(
+                                        "channel_name" to item.name,
+                                        "category_id" to (item.category_id ?: ""),
+                                        "stream_id" to (item.stream_id ?: ""),
+                                        "mode" to currentMode
+                                    )
+                                )
+                                startActivity(itn)
+                            }
+                        }
+                    }
+                }
+            }
         }
         EOF
-
 
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
+        import android.content.Intent
         import android.os.Bundle
         import android.view.View
         import android.widget.AdapterView
@@ -1988,17 +1911,18 @@ jobs:
         import java.net.URL
         import java.util.ArrayList
         import $PACKAGE_NAME.models.EpisodeItem
+        import $PACKAGE_NAME.models.SeasonItem
         import $PACKAGE_NAME.utils.Prefs
 
         class SeriesDetailActivity : AppCompatActivity() {
 
             private lateinit var prefs: Prefs
-            private lateinit var tvTitle: TextView
-            private lateinit var tvStatus: TextView
-            private lateinit var pb: ProgressBar
-            private lateinit var lv: ListView
+            private lateinit val tvTitle: TextView
+            private lateinit val tvStatus: TextView
+            private lateinit val pb: ProgressBar
+            private lateinit val lv: ListView
 
-            private val episodes = ArrayList<EpisodeItem>()
+            private val seasons = ArrayList<SeasonItem>()
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -2063,13 +1987,14 @@ jobs:
                         val obj = JSONObject(body)
                         val episodesObj = obj.optJSONObject("episodes") ?: JSONObject()
 
-                        episodes.clear()
+                        seasons.clear()
                         val keys = episodesObj.keys()
                         while (keys.hasNext()) {
                             val seasonKey = keys.next()
                             val seasonNum = seasonKey.toIntOrNull() ?: 0
                             val arr = episodesObj.optJSONArray(seasonKey) ?: continue
 
+                            val epList = ArrayList<EpisodeItem>()
                             var i = 0
                             while (i < arr.length()) {
                                 val epObj = arr.getJSONObject(i)
@@ -2078,7 +2003,7 @@ jobs:
                                 val epNum = epObj.optInt("episode_num", i + 1)
                                 val ext = epObj.optString("container_extension", "mp4")
 
-                                episodes.add(
+                                epList.add(
                                     EpisodeItem(
                                         id = id,
                                         title = title,
@@ -2089,22 +2014,21 @@ jobs:
                                 )
                                 i++
                             }
+                            if (epList.isNotEmpty()) {
+                                seasons.add(SeasonItem(seasonNum, epList))
+                            }
                         }
 
                         runOnUiThread {
                             pb.visibility = View.GONE
-                            if (episodes.isEmpty()) {
+                            if (seasons.isEmpty()) {
                                 tvStatus.text = "Bu seri için bölüm bulunamadı."
                                 tvStatus.visibility = View.VISIBLE
                             } else {
                                 tvStatus.visibility = View.GONE
                                 val labels = ArrayList<String>()
-                                for (ep in episodes) {
-                                    labels.add(
-                                        "S" + ep.seasonNumber +
-                                                "E" + ep.episodeNumber +
-                                                " - " + ep.title
-                                    )
+                                for (season in seasons) {
+                                    labels.add("Sezon " + season.seasonNumber)
                                 }
                                 val adapter = ArrayAdapter(
                                     this,
@@ -2115,7 +2039,12 @@ jobs:
 
                                 lv.onItemClickListener =
                                     AdapterView.OnItemClickListener { _, _, position, _ ->
-                                        playEpisode(episodes[position])
+                                        val season = seasons[position]
+                                        val itn = Intent(this, EpisodeListActivity::class.java)
+                                        itn.putExtra("SEASON_NUMBER", season.seasonNumber)
+                                        itn.putExtra("EPISODES", ArrayList(season.episodes))
+                                        itn.putExtra("SERIES_NAME", tvTitle.text.toString())
+                                        startActivity(itn)
                                     }
                             }
                         }
@@ -2124,6 +2053,74 @@ jobs:
                         showError("Seri bilgisi alınamadı: " + (e.message ?: "bilinmeyen hata"))
                     }
                 }.start()
+            }
+
+            private fun showError(msg: String) {
+                runOnUiThread {
+                    pb.visibility = View.GONE
+                    tvStatus.text = msg
+                    tvStatus.visibility = View.VISIBLE
+                }
+            }
+        }
+        EOF
+
+        cat <<EOF > app/src/main/java/$PATH_NAME/EpisodeListActivity.kt
+        package $PACKAGE_NAME
+
+        import android.os.Bundle
+        import android.view.View
+        import android.widget.AdapterView
+        import android.widget.ArrayAdapter
+        import android.widget.ListView
+        import android.widget.TextView
+        import androidx.appcompat.app.AppCompatActivity
+        import $PACKAGE_NAME.models.EpisodeItem
+        import $PACKAGE_NAME.utils.Prefs
+
+        class EpisodeListActivity : AppCompatActivity() {
+
+            private lateinit val prefs: Prefs
+            private lateinit val tvTitle: TextView
+            private lateinit val lv: ListView
+
+            private var episodes: List<EpisodeItem> = emptyList()
+
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_episode_list)
+
+                prefs = Prefs(this)
+
+                tvTitle = findViewById(R.id.tvEpisodeTitle)
+                lv = findViewById(R.id.lvEpisodes)
+
+                val seriesName = intent.getStringExtra("SERIES_NAME") ?: "Dizi"
+                val seasonNum = intent.getIntExtra("SEASON_NUMBER", 1)
+                episodes = intent.getParcelableArrayListExtra("EPISODES") ?: emptyList()
+
+                tvTitle.text = seriesName + " - Sezon " + seasonNum
+
+                if (episodes.isEmpty()) {
+                    tvTitle.text = "Bölüm bulunamadı."
+                    return
+                }
+
+                val labels = ArrayList<String>()
+                for (ep in episodes) {
+                    labels.add("Bölüm " + ep.episodeNumber + " - " + ep.title)
+                }
+                val adapter = ArrayAdapter(
+                    this,
+                    android.R.layout.simple_list_item_1,
+                    labels
+                )
+                lv.adapter = adapter
+
+                lv.onItemClickListener =
+                    AdapterView.OnItemClickListener { _, _, position, _ ->
+                        playEpisode(episodes[position])
+                    }
             }
 
             private fun playEpisode(ep: EpisodeItem) {
@@ -2139,19 +2136,11 @@ jobs:
 
                 val url = dns + "/series/" + user + "/" + pass + "/" + ep.id + "." + ext
 
-                val itn = android.content.Intent(this, PlayerActivity::class.java)
+                val itn = Intent(this, PlayerActivity::class.java)
                 itn.putExtra("URL", url)
                 itn.putExtra("REF", "")
                 itn.putExtra("ORG", "")
                 startActivity(itn)
-            }
-
-            private fun showError(msg: String) {
-                runOnUiThread {
-                    pb.visibility = View.GONE
-                    tvStatus.text = msg
-                    tvStatus.visibility = View.VISIBLE
-                }
             }
         }
         EOF
@@ -2182,13 +2171,13 @@ jobs:
             private var player: ExoPlayer? = null
             private var currentMode: Int = 0
 
-            private lateinit var playerView: PlayerView
-            private lateinit var leftOverlay: View
-            private lateinit var rightOverlay: View
+            private lateinit val playerView: PlayerView
+            private lateinit val leftOverlay: View
+            private lateinit val rightOverlay: View
 
-            private lateinit var tvCenterInfo: TextView
-            private lateinit var tvBrightness: TextView
-            private lateinit var tvVolume: TextView
+            private lateinit val tvCenterInfo: TextView
+            private lateinit val tvBrightness: TextView
+            private lateinit val tvVolume: TextView
 
             private var audioManager: AudioManager? = null
             private var maxVolume: Int = 0
@@ -2715,7 +2704,7 @@ jobs:
         </LinearLayout>
         EOF
 
-              cat <<EOF > app/src/main/res/layout/activity_content.xml
+        cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -2737,41 +2726,35 @@ jobs:
                     ads:adUnitId="@string/admob_banner_test"
                     android:layout_marginBottom="4dp"/>
 
-                <!-- Header: solda başlık, sağda arama alanı -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:background="@color/bordo"
-                    android:padding="8dp"
                     android:gravity="center_vertical">
 
                     <TextView
                         android:id="@+id/tvHeader"
-                        android:layout_width="0dp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
                         android:text="☰ Canlı TV"
                         android:textColor="@color/white"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:padding="8dp"/>
+                        android:padding="16dp"/>
 
                     <EditText
                         android:id="@+id/etSearch"
                         android:layout_width="0dp"
-                        android:layout_height="40dp"
+                        android:layout_height="48dp"
                         android:layout_weight="1"
-                        android:background="@drawable/bg_input_dark"
-                        android:paddingLeft="8dp"
-                        android:paddingRight="8dp"
-                        android:paddingTop="4dp"
-                        android:paddingBottom="4dp"
                         android:hint="Ara..."
+                        android:background="@drawable/bg_input_dark"
+                        android:padding="12dp"
                         android:textColor="@color/white"
                         android:textColorHint="@color/hint_yellow"
                         android:inputType="text"
-                        android:maxLines="1"/>
+                        android:layout_margin="8dp"/>
                 </LinearLayout>
 
                 <ProgressBar
@@ -2823,12 +2806,64 @@ jobs:
                 android:layout_gravity="start"
                 android:background="@color/drawer_bg"
                 app:headerLayout="@layout/nav_header"
-                app:menu="@menu/drawer_menu"
                 app:itemTextColor="@color/nav_item_text"
                 app:itemIconTint="@color/nav_item_text" />
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
-bottom_nav_menu
+
+        cat <<EOF > app/src/main/res/layout/nav_header.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:background="@color/drawer_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_header_card">
+
+                <TextView
+                    android:id="@+id/tvHeaderUser"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Kullanıcı: -"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/tvHeaderExpire"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bitiş: -"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/tvLogout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Çıkış"
+                    android:textColor="@color/error_red"
+                    android:textSize="14sp"
+                    android:layout_marginTop="8dp"
+                    android:gravity="right"
+                    android:paddingRight="12dp"/>
+            </LinearLayout>
+
+            <ListView
+                android:id="@+id/lvAccounts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:divider="@android:color/transparent"
+                android:dividerHeight="4dp"
+                android:layout_marginTop="8dp"/>
+        </LinearLayout>
+        EOF
 
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2954,6 +2989,32 @@ bottom_nav_menu
         </LinearLayout>
         EOF
 
+        cat <<EOF > app/src/main/res/layout/activity_episode_list.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@color/bg_dark">
+
+            <TextView
+                android:id="@+id/tvEpisodeTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:background="@color/bordo"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:padding="16dp"/>
+
+            <ListView
+                android:id="@+id/lvEpisodes"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="@color/gray_800"
+                android:dividerHeight="1dp"/>
+        </LinearLayout>
+        EOF
+
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -3066,6 +3127,7 @@ bottom_nav_menu
                 <activity android:name=".DashboardActivity" />
                 <activity android:name=".ContentActivity" />
                 <activity android:name=".SeriesDetailActivity" />
+                <activity android:name=".EpisodeListActivity" />
 
                 <activity
                     android:name=".PlayerActivity"
@@ -3078,40 +3140,4 @@ bottom_nav_menu
     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
       with:
-        gradle-version: '8.0'
-
-    - name: 5. Build APK + AAB (Release / Signed)
-      run: |
-        cd ErdinPlayer
-        gradle assembleRelease --no-daemon
-        gradle bundleRelease --no-daemon
-
-    - name: 6. APK'yi GitHub Artifact Olarak Yükle
-      id: upload_apk
-      uses: actions/upload-artifact@v4
-      with:
-        name: ErdinPlayer-Pro-Ultra-APK
-        path: ErdinPlayer/app/build/outputs/apk/release/*.apk
-
-    - name: 7. AAB'yi GitHub Artifact Olarak Yükle
-      id: upload_aab
-      uses: actions/upload-artifact@v4
-      with:
-        name: ErdinPlayer-Pro-Ultra-AAB
-        path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
-
-    - name: 8. Artifact URL'lerini Göster
-      run: |
-        echo "====================================="
-        echo " 📦 APK Artifact URL (GitHub):"
-        echo "${{ steps.upload_apk.outputs.artifact-url }}"
-        echo "-------------------------------------"
-        echo " 📦 AAB Artifact URL (GitHub):"
-        echo "${{ steps.upload_aab.outputs.artifact-url }}"
-        echo "====================================="
-
-        echo "### ErdinPlayer Pro Çıktılar" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+        gradle-version
