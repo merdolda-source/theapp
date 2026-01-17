@@ -229,20 +229,25 @@ jobs:
         </shape>
         EOF
 
-        cat <<EOF > app/src/main/res/drawable/bg_focusable.xml
+                cat <<EOF > app/src/main/res/drawable/bg_focusable.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
             <item android:state_focused="true">
                 <shape>
                     <solid android:color="@color/gray_700"/>
-                    <corners android:radius="14dp"/>
-                    <stroke android:width="2dp" android:color="@color/focus_ring"/>
+                    <corners android:radius="16dp"/>
+                    <stroke
+                        android:width="3dp"
+                        android:color="@color/focus_ring"/>
                 </shape>
             </item>
+
             <item>
                 <shape>
                     <solid android:color="@color/gray_800"/>
                     <corners android:radius="14dp"/>
-                    <stroke android:width="1dp" android:color="@color/bordo"/>
+                    <stroke
+                        android:width="1dp"
+                        android:color="@color/bordo"/>
                 </shape>
             </item>
         </selector>
@@ -700,13 +705,11 @@ jobs:
         }
         EOF
 
-        # --- GridAdapter (TEK TIK FIX: TV + Mobil) ---
-        cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
+                cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
 
-        import android.view.KeyEvent
+        import android.content.pm.PackageManager
         import android.view.LayoutInflater
-        import android.view.MotionEvent
         import android.view.View
         import android.view.ViewGroup
         import android.widget.TextView
@@ -725,10 +728,21 @@ jobs:
             }
 
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_grid_pro, parent, false)
-                v.isFocusable = true
-                // TV'de touch/mouse ilk dokunuş focus yapıp ikinciyi beklemesin:
-                v.isFocusableInTouchMode = false
+                val v = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_grid_pro, parent, false)
+
+                // 👉 TV’de odak açık, mobilde kapalı (2 tık sorunu çözülüyor)
+                val pm = parent.context.packageManager
+                val isTv = pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+
+                if (isTv) {
+                    v.isFocusable = true
+                    v.isFocusableInTouchMode = true
+                } else {
+                    v.isFocusable = false
+                    v.isFocusableInTouchMode = false
+                }
+
                 return VH(v)
             }
 
@@ -737,30 +751,7 @@ jobs:
                 val s = subtitles[position]
                 holder.sub.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
                 holder.sub.text = s
-
-                fun fire() {
-                    val p = holder.bindingAdapterPosition
-                    if (p != RecyclerView.NO_POSITION) onClick(p)
-                }
-
-                // D-Pad / Enter
-                holder.itemView.setOnClickListener { fire() }
-                holder.itemView.setOnKeyListener { _, keyCode, event ->
-                    if (event.action == KeyEvent.ACTION_UP &&
-                        (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
-                    ) {
-                        fire()
-                        true
-                    } else false
-                }
-
-                // Touch/mouse: tek dokunuşta çalışsın
-                holder.itemView.setOnTouchListener { _, ev ->
-                    if (ev.action == MotionEvent.ACTION_UP) {
-                        fire()
-                        true
-                    } else false
-                }
+                holder.itemView.setOnClickListener { onClick(position) }
             }
 
             override fun getItemCount(): Int = titles.size
@@ -773,13 +764,11 @@ jobs:
         }
         EOF
 
-        # --- AccountsAdapter (TEK TIK FIX: TV + Mobil) ---
-        cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
+                cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
         package $PACKAGE_NAME.adapters
 
-        import android.view.KeyEvent
+        import android.content.pm.PackageManager
         import android.view.LayoutInflater
-        import android.view.MotionEvent
         import android.view.View
         import android.view.ViewGroup
         import android.widget.ImageButton
@@ -801,9 +790,20 @@ jobs:
             }
 
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_account, parent, false)
-                v.isFocusable = true
-                v.isFocusableInTouchMode = false
+                val v = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_account, parent, false)
+
+                val pm = parent.context.packageManager
+                val isTv = pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+
+                if (isTv) {
+                    v.isFocusable = true
+                    v.isFocusableInTouchMode = true
+                } else {
+                    v.isFocusable = false
+                    v.isFocusableInTouchMode = false
+                }
+
                 return VH(v)
             }
 
@@ -814,29 +814,7 @@ jobs:
                     "M3U" -> "M3U"
                     else -> if (item.adultEnabled) "Xtream (18+ PIN)" else "Xtream"
                 }
-
-                fun fireOpen() {
-                    val p = holder.bindingAdapterPosition
-                    if (p != RecyclerView.NO_POSITION) onOpen(items[p])
-                }
-
-                holder.itemView.setOnClickListener { fireOpen() }
-                holder.itemView.setOnKeyListener { _, keyCode, event ->
-                    if (event.action == KeyEvent.ACTION_UP &&
-                        (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
-                    ) {
-                        fireOpen()
-                        true
-                    } else false
-                }
-
-                holder.itemView.setOnTouchListener { _, ev ->
-                    if (ev.action == MotionEvent.ACTION_UP) {
-                        fireOpen()
-                        true
-                    } else false
-                }
-
+                holder.itemView.setOnClickListener { onOpen(item) }
                 holder.btnDelete.setOnClickListener { onDelete(item) }
             }
 
@@ -850,7 +828,7 @@ jobs:
         }
         EOF
 
-        cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
+                cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
         import android.content.Intent
@@ -877,16 +855,9 @@ jobs:
 
                 val prefs = Prefs(this)
 
-                // Uygulama her açılışta Canlı TV ile başlasın:
-                // Eğer hesap kayıtlıysa direkt içerik ekranına ama LIVE modunda gir.
-                val activeStartup = prefs.getActive()
-                if (activeStartup != null) {
-                    val i = Intent(this, ContentActivity::class.java)
-                    i.putExtra("MODE", "LIVE")
-                    startActivity(i)
-                    finish()
-                    return
-                }
+                // ❌ Artık OTOMATİK GİRİŞ YOK
+                // Uygulama açılınca her zaman bu ekran gelir,
+                // alttan hesap seçilir veya yeni hesap eklenir.
 
                 val lang = "tr"
                 prefs.setLang(lang)
@@ -995,7 +966,7 @@ jobs:
                         val acc = accounts[position]
                         prefs.setActive(acc.id)
                         val i = Intent(this, ContentActivity::class.java)
-                        i.putExtra("MODE", "LIVE") // her zaman LIVE
+                        i.putExtra("MODE", "LIVE") // her zaman CANLI ile aç
                         startActivity(i)
                         finish()
                     }
@@ -1013,8 +984,10 @@ jobs:
                             .create()
 
                         dialog.setOnShowListener {
-                            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
-                            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(ContextCompat.getColor(this, R.color.error_red))
+                            dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                                ?.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
+                            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
+                                ?.setTextColor(ContextCompat.getColor(this, R.color.error_red))
                         }
                         dialog.show()
                         true
@@ -1201,8 +1174,15 @@ jobs:
 
                 tvDrawerOpen.setOnClickListener { drawer.openDrawer(GravityCompat.START) }
                 tvLogout.setOnClickListener {
+                    // 👉 Aktif hesabı temizle + tam logout
+                    prefs.setActive(-1)
+
                     val i = Intent(this, LoginActivity::class.java)
-                    i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    i.addFlags(
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    )
                     startActivity(i)
                     finish()
                 }
@@ -1355,13 +1335,13 @@ jobs:
             private fun applySearchFilter(qRaw: String) {
                 val q = qRaw.trim().lowercase(Locale.getDefault())
 
-                if (screen == Screen.CATEGORIES) {
-                    val cats = if (q.isEmpty()) categoriesAll else categoriesAll.filter { it.category_name.lowercase(Locale.getDefault()).contains(q) }
-                    filteredTitles = cats.map { it.category_name }
-                    filteredSubtitles = cats.map { if (it.is_adult) "18+ (PIN)" else "" }
-                    filteredCategoryIds = cats.map { it.category_id }
-                    filteredStreamIdx = emptyList()
-                    gridAdapter?.update(filteredTitles, filteredSubtitles)
+                                if (screen == Screen.CATEGORIES) {
+                    if (position !in filteredCategoryIds.indices) return
+                    val catId = filteredCategoryIds[position]
+                    val cat = categoriesAll.find { it.category_id == catId } ?: return
+
+                    // 👉 18+ artık serbest: PIN yok, direkt aç
+                    showItemsForCategory(cat)
                     return
                 }
 
@@ -1928,13 +1908,13 @@ jobs:
         }
         EOF
 
-        # --- PlayerActivity (TEK DOKUNUS PLAY/PAUSE + double tap yok) ---
-        cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
+                cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
         import android.content.Context
         import android.media.AudioManager
         import android.os.Bundle
+        import android.view.KeyEvent
         import android.view.MotionEvent
         import android.view.View
         import android.view.WindowManager
@@ -1973,10 +1953,18 @@ jobs:
             private var gestureStartY: Float = 0f
             private var isGesture: Boolean = false
 
+            private var lastTapLeft: Long = 0
+            private var lastTapRight: Long = 0
+            private var tapCountLeft: Int = 0
+            private var tapCountRight: Int = 0
+
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
 
-                window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
+                window.setFlags(
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN
+                )
                 window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
 
                 window.decorView.systemUiVisibility =
@@ -2007,10 +1995,6 @@ jobs:
                 tvBrightness = findViewById(R.id.tvBrightness)
                 tvVolume = findViewById(R.id.tvVolume)
 
-                // Controller + play/pause aktif
-                playerView.useController = true
-                playerView.controllerAutoShow = true
-
                 audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
 
@@ -2022,10 +2006,20 @@ jobs:
                 btnMode.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
                     applyResizeMode(playerView)
+                    showCenterInfo(
+                        when (currentMode) {
+                            0 -> "Ekran: Fit"
+                            1 -> "Ekran: Fill"
+                            else -> "Ekran: Zoom"
+                        }
+                    )
                 }
 
-                // Sol: parlaklık swipe, Sağ: ses swipe
-                // Tek dokunuş: oynat/durdur (double tap yok)
+                // 👉 Ekrana tek tık = Oynat / Durdur
+                playerView.setOnClickListener {
+                    togglePlayPause()
+                }
+
                 setupGestureOverlay(leftOverlay, true)
                 setupGestureOverlay(rightOverlay, false)
 
@@ -2042,7 +2036,10 @@ jobs:
 
                     val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
 
-                    player = ExoPlayer.Builder(this).setMediaSourceFactory(mediaSourceFactory).build()
+                    player = ExoPlayer.Builder(this)
+                        .setMediaSourceFactory(mediaSourceFactory)
+                        .build()
+
                     val exo = player!!
                     playerView.player = exo
                     exo.setMediaItem(MediaItem.fromUri(url))
@@ -2051,6 +2048,33 @@ jobs:
                 } catch (e: Exception) {
                     Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
                     finish()
+                }
+            }
+
+            // 👉 Kumanda OK / Enter / Play-Pause = Oynat / Durdur
+            override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    when (event.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_CENTER,
+                        KeyEvent.KEYCODE_ENTER,
+                        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                        KeyEvent.KEYCODE_SPACE -> {
+                            togglePlayPause()
+                            return true
+                        }
+                    }
+                }
+                return super.dispatchKeyEvent(event)
+            }
+
+            private fun togglePlayPause() {
+                val p = player ?: return
+                if (p.isPlaying) {
+                    p.pause()
+                    showCenterInfo("Durduruldu")
+                } else {
+                    p.play()
+                    showCenterInfo("Oynatılıyor")
                 }
             }
 
@@ -2078,7 +2102,24 @@ jobs:
                         }
                         MotionEvent.ACTION_UP -> {
                             if (!isGesture) {
-                                togglePlayPause()
+                                val now = System.currentTimeMillis()
+                                if (isLeft) {
+                                    tapCountLeft = if (now - lastTapLeft < 350) tapCountLeft + 1 else 1
+                                    lastTapLeft = now
+                                    if (tapCountLeft >= 2) {
+                                        tapCountLeft = 0
+                                        seekBy(-15000L)
+                                        showCenterInfo("15 saniye geri")
+                                    }
+                                } else {
+                                    tapCountRight = if (now - lastTapRight < 350) tapCountRight + 1 else 1
+                                    lastTapRight = now
+                                    if (tapCountRight >= 2) {
+                                        tapCountRight = 0
+                                        seekBy(15000L)
+                                        showCenterInfo("15 saniye ileri")
+                                    }
+                                }
                                 try { playerView.showController() } catch (_: Exception) {}
                             }
                             tvBrightness.visibility = View.GONE
@@ -2087,17 +2128,6 @@ jobs:
                         }
                         else -> false
                     }
-                }
-            }
-
-            private fun togglePlayPause() {
-                val p = player ?: return
-                if (p.isPlaying) {
-                    p.pause()
-                    showCenterInfo("Duraklat")
-                } else {
-                    p.play()
-                    showCenterInfo("Oynat")
                 }
             }
 
@@ -2125,6 +2155,15 @@ jobs:
                 tvBrightness.visibility = View.VISIBLE
             }
 
+            private fun seekBy(deltaMs: Long) {
+                val p = player ?: return
+                var newPos = p.currentPosition + deltaMs
+                if (newPos < 0L) newPos = 0L
+                val duration = p.duration
+                if (duration > 0 && newPos > duration) newPos = duration
+                p.seekTo(newPos)
+            }
+
             private fun applyResizeMode(pv: PlayerView) {
                 pv.resizeMode = when (currentMode) {
                     0 -> AspectRatioFrameLayout.RESIZE_MODE_FIT
@@ -2136,7 +2175,7 @@ jobs:
             private fun showCenterInfo(text: String) {
                 tvCenterInfo.text = text
                 tvCenterInfo.visibility = View.VISIBLE
-                tvCenterInfo.postDelayed({ tvCenterInfo.visibility = View.GONE }, 900)
+                tvCenterInfo.postDelayed({ tvCenterInfo.visibility = View.GONE }, 1200)
             }
 
             override fun onDestroy() {
@@ -2599,7 +2638,6 @@ jobs:
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
 
-        # item_grid_pro.xml (focusableInTouchMode FALSE)
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2607,7 +2645,7 @@ jobs:
             android:orientation="vertical"
             android:padding="8dp"
             android:focusable="true"
-            android:focusableInTouchMode="false">
+            android:focusableInTouchMode="true">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -2639,7 +2677,6 @@ jobs:
         </LinearLayout>
         EOF
 
-        # item_account.xml (focusableInTouchMode FALSE)
         cat <<EOF > app/src/main/res/layout/item_account.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2650,7 +2687,7 @@ jobs:
             android:minHeight="72dp"
             android:padding="10dp"
             android:focusable="true"
-            android:focusableInTouchMode="false">
+            android:focusableInTouchMode="true">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -2738,10 +2775,8 @@ jobs:
         </LinearLayout>
         EOF
 
-        # activity_player_pro.xml (controller attrs + xmlns:app)
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@color/black">
@@ -2749,9 +2784,7 @@ jobs:
             <androidx.media3.ui.PlayerView
                 android:id="@+id/pvMain"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:use_controller="true"
-                app:controller_auto_show="true"/>
+                android:layout_height="match_parent"/>
 
             <LinearLayout
                 android:id="@+id/overlayContainer"
