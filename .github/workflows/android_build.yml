@@ -3137,7 +3137,43 @@ jobs:
         </manifest>
         EOF
 
-    - name: 4. Gradle Kurulumu
+     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
       with:
-        gradle-version
+        gradle-version: '8.0'
+
+    - name: 5. Build APK + AAB (Release / Signed)
+      run: |
+        cd ErdinPlayer
+        gradle assembleRelease --no-daemon
+        gradle bundleRelease --no-daemon
+
+    - name: 6. APK'yi GitHub Artifact Olarak Yükle
+      id: upload_apk
+      uses: actions/upload-artifact@v4
+      with:
+        name: ErdinPlayer-Pro-Ultra-APK
+        path: ErdinPlayer/app/build/outputs/apk/release/*.apk
+
+    - name: 7. AAB'yi GitHub Artifact Olarak Yükle
+      id: upload_aab
+      uses: actions/upload-artifact@v4
+      with:
+        name: ErdinPlayer-Pro-Ultra-AAB
+        path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
+
+    - name: 8. Artifact URL'lerini Göster
+      run: |
+        echo "====================================="
+        echo " 📦 APK Artifact URL (GitHub):"
+        echo "${{ steps.upload_apk.outputs.artifact-url }}"
+        echo "-------------------------------------"
+        echo " 📦 AAB Artifact URL (GitHub):"
+        echo "${{ steps.upload_aab.outputs.artifact-url }}"
+        echo "====================================="
+
+        echo "### ErdinPlayer Pro Çıktılar" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
