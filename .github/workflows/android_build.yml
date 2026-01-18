@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Ultra Build 
+name: ErdinPlayer Pro Ultra Build
 
 on:
   push:
@@ -537,7 +537,6 @@ jobs:
             fun setActive(id: Int) { p.edit().putInt("active_id", id).apply() }
             fun clearActive() { p.edit().putInt("active_id", -1).apply() }
 
-            // Artık aktif id yoksa null dönüyor (çıkış düzgün çalışsın)
             fun getActive(): AccountProfile? {
                 val all = getAccounts()
                 if (all.isEmpty()) return null
@@ -728,7 +727,6 @@ jobs:
                 holder.sub.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
                 holder.sub.text = s
 
-                // TV'de imleci çok net göster: focus'ta büyüt
                 holder.itemView.setOnFocusChangeListener { v, hasFocus ->
                     val scale = if (hasFocus) 1.08f else 1.0f
                     v.animate().scaleX(scale).scaleY(scale).setDuration(120).start()
@@ -830,7 +828,6 @@ jobs:
 
                 val prefs = Prefs(this)
 
-                // Sadece active_id varsa direkt içeri; yoksa login ekranında kalsın
                 val activeStartup = prefs.getActive()
                 if (activeStartup != null) {
                     val i = Intent(this, ContentActivity::class.java)
@@ -993,7 +990,8 @@ jobs:
                         prefs.createM3uAccount(finalName, m)
 
                         RemoteLogger.sendEvent(this, "account_m3u_created", mapOf(
-                            "name" to finalName, "m3u_prefix" to m.take(160)
+                            "name" to finalName,
+                            "m3u_prefix" to m.take(160)
                         ))
 
                         Toast.makeText(this, "Hesap eklendi. Canlı TV ile açılıyor...", Toast.LENGTH_SHORT).show()
@@ -1008,7 +1006,7 @@ jobs:
         }
         EOF
 
-        # CONTENT ACTIVITY – +18 PIN YOK, ÇIKIŞ GERÇEK LOGOUT, TV IMLEÇ NET
+        # CONTENT ACTIVITY – TV'de boş gelme sorunu için httpGet + gzip + UA + redirect + timeout fix
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1117,7 +1115,6 @@ jobs:
                 gridAdapter = GridAdapter(emptyList(), emptyList()) { pos -> onGridClick(pos) }
                 rv.adapter = gridAdapter
 
-                // Drawer views
                 rvAccounts = findViewById(R.id.rvAccounts)
                 rvAccounts.layoutManager = LinearLayoutManager(this)
                 tvDrawerUser = findViewById(R.id.tvDrawerUser)
@@ -1127,7 +1124,6 @@ jobs:
                 tvDrawerOpen.setOnClickListener { drawer.openDrawer(GravityCompat.START) }
 
                 tvLogout.setOnClickListener {
-                    // Çıkış: active_id sıfırlanır, LoginActivity açılır, otomatik geri dönmez
                     prefs.clearActive()
                     val i = Intent(this, LoginActivity::class.java)
                     i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -1283,7 +1279,6 @@ jobs:
                 if (screen == Screen.CATEGORIES) {
                     val cats = if (q.isEmpty()) categoriesAll else categoriesAll.filter { it.category_name.lowercase(Locale.getDefault()).contains(q) }
                     filteredTitles = cats.map { it.category_name }
-                    // +18 etiketi de yok, düz kategori ismi
                     filteredSubtitles = cats.map { "" }
                     filteredCategoryIds = cats.map { it.category_id }
                     filteredStreamIdx = emptyList()
@@ -1309,8 +1304,6 @@ jobs:
                     if (position !in filteredCategoryIds.indices) return
                     val catId = filteredCategoryIds[position]
                     val cat = categoriesAll.find { it.category_id == catId } ?: return
-
-                    // +18 PIN kontrolü tamamen kaldırıldı
                     showItemsForCategory(cat)
                     return
                 }
@@ -1469,7 +1462,7 @@ jobs:
                     } catch (e: Exception) {
                         runOnUiThread {
                             pb.visibility = View.GONE
-                            tvStatus.text = "Veriler alınamadı: " + (e.message ?: "bilinmeyen hata")
+                            tvStatus.text = "Veriler alınamadı: ${e.message}\n\nURL: ${streamsUrl.take(180)}"
                             tvStatus.visibility = View.VISIBLE
                         }
                     }
@@ -1480,14 +1473,7 @@ jobs:
                 val categoriesMap = LinkedHashMap<String, Category>()
                 val streamsList = ArrayList<StreamItem>()
 
-                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 10000
-                    readTimeout = 20000
-                    requestMethod = "GET"
-                }
-                if (conn.responseCode != HttpURLConnection.HTTP_OK) return Pair(emptyList(), emptyList())
-
-                val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                val body = httpGet(urlStr)
                 val lines = body.split("\n")
 
                 var currentName = ""
@@ -1547,13 +1533,7 @@ jobs:
 
             private fun fetchAccountInfo(baseUrl: String): Pair<String?, String?> {
                 return try {
-                    val conn = (URL(baseUrl).openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 8000
-                        readTimeout = 8000
-                        requestMethod = "GET"
-                    }
-                    if (conn.responseCode != HttpURLConnection.HTTP_OK) return Pair(null, null)
-                    val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                    val body = httpGet(baseUrl)
                     val obj = JSONObject(body)
                     val userInfo = obj.optJSONObject("user_info")
                     if (userInfo != null) Pair(userInfo.optString("username", null), userInfo.optString("exp_date", null)) else Pair(null, null)
@@ -1575,14 +1555,7 @@ jobs:
 
             private fun fetchCategories(urlStr: String): List<Category> {
                 val list = ArrayList<Category>()
-                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 10000
-                    readTimeout = 15000
-                    requestMethod = "GET"
-                }
-                if (conn.responseCode != HttpURLConnection.HTTP_OK) return list
-
-                val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                val body = httpGet(urlStr)
                 val arr = JSONArray(body)
                 var i = 0
                 while (i < arr.length()) {
@@ -1602,14 +1575,7 @@ jobs:
 
             private fun fetchStreams(urlStr: String): List<StreamItem> {
                 val list = ArrayList<StreamItem>()
-                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 10000
-                    readTimeout = 20000
-                    requestMethod = "GET"
-                }
-                if (conn.responseCode != HttpURLConnection.HTTP_OK) return list
-
-                val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                val body = httpGet(urlStr)
                 val arr = JSONArray(body)
                 var i = 0
                 while (i < arr.length()) {
@@ -1623,6 +1589,35 @@ jobs:
                     i++
                 }
                 return list
+            }
+
+            // Android TV'de boş liste sorunu: gzip + user-agent + redirect + timeout + hata gömme
+            private fun httpGet(urlStr: String): String {
+                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                    instanceFollowRedirects = true
+                    connectTimeout = 20000
+                    readTimeout = 30000
+                    requestMethod = "GET"
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (AndroidTV) ErdinPlayer/1.7")
+                    setRequestProperty("Accept", "application/json,text/plain,*/*")
+                    setRequestProperty("Accept-Encoding", "gzip")
+                    setRequestProperty("Connection", "close")
+                }
+
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                val encoding = (conn.contentEncoding ?: "").lowercase()
+                val raw = stream ?: throw Exception("HTTP $code boş response")
+
+                val input = if (encoding.contains("gzip")) {
+                    java.util.zip.GZIPInputStream(raw)
+                } else raw
+
+                val body = input.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                if (code !in 200..299) {
+                    throw Exception("HTTP $code: " + body.take(300))
+                }
+                return body
             }
         }
         EOF
@@ -1825,7 +1820,7 @@ jobs:
         }
         EOF
 
-        # PLAYER – OYNAT/DURDUR EKLENDI
+        # PLAYER – TEK TIK: Play/Pause (double-tap TAMEN KALDIRILDI)
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1869,11 +1864,6 @@ jobs:
 
             private var gestureStartY: Float = 0f
             private var isGesture: Boolean = false
-
-            private var lastTapLeft: Long = 0
-            private var lastTapRight: Long = 0
-            private var tapCountLeft: Int = 0
-            private var tapCountRight: Int = 0
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -1922,10 +1912,8 @@ jobs:
                     applyResizeMode(playerView)
                 }
 
-                // Tüm player'a tıklayınca Play/Pause
-                playerView.setOnClickListener {
-                    togglePlayPause()
-                }
+                // Tek tık: Play/Pause
+                playerView.setOnClickListener { togglePlayPause() }
 
                 setupGestureOverlay(leftOverlay, true)
                 setupGestureOverlay(rightOverlay, false)
@@ -1990,24 +1978,7 @@ jobs:
                         }
                         MotionEvent.ACTION_UP -> {
                             if (!isGesture) {
-                                val now = System.currentTimeMillis()
-                                if (isLeft) {
-                                    tapCountLeft = if (now - lastTapLeft < 350) tapCountLeft + 1 else 1
-                                    lastTapLeft = now
-                                    if (tapCountLeft >= 2) {
-                                        tapCountLeft = 0
-                                        seekBy(-15000L)
-                                        showCenterInfo("15 saniye geri")
-                                    }
-                                } else {
-                                    tapCountRight = if (now - lastTapRight < 350) tapCountRight + 1 else 1
-                                    lastTapRight = now
-                                    if (tapCountRight >= 2) {
-                                        tapCountRight = 0
-                                        seekBy(15000L)
-                                        showCenterInfo("15 saniye ileri")
-                                    }
-                                }
+                                togglePlayPause()
                                 try { playerView.showController() } catch (_: Exception) {}
                             }
                             tvBrightness.visibility = View.GONE
@@ -2041,15 +2012,6 @@ jobs:
                 currentBrightness = newB
                 tvBrightness.text = "Parlaklık: " + (currentBrightness * 100f).toInt() + "%"
                 tvBrightness.visibility = View.VISIBLE
-            }
-
-            private fun seekBy(deltaMs: Long) {
-                val p = player ?: return
-                var newPos = p.currentPosition + deltaMs
-                if (newPos < 0L) newPos = 0L
-                val duration = p.duration
-                if (duration > 0 && newPos > duration) newPos = duration
-                p.seekTo(newPos)
             }
 
             private fun applyResizeMode(pv: PlayerView) {
@@ -2320,7 +2282,6 @@ jobs:
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <!-- MAIN -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -2335,7 +2296,6 @@ jobs:
                     ads:adUnitId="@string/admob_banner_test"
                     android:layout_marginBottom="4dp"/>
 
-                <!-- HEADER: solda drawer, ortada başlık, sağda arama -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -2430,7 +2390,6 @@ jobs:
                     app:menu="@menu/bottom_nav_menu" />
             </LinearLayout>
 
-            <!-- DRAWER: hesap + süre + ekli hesaplar + çıkış -->
             <LinearLayout
                 android:layout_width="300dp"
                 android:layout_height="match_parent"
