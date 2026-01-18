@@ -1462,7 +1462,7 @@ jobs:
                     } catch (e: Exception) {
                         runOnUiThread {
                             pb.visibility = View.GONE
-                            tvStatus.text = "Veriler alınamadı: ${e.message}\n\nURL: ${streamsUrl.take(180)}"
+                            tvStatus.text = "Veriler alınamadı: " + (e.message ?: "") + "\n\nURL: " + streamsUrl.take(180)
                             tvStatus.visibility = View.VISIBLE
                         }
                     }
