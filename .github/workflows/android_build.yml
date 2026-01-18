@@ -1008,8 +1008,8 @@ jobs:
             }
         }
         EOF
-
-        # CONTENT ACTIVITY (TV için httpGet + TLS fix)
+             
+        # CONTENT ACTIVITY (TV FIX: SSL Bypass + Fake User Agent)
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1034,6 +1034,12 @@ jobs:
         import org.json.JSONObject
         import java.net.HttpURLConnection
         import java.net.URL
+        import java.security.SecureRandom
+        import java.security.cert.X509Certificate
+        import javax.net.ssl.HttpsURLConnection
+        import javax.net.ssl.SSLContext
+        import javax.net.ssl.TrustManager
+        import javax.net.ssl.X509TrustManager
         import java.text.SimpleDateFormat
         import java.util.ArrayList
         import java.util.Date
@@ -1090,10 +1096,8 @@ jobs:
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_content)
 
-                // TLS fix (eski Android TV'ler için)
-                try {
-                    com.google.android.gms.security.ProviderInstaller.installIfNeeded(this)
-                } catch (e: Exception) { }
+                // TV ICIN KRITIK: SSL Guvenlik Kontrolunu Devre Disi Birak (Eski TV'ler icin)
+                trustAllHosts()
 
                 prefs = Prefs(this)
 
@@ -1188,6 +1192,23 @@ jobs:
                 }
 
                 resetFlowAndLoad()
+            }
+
+            // TV SSL Fix Fonksiyonu
+            private fun trustAllHosts() {
+                try {
+                    val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+                        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                        override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
+                        override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
+                    })
+                    val sc = SSLContext.getInstance("TLS")
+                    sc.init(null, trustAllCerts, SecureRandom())
+                    HttpsURLConnection.setDefaultSSLSocketFactory(sc.socketFactory)
+                    HttpsURLConnection.setDefaultHostnameVerifier { _, _ -> true }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
 
             private fun setupDrawerAccounts() {
@@ -1608,7 +1629,9 @@ jobs:
                     connectTimeout = 20000
                     readTimeout = 30000
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "Mozilla/5.0 (AndroidTV) ErdinPlayer/1.7")
+                    // TV FIX: User-Agent degistirildi. "AndroidTV" ibaresi bazi sunucularca engellenir.
+                    // Standart bir Chrome User-Agent kullaniyoruz.
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36")
                     setRequestProperty("Accept", "application/json,text/plain,*/*")
                     setRequestProperty("Accept-Encoding", "gzip")
                     setRequestProperty("Connection", "close")
@@ -1639,7 +1662,7 @@ jobs:
                 return body
             }
         }
-        EOF
+        EOF 
 
         # SERIES DETAIL
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
