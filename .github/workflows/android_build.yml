@@ -1010,7 +1010,7 @@ jobs:
         }
         EOF
 
-         # CONTENT ACTIVITY (TV için httpGet + TLS fix + HTTP/HTTPS fallback)
+                 # CONTENT ACTIVITY (TV için HTTP fix + TLS fix, HTTPS yok)
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1092,7 +1092,7 @@ jobs:
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_content)
 
-                // TLS fix (eski Android TV'ler için)
+                // TLS fix (eski Android TV'ler için; sadece https için lazımdı ama dursa da zarar vermez)
                 try {
                     com.google.android.gms.security.ProviderInstaller.installIfNeeded(this)
                 } catch (e: Exception) {
@@ -1650,20 +1650,16 @@ jobs:
                 return list
             }
 
-            // TV için güçlendirilmiş HTTP GET:
-            // 1) Normal URL'yi dener
-            // 2) Hata alırsa ve URL http:// ise https:// fallback dener
+            // TV için HTTP GET:
+            // - Tüm IPTV panellerin http olduğu varsayımıyla ÇALIŞIR
+            // - Eğer yanlışlıkla https gelirse bile otomatik http'ye çevirir
             private fun httpGet(urlStr: String): String {
-                return try {
-                    doHttpGet(urlStr)
-                } catch (e: Exception) {
-                    if (urlStr.startsWith("http://", ignoreCase = true)) {
-                        val httpsUrl = urlStr.replaceFirst("http://", "https://")
-                        doHttpGet(httpsUrl)
-                    } else {
-                        throw e
-                    }
+                val finalUrl = if (urlStr.startsWith("https://", ignoreCase = true)) {
+                    "http://" + urlStr.substringAfter("://")
+                } else {
+                    urlStr
                 }
+                return doHttpGet(finalUrl)
             }
 
             private fun doHttpGet(urlStr: String): String {
