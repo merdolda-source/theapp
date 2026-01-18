@@ -1010,7 +1010,7 @@ jobs:
         }
         EOF
 
-        # CONTENT ACTIVITY (TV için httpGet + TLS fix + HTTP/HTTPS fallback)
+                # CONTENT ACTIVITY (TV için httpGet + TLS fix + HTTP/HTTPS fallback)
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1095,12 +1095,7 @@ jobs:
                 try {
                     com.google.android.gms.security.ProviderInstaller.installIfNeeded(this)
                 } catch (e: Exception) {
-                    RemoteLogger.sendError(
-                        this,
-                        "tls_provider_install_fail",
-                        e,
-                        mapOf("device" to "android_tv")
-                    )
+                    // sessiz geç
                 }
 
                 prefs = Prefs(this)
@@ -1292,7 +1287,9 @@ jobs:
                 val q = qRaw.trim().lowercase(Locale.getDefault())
 
                 if (screen == Screen.CATEGORIES) {
-                    val cats = if (q.isEmpty()) categoriesAll else categoriesAll.filter { it.category_name.lowercase(Locale.getDefault()).contains(q) }
+                    val cats = if (q.isEmpty()) categoriesAll else categoriesAll.filter {
+                        it.category_name.lowercase(Locale.getDefault()).contains(q)
+                    }
                     filteredTitles = cats.map { it.category_name }
                     filteredSubtitles = cats.map { "" }
                     filteredCategoryIds = cats.map { it.category_id }
@@ -1304,7 +1301,9 @@ jobs:
                 val catId = selectedCategory?.category_id
                 val items = if (catId.isNullOrEmpty()) streamsAll else streamsAll.filter { it.category_id == catId }
 
-                val filtered = if (q.isEmpty()) items else items.filter { it.name.lowercase(Locale.getDefault()).contains(q) }
+                val filtered = if (q.isEmpty()) items else items.filter {
+                    it.name.lowercase(Locale.getDefault()).contains(q)
+                }
                 filteredTitles = filtered.map { it.name }
                 filteredSubtitles = filtered.map { "" }
                 filteredStreamIdx = filtered.map { streamsAll.indexOf(it) }
@@ -1340,11 +1339,15 @@ jobs:
                     itn.putExtra("ORG", item.origin ?: "")
 
                     AdsHelper.maybeShowOnChannelClick(this) {
-                        RemoteLogger.sendEvent(this, "play_m3u", mapOf(
-                            "channel_name" to item.name,
-                            "category_id" to (item.category_id ?: ""),
-                            "url" to url.take(200)
-                        ))
+                        RemoteLogger.sendEvent(
+                            this,
+                            "play_m3u",
+                            mapOf(
+                                "channel_name" to item.name,
+                                "category_id" to (item.category_id ?: ""),
+                                "url" to url.take(200)
+                            )
+                        )
                         startActivity(itn)
                     }
                     return
@@ -1355,10 +1358,14 @@ jobs:
                     itn.putExtra("SERIES_ID", item.series_id ?: "")
                     itn.putExtra("SERIES_NAME", item.name)
                     AdsHelper.maybeShowOnChannelClick(this) {
-                        RemoteLogger.sendEvent(this, "open_series_detail", mapOf(
-                            "series_id" to (item.series_id ?: ""),
-                            "series_name" to item.name
-                        ))
+                        RemoteLogger.sendEvent(
+                            this,
+                            "open_series_detail",
+                            mapOf(
+                                "series_id" to (item.series_id ?: ""),
+                                "series_name" to item.name
+                            )
+                        )
                         startActivity(itn)
                     }
                     return
@@ -1373,7 +1380,11 @@ jobs:
                 val ext = if (currentMode == "LIVE") {
                     ".ts"
                 } else {
-                    if (!item.container_extension.isNullOrEmpty()) "." + item.container_extension else ".mp4"
+                    if (!item.container_extension.isNullOrEmpty()) {
+                        "." + item.container_extension
+                    } else {
+                        ".mp4"
+                    }
                 }
                 val id = item.stream_id ?: ""
                 val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
@@ -1384,12 +1395,16 @@ jobs:
                 itn.putExtra("ORG", "")
 
                 AdsHelper.maybeShowOnChannelClick(this) {
-                    RemoteLogger.sendEvent(this, "play_xtream", mapOf(
-                        "channel_name" to item.name,
-                        "category_id" to (item.category_id ?: ""),
-                        "stream_id" to (item.stream_id ?: ""),
-                        "mode" to currentMode
-                    ))
+                    RemoteLogger.sendEvent(
+                        this,
+                        "play_xtream",
+                        mapOf(
+                            "channel_name" to item.name,
+                            "category_id" to (item.category_id ?: ""),
+                            "stream_id" to (item.stream_id ?: ""),
+                            "mode" to currentMode
+                        )
+                    )
                     startActivity(itn)
                 }
             }
@@ -1422,12 +1437,6 @@ jobs:
                                 showCategories()
                             }
                         } catch (e: Exception) {
-                            RemoteLogger.sendError(
-                                this,
-                                "fetch_m3u_fail",
-                                e,
-                                mapOf("url" to m3uUrl.take(200))
-                            )
                             runOnUiThread {
                                 pb.visibility = View.GONE
                                 tvStatus.text = "M3U okunamadı: " + (e.message ?: "bilinmeyen hata")
@@ -1481,15 +1490,6 @@ jobs:
                             showCategories()
                         }
                     } catch (e: Exception) {
-                        RemoteLogger.sendError(
-                            this,
-                            "fetch_xtream_fail",
-                            e,
-                            mapOf(
-                                "base" to base.take(200),
-                                "mode" to currentMode
-                            )
-                        )
                         runOnUiThread {
                             pb.visibility = View.GONE
                             tvStatus.text = "Veriler alınamadı: " + (e.message ?: "bilinmeyen hata")
@@ -1526,7 +1526,9 @@ jobs:
                             if (end > start) group = line.substring(start, end)
                         }
                         val commaIndex = line.lastIndexOf(',')
-                        if (commaIndex >= 0 && commaIndex < line.length - 1) name = line.substring(commaIndex + 1).trim()
+                        if (commaIndex >= 0 && commaIndex < line.length - 1) {
+                            name = line.substring(commaIndex + 1).trim()
+                        }
 
                         currentName = if (name.isNotEmpty()) name else "Kanal"
                         currentGroup = if (group.isNotEmpty()) group else "Genel"
@@ -1534,26 +1536,34 @@ jobs:
                         currentOrg = null
                     } else if (line.startsWith("#EXTVLCOPT:http-referrer=", ignoreCase = true)) {
                         val idx = line.indexOf("=")
-                        if (idx >= 0 && idx < line.length - 1) currentRef = line.substring(idx + 1).trim()
+                        if (idx >= 0 && idx < line.length - 1) {
+                            currentRef = line.substring(idx + 1).trim()
+                        }
                     } else if (line.startsWith("#EXTVLCOPT:http-origin=", ignoreCase = true)) {
                         val idx = line.indexOf("=")
-                        if (idx >= 0 && idx < line.length - 1) currentOrg = line.substring(idx + 1).trim()
+                        if (idx >= 0 && idx < line.length - 1) {
+                            currentOrg = line.substring(idx + 1).trim()
+                        }
                     } else if (!line.startsWith("#")) {
                         val urlPlay = line
                         val groupId = if (currentGroup.isNotEmpty()) currentGroup else "Genel"
 
-                        val cat = categoriesMap.getOrPut(groupId) { Category(groupId, groupId, false) }
+                        val cat = categoriesMap.getOrPut(groupId) {
+                            Category(groupId, groupId, false)
+                        }
 
-                        streamsList.add(StreamItem(
-                            name = currentName,
-                            stream_id = null,
-                            series_id = null,
-                            container_extension = null,
-                            category_id = cat.category_id,
-                            full_url = urlPlay,
-                            referer = currentRef,
-                            origin = currentOrg
-                        ))
+                        streamsList.add(
+                            StreamItem(
+                                name = currentName,
+                                stream_id = null,
+                                series_id = null,
+                                container_extension = null,
+                                category_id = cat.category_id,
+                                full_url = urlPlay,
+                                referer = currentRef,
+                                origin = currentOrg
+                            )
+                        )
                         currentRef = null
                         currentOrg = null
                     }
@@ -1567,17 +1577,14 @@ jobs:
                     val obj = JSONObject(body)
                     val userInfo = obj.optJSONObject("user_info")
                     if (userInfo != null) {
-                        Pair(userInfo.optString("username", null), userInfo.optString("exp_date", null))
+                        Pair(
+                            userInfo.optString("username", null),
+                            userInfo.optString("exp_date", null)
+                        )
                     } else {
                         Pair(null, null)
                     }
                 } catch (e: Exception) {
-                    RemoteLogger.sendError(
-                        this,
-                        "fetch_account_info_fail",
-                        e,
-                        mapOf("base" to baseUrl.take(200))
-                    )
                     Pair(null, null)
                 }
             }
@@ -1625,7 +1632,18 @@ jobs:
                     val streamId = obj.optString("stream_id", null)
                     val seriesId = obj.optString("series_id", null)
                     val ext = obj.optString("container_extension", null)
-                    list.add(StreamItem(name, streamId, seriesId, ext, catId, null, null, null))
+                    list.add(
+                        StreamItem(
+                            name,
+                            streamId,
+                            seriesId,
+                            ext,
+                            catId,
+                            null,
+                            null,
+                            null
+                        )
+                    )
                     i++
                 }
                 return list
@@ -1634,35 +1652,18 @@ jobs:
             // TV için güçlendirilmiş HTTP GET:
             // 1) Normal URL'yi dener
             // 2) Hata alırsa ve URL http:// ise https:// fallback dener
-            // 3) Hataları RemoteLogger'a yollar (TV'deki asıl sebebi panelden görebilirsin)
             private fun httpGet(urlStr: String): String {
                 try {
                     return doHttpGet(urlStr)
                 } catch (e: Exception) {
-                    // http ise https fallback dene
                     if (urlStr.startsWith("http://", ignoreCase = true)) {
                         val httpsUrl = urlStr.replaceFirst("http://", "https://")
                         try {
                             return doHttpGet(httpsUrl)
-                        } catch (e2: Exception) {
-                            RemoteLogger.sendError(
-                                this,
-                                "http_get_fail_https_fallback",
-                                e2,
-                                mapOf(
-                                    "original" to urlStr.take(200),
-                                    "fallback" to httpsUrl.take(200)
-                                )
-                            )
-                            throw e2
+                        } catch (_: Exception) {
+                            throw _  // fallback de patlarsa üstte handle edilsin
                         }
                     } else {
-                        RemoteLogger.sendError(
-                            this,
-                            "http_get_fail",
-                            e,
-                            mapOf("url" to urlStr.take(200))
-                        )
                         throw e
                     }
                 }
@@ -1674,7 +1675,6 @@ jobs:
                     connectTimeout = 20000
                     readTimeout = 30000
                     requestMethod = "GET"
-                    // Android TV dostu, panel tarafından engellenmeyecek bir UA
                     setRequestProperty(
                         "User-Agent",
                         "Mozilla/5.0 (Linux; Android 9; AndroidTV) " +
