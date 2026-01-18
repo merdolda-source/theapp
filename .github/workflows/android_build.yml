@@ -1010,7 +1010,7 @@ jobs:
         }
         EOF
 
-                # CONTENT ACTIVITY (TV için httpGet + TLS fix + HTTP/HTTPS fallback)
+         # CONTENT ACTIVITY (TV için httpGet + TLS fix + HTTP/HTTPS fallback)
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1038,6 +1038,7 @@ jobs:
         import java.text.SimpleDateFormat
         import java.util.ArrayList
         import java.util.Date
+        import java.util.LinkedHashMap
         import java.util.Locale
         import $PACKAGE_NAME.adapters.AccountsAdapter
         import $PACKAGE_NAME.adapters.GridAdapter
@@ -1653,16 +1654,12 @@ jobs:
             // 1) Normal URL'yi dener
             // 2) Hata alırsa ve URL http:// ise https:// fallback dener
             private fun httpGet(urlStr: String): String {
-                try {
-                    return doHttpGet(urlStr)
+                return try {
+                    doHttpGet(urlStr)
                 } catch (e: Exception) {
                     if (urlStr.startsWith("http://", ignoreCase = true)) {
                         val httpsUrl = urlStr.replaceFirst("http://", "https://")
-                        try {
-                            return doHttpGet(httpsUrl)
-                        } catch (_: Exception) {
-                            throw _  // fallback de patlarsa üstte handle edilsin
-                        }
+                        doHttpGet(httpsUrl)
                     } else {
                         throw e
                     }
@@ -1689,7 +1686,7 @@ jobs:
                 try {
                     val code = conn.responseCode
                     val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-                    val encoding = (conn.contentEncoding ?: "").lowercase()
+                    val encoding = (conn.contentEncoding ?: "").lowercase(Locale.getDefault())
                     val raw = stream ?: throw Exception("HTTP " + code + " boş response")
 
                     val input = if (encoding.contains("gzip")) {
