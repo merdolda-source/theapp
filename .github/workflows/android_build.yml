@@ -1010,7 +1010,7 @@ jobs:
         }
         EOF
 
-                 # CONTENT ACTIVITY (TV için HTTP fix + TLS fix, HTTPS yok)
+                        # CONTENT ACTIVITY (TV için HTTP/HTTPS otomatik fallback + TLS fix)
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1092,7 +1092,7 @@ jobs:
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_content)
 
-                // TLS fix (eski Android TV'ler için; sadece https için lazımdı ama dursa da zarar vermez)
+                // TLS fix (eski Android TV'ler için)
                 try {
                     com.google.android.gms.security.ProviderInstaller.installIfNeeded(this)
                 } catch (e: Exception) {
@@ -1650,16 +1650,38 @@ jobs:
                 return list
             }
 
-            // TV için HTTP GET:
-            // - Tüm IPTV panellerin http olduğu varsayımıyla ÇALIŞIR
-            // - Eğer yanlışlıkla https gelirse bile otomatik http'ye çevirir
+            // TV için HTTP/HTTPS otomatik fallback:
+            // - Önce kullanıcının girdiği URL'yi DENER
+            // - Eğer HTTPS + handshake/SSL/certificate hatası alırsa -> HTTP fallback
+            // - Eğer HTTP + HTTP 404 alırsa                         -> HTTPS fallback
             private fun httpGet(urlStr: String): String {
-                val finalUrl = if (urlStr.startsWith("https://", ignoreCase = true)) {
-                    "http://" + urlStr.substringAfter("://")
-                } else {
-                    urlStr
+                val original = urlStr
+                try {
+                    return doHttpGet(original)
+                } catch (e: Exception) {
+                    val msg = (e.message ?: "").lowercase(Locale.getDefault())
+
+                    // 1) HTTPS ve TLS/sertifika/handshake hatası -> HTTP'ye düş
+                    if (original.startsWith("https://", ignoreCase = true) &&
+                        (msg.contains("handshake") ||
+                         msg.contains("ssl") ||
+                         msg.contains("certificate"))) {
+
+                        val httpUrl = "http://" + original.substringAfter("://")
+                        return doHttpGet(httpUrl)
+                    }
+
+                    // 2) HTTP ve 404 -> HTTPS dene (bazı paneller sadece HTTPS'te player_api.php açıyor)
+                    if (original.startsWith("http://", ignoreCase = true) &&
+                        msg.startsWith("http 404")) {
+
+                        val httpsUrl = "https://" + original.substringAfter("://")
+                        return doHttpGet(httpsUrl)
+                    }
+
+                    // 3) Diğer durumlarda ilk hatayı aynen fırlat
+                    throw e
                 }
-                return doHttpGet(finalUrl)
             }
 
             private fun doHttpGet(urlStr: String): String {
