@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Ultra Build 
+name: ErdinPlayer Pro Ultra Build (TV Fix)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Android TV + D-Pad + Sağda Arama + Drawer Hesaplar) - SIGNED
+    - name: 3. ErdinPlayer Pro Proje Üretimi (TV Fix + Emulator Uyumu) - SIGNED
       shell: bash
       run: |
         set -e
@@ -38,7 +38,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
         
-        echo "🚀 ErdinPlayer Pro Ultra (TV uyumlu) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro Ultra (TV ve Emülatör Fixli) üretiliyor..."
 
         rm -rf "$APP_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME"
@@ -52,6 +52,7 @@ jobs:
         mkdir -p "$APP_NAME/app/src/main/res/mipmap-hdpi"
         mkdir -p "$APP_NAME/app/src/main/res/menu"
         mkdir -p "$APP_NAME/app/src/main/res/color"
+        mkdir -p "$APP_NAME/app/src/main/res/xml"
         
         cd "$APP_NAME"
 
@@ -104,9 +105,9 @@ jobs:
             defaultConfig {
                 applicationId "$PACKAGE_NAME"
                 minSdk 24
-                targetSdk 34
-                versionCode 4
-                versionName "1.7.0-tv"
+                targetSdk 35
+                versionCode 5
+                versionName "1.8.0-tv-fix"
             }
 
             signingConfigs {
@@ -146,9 +147,7 @@ jobs:
             implementation 'androidx.media3:media3-exoplayer-dash:1.1.0'
 
             implementation 'com.github.bumptech.glide:glide:4.15.1'
-
             implementation 'com.google.android.gms:play-services-ads:23.4.0'
-            implementation 'com.google.android.gms:play-services-security:18.0.1'
         }
         EOF
 
@@ -1011,7 +1010,7 @@ jobs:
         }
         EOF
 
-        # CONTENT ACTIVITY (TV: HTTP/HTTPS + TLS fix + handshake/404 fallback)
+        # CONTENT ACTIVITY (TV FIX UYGULANDI: User-Agent Spoofing + SSL Bypass)
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1031,22 +1030,27 @@ jobs:
         import androidx.recyclerview.widget.LinearLayoutManager
         import androidx.recyclerview.widget.RecyclerView
         import com.google.android.gms.ads.AdView
-        import com.google.android.gms.security.ProviderInstaller
         import com.google.android.material.bottomnavigation.BottomNavigationView
         import org.json.JSONArray
         import org.json.JSONObject
         import java.net.HttpURLConnection
         import java.net.URL
+        import java.security.SecureRandom
+        import java.security.cert.X509Certificate
+        import javax.net.ssl.HttpsURLConnection
+        import javax.net.ssl.SSLContext
+        import javax.net.ssl.TrustManager
+        import javax.net.ssl.X509TrustManager
         import java.text.SimpleDateFormat
         import java.util.ArrayList
         import java.util.Date
         import java.util.LinkedHashMap
         import java.util.Locale
-        import java.util.zip.GZIPInputStream
         import $PACKAGE_NAME.adapters.AccountsAdapter
         import $PACKAGE_NAME.adapters.GridAdapter
         import $PACKAGE_NAME.models.AccountProfile
         import $PACKAGE_NAME.models.Category
+        import $PACKAGE_NAME.models.EpisodeItem
         import $PACKAGE_NAME.models.StreamItem
         import $PACKAGE_NAME.utils.AdsHelper
         import $PACKAGE_NAME.utils.Prefs
@@ -1090,16 +1094,20 @@ jobs:
 
             private var gridAdapter: GridAdapter? = null
 
+            // TV ve Emulator icin ozel User-Agent (Samsung Telefon Taklidi)
+            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 10; SM-A505F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Mobile Safari/537.36"
+
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_content)
 
-                // TLS fix (eski Android TV'ler için)
+                // 1. SSL/TLS Fix (Eski TV'ler icin)
                 try {
-                    ProviderInstaller.installIfNeeded(this)
+                    com.google.android.gms.security.ProviderInstaller.installIfNeeded(this)
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    // sessiz gec
                 }
+                trustAllCertificates() // Sertifika hatalarini yoksay
 
                 prefs = Prefs(this)
 
@@ -1180,11 +1188,7 @@ jobs:
                             resetFlowAndLoad()
                             true
                         } else {
-                            Toast.makeText(
-                                this,
-                                "M3U hesabında yalnızca Canlı TV listesi gösterilir.",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast.makeText(this, "M3U hesabında yalnızca Canlı TV listesi gösterilir.", Toast.LENGTH_SHORT).show()
                             false
                         }
                     } else {
@@ -1198,6 +1202,23 @@ jobs:
                 }
 
                 resetFlowAndLoad()
+            }
+
+            // SSL Sertifika hatalarini yoksayan fonksiyon (TV Fix)
+            private fun trustAllCertificates() {
+                try {
+                    val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+                        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                        override fun checkClientTrusted(certs: Array<X509Certificate>, authType: String) {}
+                        override fun checkServerTrusted(certs: Array<X509Certificate>, authType: String) {}
+                    })
+                    val sc = SSLContext.getInstance("SSL")
+                    sc.init(null, trustAllCerts, SecureRandom())
+                    HttpsURLConnection.setDefaultSSLSocketFactory(sc.socketFactory)
+                    HttpsURLConnection.setDefaultHostnameVerifier { _, _ -> true }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
 
             private fun setupDrawerAccounts() {
@@ -1656,50 +1677,45 @@ jobs:
                 return list
             }
 
-            // TV için HTTP/HTTPS otomatik fallback:
-            // - Önce kullanıcının girdiği URL'yi dener
-            // - HTTPS + handshake/SSL/sertifika hatasında -> HTTP fallback
-            // - HTTP + HTTP 404 durumunda              -> HTTPS fallback
+            // TV ve Emulator icin gelismis HTTP/HTTPS Fallback
             private fun httpGet(urlStr: String): String {
                 val original = urlStr
-                return try {
-                    doHttpGet(original)
+                try {
+                    return doHttpGet(original)
                 } catch (e: Exception) {
                     val msg = (e.message ?: "").lowercase(Locale.getDefault())
 
-                    // HTTPS + TLS/sertifika/handshake hatası -> HTTP'ye düş
+                    // 1) HTTPS ve TLS/sertifika/handshake hatası -> HTTP'ye düş
                     if (original.startsWith("https://", ignoreCase = true) &&
                         (msg.contains("handshake") ||
                          msg.contains("ssl") ||
-                         msg.contains("certificate"))
-                    ) {
+                         msg.contains("certificate") ||
+                         msg.contains("validator"))) {
+
                         val httpUrl = "http://" + original.substringAfter("://")
-                        doHttpGet(httpUrl)
+                        return doHttpGet(httpUrl)
                     }
-                    // HTTP + HTTP 404 -> HTTPS dene
-                    else if (original.startsWith("http://", ignoreCase = true) &&
-                        msg.startsWith("http 404")
-                    ) {
+
+                    // 2) HTTP ve 404/301 -> HTTPS dene
+                    if (original.startsWith("http://", ignoreCase = true) &&
+                        (msg.startsWith("http 404") || msg.startsWith("http 301"))) {
+
                         val httpsUrl = "https://" + original.substringAfter("://")
-                        doHttpGet(httpsUrl)
-                    } else {
-                        throw e
+                        return doHttpGet(httpsUrl)
                     }
+
+                    throw e
                 }
             }
 
             private fun doHttpGet(urlStr: String): String {
                 val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
                     instanceFollowRedirects = true
-                    connectTimeout = 20000
-                    readTimeout = 30000
+                    connectTimeout = 25000 // TV icin sure artirildi
+                    readTimeout = 35000
                     requestMethod = "GET"
-                    setRequestProperty(
-                        "User-Agent",
-                        "Mozilla/5.0 (Linux; Android 9; AndroidTV) " +
-                                "AppleWebKit/537.36 (KHTML, like Gecko) " +
-                                "Chrome/119.0.0.0 Safari/537.36 ErdinPlayer/1.7"
-                    )
+                    // ONEMLI: User-Agent'i Samsung Telefon gibi gosteriyoruz
+                    setRequestProperty("User-Agent", FAKE_USER_AGENT)
                     setRequestProperty("Accept", "application/json,text/plain,*/*")
                     setRequestProperty("Accept-Encoding", "gzip")
                     setRequestProperty("Connection", "close")
@@ -1712,7 +1728,7 @@ jobs:
                     val raw = stream ?: throw Exception("HTTP " + code + " boş response")
 
                     val input = if (encoding.contains("gzip")) {
-                        GZIPInputStream(raw)
+                        java.util.zip.GZIPInputStream(raw)
                     } else {
                         raw
                     }
@@ -1732,7 +1748,8 @@ jobs:
                 } finally {
                     try {
                         conn.disconnect()
-                    } catch (_: Exception) { }
+                    } catch (_: Exception) {
+                    }
                 }
             }
         }
@@ -1769,6 +1786,9 @@ jobs:
             private var seasons = ArrayList<Int>()
             private var inSeason = false
             private var selectedSeason = 0
+            
+            // TV ve Emulator icin ozel User-Agent (Samsung Telefon Taklidi)
+            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 10; SM-A505F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Mobile Safari/537.36"
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -1833,9 +1853,10 @@ jobs:
                 Thread {
                     try {
                         val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-                            connectTimeout = 10000
-                            readTimeout = 20000
+                            connectTimeout = 15000
+                            readTimeout = 25000
                             requestMethod = "GET"
+                            setRequestProperty("User-Agent", FAKE_USER_AGENT)
                         }
 
                         if (conn.responseCode != HttpURLConnection.HTTP_OK) {
@@ -1936,7 +1957,7 @@ jobs:
         }
         EOF
 
-        # PLAYER ACTIVITY (gesture + tek tık play/pause)
+        # PLAYER ACTIVITY (senin çalışan hali – çift tıkla ileri/geri, tek tık play/pause)
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1985,6 +2006,9 @@ jobs:
             private var lastTapRight: Long = 0
             private var tapCountLeft: Int = 0
             private var tapCountRight: Int = 0
+            
+            // TV ve Emulator icin ozel User-Agent (Samsung Telefon Taklidi)
+            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 10; SM-A505F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Mobile Safari/537.36"
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -2042,7 +2066,7 @@ jobs:
 
                 try {
                     val headers = mutableMapOf<String, String>()
-                    headers["User-Agent"] = "Mozilla/5.0 (AndroidTV) ExoPlayer"
+                    headers["User-Agent"] = FAKE_USER_AGENT
                     if (ref.isNotEmpty()) headers["Referer"] = ref
                     if (org.isNotEmpty()) headers["Origin"] = org
 
