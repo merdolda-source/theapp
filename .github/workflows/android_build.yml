@@ -1012,6 +1012,733 @@ jobs:
 
         
 
+
+            # CONTENT ACTIVITY (TV: HTTP/HTTPS + TLS fix)
+    cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
+    package $PACKAGE_NAME
+
+    import android.content.Intent
+    import android.os.Bundle
+    import android.text.Editable
+    import android.text.TextWatcher
+    import android.view.View
+    import android.widget.EditText
+    import android.widget.ProgressBar
+    import android.widget.TextView
+    import android.widget.Toast
+    import androidx.appcompat.app.AlertDialog
+    import androidx.appcompat.app.AppCompatActivity
+    import androidx.core.view.GravityCompat
+    import androidx.drawerlayout.widget.DrawerLayout
+    import androidx.recyclerview.widget.LinearLayoutManager
+    import androidx.recyclerview.widget.RecyclerView
+    import com.google.android.gms.ads.AdView
+    import com.google.android.gms.security.ProviderInstaller
+    import com.google.android.material.bottomnavigation.BottomNavigationView
+    import org.json.JSONArray
+    import org.json.JSONObject
+    import java.net.HttpURLConnection
+    import java.net.URL
+    import java.text.SimpleDateFormat
+    import java.util.ArrayList
+    import java.util.Date
+    import java.util.LinkedHashMap
+    import java.util.Locale
+    import java.util.zip.GZIPInputStream
+    import $PACKAGE_NAME.adapters.AccountsAdapter
+    import $PACKAGE_NAME.adapters.GridAdapter
+    import $PACKAGE_NAME.models.AccountProfile
+    import $PACKAGE_NAME.models.Category
+    import $PACKAGE_NAME.models.StreamItem
+    import $PACKAGE_NAME.utils.AdsHelper
+    import $PACKAGE_NAME.utils.Prefs
+    import $PACKAGE_NAME.utils.RemoteLogger
+    import $PACKAGE_NAME.utils.LangManager
+
+    class ContentActivity : AppCompatActivity() {
+
+        private lateinit var prefs: Prefs
+        private lateinit var drawer: DrawerLayout
+
+        private lateinit var bottomNav: BottomNavigationView
+        private lateinit var rv: RecyclerView
+        private lateinit var pb: ProgressBar
+        private lateinit var tvStatus: TextView
+
+        private lateinit var tvTitle: TextView
+        private lateinit var etSearch: EditText
+        private lateinit var tvDrawerOpen: TextView
+
+        private lateinit var rvAccounts: RecyclerView
+        private lateinit var tvDrawerUser: TextView
+        private lateinit var tvDrawerExpire: TextView
+        private lateinit var tvLogout: TextView
+
+        private var currentMode: String = "LIVE"
+        private var activeAcc: AccountProfile? = null
+        private var accountType: String = "XTREAM"
+
+        private enum class Screen { CATEGORIES, ITEMS }
+        private var screen: Screen = Screen.CATEGORIES
+        private var selectedCategory: Category? = null
+
+        private var categoriesAll: List<Category> = emptyList()
+        private var streamsAll: List<StreamItem> = emptyList()
+
+        private var filteredTitles: List<String> = emptyList()
+        private var filteredSubtitles: List<String> = emptyList()
+        private var filteredCategoryIds: List<String> = emptyList()
+        private var filteredStreamIdx: List<Int> = emptyList()
+
+        private var gridAdapter: GridAdapter? = null
+
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            setContentView(R.layout.activity_content)
+
+            // TLS fix (eski Android TV'ler için)
+            try {
+                ProviderInstaller.installIfNeeded(this)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            prefs = Prefs(this)
+
+            val lang = prefs.getLang()
+            LangManager.restoreFromPrefs(this, lang)
+            LangManager.init(this, lang)
+
+            AdsHelper.init(this)
+            AdsHelper.loadInterstitial(this)
+            val adTop = findViewById<AdView>(R.id.adViewTopContent)
+            val adBottom = findViewById<AdView>(R.id.adViewBottomContent)
+            AdsHelper.loadBanner(adTop)
+            AdsHelper.loadBanner(adBottom)
+
+            drawer = findViewById(R.id.drawerLayout)
+            bottomNav = findViewById(R.id.bottomNav)
+            rv = findViewById(R.id.rvContent)
+            pb = findViewById(R.id.pbLoading)
+            tvStatus = findViewById(R.id.tvStatus)
+
+            tvTitle = findViewById(R.id.tvTitleBar)
+            etSearch = findViewById(R.id.etSearch)
+            tvDrawerOpen = findViewById(R.id.tvOpenDrawer)
+
+            rv.layoutManager = LinearLayoutManager(this)
+            gridAdapter = GridAdapter(emptyList(), emptyList()) { pos -> onGridClick(pos) }
+            rv.adapter = gridAdapter
+
+            rvAccounts = findViewById(R.id.rvAccounts)
+            rvAccounts.layoutManager = LinearLayoutManager(this)
+            tvDrawerUser = findViewById(R.id.tvDrawerUser)
+            tvDrawerExpire = findViewById(R.id.tvDrawerExpire)
+            tvLogout = findViewById(R.id.tvLogout)
+
+            tvDrawerOpen.setOnClickListener { drawer.openDrawer(GravityCompat.START) }
+
+            tvLogout.setOnClickListener {
+                prefs.clearActive()
+                val i = Intent(this, LoginActivity::class.java)
+                i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(i)
+                finish()
+            }
+
+            tvTitle.setOnClickListener {
+                if (screen == Screen.ITEMS) {
+                    showCategories()
+                } else {
+                    drawer.openDrawer(GravityCompat.START)
+                }
+            }
+
+            etSearch.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun afterTextChanged(s: Editable?) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    applySearchFilter(s?.toString() ?: "")
+                }
+            })
+
+            activeAcc = prefs.getActive()
+            if (activeAcc == null) {
+                tvStatus.text = "Kayıtlı aktif hesap yok. Giriş ekranına dönün."
+                tvStatus.visibility = View.VISIBLE
+                return
+            }
+            accountType = activeAcc?.type ?: "XTREAM"
+
+            setupDrawerAccounts()
+
+            currentMode = "LIVE"
+            bottomNav.selectedItemId = R.id.nav_live
+            setTitleForMode()
+            bottomNav.setOnItemSelectedListener { item ->
+                if (accountType == "M3U") {
+                    if (item.itemId == R.id.nav_live) {
+                        currentMode = "LIVE"
+                        resetFlowAndLoad()
+                        true
+                    } else {
+                        Toast.makeText(
+                            this,
+                            "M3U hesabında yalnızca Canlı TV listesi gösterilir.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        false
+                    }
+                } else {
+                    when (item.itemId) {
+                        R.id.nav_live -> { currentMode = "LIVE"; resetFlowAndLoad(); true }
+                        R.id.nav_vod -> { currentMode = "VOD"; resetFlowAndLoad(); true }
+                        R.id.nav_series -> { currentMode = "SERIES"; resetFlowAndLoad(); true }
+                        else -> false
+                    }
+                }
+            }
+
+            resetFlowAndLoad()
+        }
+
+        private fun setupDrawerAccounts() {
+            val acc = activeAcc ?: return
+            tvDrawerUser.text = "Hesap: " + acc.name
+            tvDrawerExpire.text = "Süre: -"
+
+            val adapter = AccountsAdapter(
+                prefs.getAccounts().toMutableList(),
+                onOpen = { a ->
+                    prefs.setActive(a.id)
+                    activeAcc = a
+                    accountType = a.type
+                    tvDrawerUser.text = "Hesap: " + a.name
+                    tvDrawerExpire.text = "Süre: -"
+                    drawer.closeDrawer(GravityCompat.START)
+                    currentMode = "LIVE"
+                    bottomNav.selectedItemId = R.id.nav_live
+                    resetFlowAndLoad()
+                },
+                onDelete = { a ->
+                    AlertDialog.Builder(this)
+                        .setTitle("Hesabı Sil")
+                        .setMessage("Hesap silinsin mi? " + a.name)
+                        .setPositiveButton("Evet") { _, _ ->
+                            prefs.deleteAccount(a.id)
+                            val newList = prefs.getAccounts()
+                            (rvAccounts.adapter as? AccountsAdapter)?.update(newList)
+                            val act = prefs.getActive()
+                            if (act == null) {
+                                startActivity(Intent(this, LoginActivity::class.java))
+                                finish()
+                            } else {
+                                activeAcc = act
+                                tvDrawerUser.text = "Hesap: " + act.name
+                            }
+                        }
+                        .setNegativeButton("Hayır", null)
+                        .show()
+                }
+            )
+            rvAccounts.adapter = adapter
+        }
+
+        private fun setTitleForMode() {
+            tvTitle.text = when (currentMode) {
+                "VOD" -> "Filmler"
+                "SERIES" -> "Diziler"
+                else -> "Canlı TV"
+            }
+        }
+
+        private fun resetFlowAndLoad() {
+            etSearch.setText("")
+            screen = Screen.CATEGORIES
+            selectedCategory = null
+            categoriesAll = emptyList()
+            streamsAll = emptyList()
+            setTitleForMode()
+            fetchCategoriesAndStreams()
+        }
+
+        override fun onBackPressed() {
+            if (drawer.isDrawerOpen(GravityCompat.START)) {
+                drawer.closeDrawer(GravityCompat.START)
+                return
+            }
+            if (screen == Screen.ITEMS) {
+                showCategories()
+                return
+            }
+            super.onBackPressed()
+        }
+
+        private fun showCategories() {
+            screen = Screen.CATEGORIES
+            selectedCategory = null
+            setTitleForMode()
+            applySearchFilter(etSearch.text?.toString() ?: "")
+        }
+
+        private fun showItemsForCategory(cat: Category) {
+            selectedCategory = cat
+            screen = Screen.ITEMS
+            tvTitle.text = when (currentMode) {
+                "VOD" -> "Filmler • " + cat.category_name
+                "SERIES" -> "Diziler • " + cat.category_name
+                else -> "Canlı TV • " + cat.category_name
+            }
+            applySearchFilter(etSearch.text?.toString() ?: "")
+        }
+
+        private fun applySearchFilter(qRaw: String) {
+            val q = qRaw.trim().lowercase(Locale.getDefault())
+
+            if (screen == Screen.CATEGORIES) {
+                val cats = if (q.isEmpty()) categoriesAll else categoriesAll.filter {
+                    it.category_name.lowercase(Locale.getDefault()).contains(q)
+                }
+                filteredTitles = cats.map { it.category_name }
+                filteredSubtitles = cats.map { "" }
+                filteredCategoryIds = cats.map { it.category_id }
+                filteredStreamIdx = emptyList()
+                gridAdapter?.update(filteredTitles, filteredSubtitles)
+                return
+            }
+
+            val catId = selectedCategory?.category_id
+            val items = if (catId.isNullOrEmpty()) streamsAll else streamsAll.filter { it.category_id == catId }
+
+            val filtered = if (q.isEmpty()) items else items.filter {
+                it.name.lowercase(Locale.getDefault()).contains(q)
+            }
+            filteredTitles = filtered.map { it.name }
+            filteredSubtitles = filtered.map { "" }
+            filteredStreamIdx = filtered.map { streamsAll.indexOf(it) }
+            filteredCategoryIds = emptyList()
+            gridAdapter?.update(filteredTitles, filteredSubtitles)
+        }
+
+        private fun onGridClick(position: Int) {
+            val acc = activeAcc ?: return
+
+            if (screen == Screen.CATEGORIES) {
+                if (position !in filteredCategoryIds.indices) return
+                val catId = filteredCategoryIds[position]
+                val cat = categoriesAll.find { it.category_id == catId } ?: return
+                showItemsForCategory(cat)
+                return
+            }
+
+            if (position !in filteredStreamIdx.indices) return
+            val idx = filteredStreamIdx[position]
+            if (idx !in streamsAll.indices) return
+            val item = streamsAll[idx]
+
+            if (acc.type == "M3U") {
+                val url = item.full_url
+                if (url.isNullOrEmpty()) {
+                    Toast.makeText(this, "Geçersiz M3U kanalı.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val itn = Intent(this, PlayerActivity::class.java)
+                itn.putExtra("URL", url)
+                itn.putExtra("REF", item.referer ?: "")
+                itn.putExtra("ORG", item.origin ?: "")
+
+                AdsHelper.maybeShowOnChannelClick(this) {
+                    RemoteLogger.sendEvent(
+                        this,
+                        "play_m3u",
+                        mapOf(
+                            "channel_name" to item.name,
+                            "category_id" to (item.category_id ?: ""),
+                            "url" to url.take(200)
+                        )
+                    )
+                    startActivity(itn)
+                }
+                return
+            }
+
+            if (currentMode == "SERIES") {
+                val itn = Intent(this, SeriesDetailActivity::class.java)
+                itn.putExtra("SERIES_ID", item.series_id ?: "")
+                itn.putExtra("SERIES_NAME", item.name)
+                AdsHelper.maybeShowOnChannelClick(this) {
+                    RemoteLogger.sendEvent(
+                        this,
+                        "open_series_detail",
+                        mapOf(
+                            "series_id" to (item.series_id ?: ""),
+                            "series_name" to item.name
+                        )
+                    )
+                    startActivity(itn)
+                }
+                return
+            }
+
+            val dnsRaw = acc.dns?.trim() ?: ""
+            val user = acc.user?.trim() ?: ""
+            val pass = acc.pass?.trim() ?: ""
+            val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
+
+            val path = if (currentMode == "LIVE") "live" else "movie"
+            val ext = if (currentMode == "LIVE") {
+                ".ts"
+            } else {
+                if (!item.container_extension.isNullOrEmpty()) {
+                    "." + item.container_extension
+                } else {
+                    ".mp4"
+                }
+            }
+            val id = item.stream_id ?: ""
+            val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
+
+            val itn = Intent(this, PlayerActivity::class.java)
+            itn.putExtra("URL", playUrl)
+            itn.putExtra("REF", "")
+            itn.putExtra("ORG", "")
+
+            AdsHelper.maybeShowOnChannelClick(this) {
+                RemoteLogger.sendEvent(
+                    this,
+                    "play_xtream",
+                    mapOf(
+                        "channel_name" to item.name,
+                        "category_id" to (item.category_id ?: ""),
+                        "stream_id" to (item.stream_id ?: ""),
+                        "mode" to currentMode
+                    )
+                )
+                startActivity(itn)
+            }
+        }
+
+        private fun fetchCategoriesAndStreams() {
+            val acc = activeAcc ?: return
+
+            pb.visibility = View.VISIBLE
+            tvStatus.visibility = View.GONE
+
+            if (acc.type == "M3U") {
+                val m3uUrl = acc.m3u?.trim() ?: ""
+                if (m3uUrl.isEmpty()) {
+                    pb.visibility = View.GONE
+                    tvStatus.text = "Bu M3U hesabında link yok."
+                    tvStatus.visibility = View.VISIBLE
+                    return
+                }
+
+                Thread {
+                    try {
+                        val result = fetchM3u(m3uUrl)
+                        val cats = result.first
+                        val streamsList = result.second
+                        runOnUiThread {
+                            pb.visibility = View.GONE
+                            categoriesAll = cats
+                            streamsAll = streamsList
+                            tvDrawerExpire.text = "Süre: M3U Playlist"
+                            showCategories()
+                        }
+                    } catch (e: Exception) {
+                        runOnUiThread {
+                            pb.visibility = View.GONE
+                            tvStatus.text = "M3U okunamadı: " + (e.message ?: "bilinmeyen hata")
+                            tvStatus.visibility = View.VISIBLE
+                        }
+                    }
+                }.start()
+                return
+            }
+
+            val dnsRaw = acc.dns?.trim() ?: ""
+            val user = acc.user?.trim() ?: ""
+            val pass = acc.pass?.trim() ?: ""
+            if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
+                pb.visibility = View.GONE
+                tvStatus.text = "DNS / kullanıcı / şifre boş."
+                tvStatus.visibility = View.VISIBLE
+                return
+            }
+            val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
+            val base = dns + "/player_api.php?username=" + user + "&password=" + pass
+
+            val catAction = when (currentMode) {
+                "VOD" -> "get_vod_categories"
+                "SERIES" -> "get_series_categories"
+                else -> "get_live_categories"
+            }
+            val streamsAction = when (currentMode) {
+                "VOD" -> "get_vod_streams"
+                "SERIES" -> "get_series"
+                else -> "get_live_streams"
+            }
+
+            val catUrl = base + "&action=" + catAction
+            val streamsUrl = base + "&action=" + streamsAction
+
+            Thread {
+                try {
+                    val accInfo = fetchAccountInfo(base)
+                    val fetchedCategories = fetchCategories(catUrl)
+                    val fetchedStreams = fetchStreams(streamsUrl)
+
+                    runOnUiThread {
+                        pb.visibility = View.GONE
+                        categoriesAll = fetchedCategories
+                        streamsAll = fetchedStreams
+
+                        val expText = formatExp(accInfo.second)
+                        tvDrawerExpire.text = "Süre: " + expText
+
+                        showCategories()
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread {
+                        pb.visibility = View.GONE
+                        tvStatus.text = "Veriler alınamadı: " + (e.message ?: "bilinmeyen hata")
+                        tvStatus.visibility = View.VISIBLE
+                    }
+                }
+            }.start()
+        }
+
+        private fun fetchM3u(urlStr: String): Pair<List<Category>, List<StreamItem>> {
+            val categoriesMap = LinkedHashMap<String, Category>()
+            val streamsList = ArrayList<StreamItem>()
+
+            val body = httpGet(urlStr)
+            val lines = body.split("\n")
+
+            var currentName = ""
+            var currentGroup = "Genel"
+            var currentRef: String? = null
+            var currentOrg: String? = null
+
+            for (raw in lines) {
+                val line = raw.trim()
+                if (line.isEmpty()) continue
+                if (line.startsWith("#EXTM3U", ignoreCase = true)) continue
+
+                if (line.startsWith("#EXTINF", ignoreCase = true)) {
+                    var name = ""
+                    var group = "Genel"
+                    val groupIndex = line.indexOf("group-title=\"")
+                    if (groupIndex >= 0) {
+                        val start = groupIndex + "group-title=\"".length
+                        val end = line.indexOf("\"", startIndex = start)
+                        if (end > start) group = line.substring(start, end)
+                    }
+                    val commaIndex = line.lastIndexOf(',')
+                    if (commaIndex >= 0 && commaIndex < line.length - 1) {
+                        name = line.substring(commaIndex + 1).trim()
+                    }
+
+                    currentName = if (name.isNotEmpty()) name else "Kanal"
+                    currentGroup = if (group.isNotEmpty()) group else "Genel"
+                    currentRef = null
+                    currentOrg = null
+                } else if (line.startsWith("#EXTVLCOPT:http-referrer=", ignoreCase = true)) {
+                    val idx = line.indexOf("=")
+                    if (idx >= 0 && idx < line.length - 1) {
+                        currentRef = line.substring(idx + 1).trim()
+                    }
+                } else if (line.startsWith("#EXTVLCOPT:http-origin=", ignoreCase = true)) {
+                    val idx = line.indexOf("=")
+                    if (idx >= 0 && idx < line.length - 1) {
+                        currentOrg = line.substring(idx + 1).trim()
+                    }
+                } else if (!line.startsWith("#")) {
+                    val urlPlay = line
+                    val groupId = if (currentGroup.isNotEmpty()) currentGroup else "Genel"
+
+                    val cat = categoriesMap.getOrPut(groupId) {
+                        Category(groupId, groupId, false)
+                    }
+
+                    streamsList.add(
+                        StreamItem(
+                            name = currentName,
+                            stream_id = null,
+                            series_id = null,
+                            container_extension = null,
+                            category_id = cat.category_id,
+                            full_url = urlPlay,
+                            referer = currentRef,
+                            origin = currentOrg
+                        )
+                    )
+                    currentRef = null
+                    currentOrg = null
+                }
+            }
+            return Pair(categoriesMap.values.toList(), streamsList)
+        }
+
+        private fun fetchAccountInfo(baseUrl: String): Pair<String?, String?> {
+            return try {
+                val body = httpGet(baseUrl)
+                val obj = JSONObject(body)
+                val userInfo = obj.optJSONObject("user_info")
+                if (userInfo != null) {
+                    Pair(
+                        userInfo.optString("username", null),
+                        userInfo.optString("exp_date", null)
+                    )
+                } else {
+                    Pair(null, null)
+                }
+            } catch (e: Exception) {
+                Pair(null, null)
+            }
+        }
+
+        private fun formatExp(exp: String?): String {
+            if (exp.isNullOrEmpty() || exp == "0" || exp == "null") return "Sınırsız"
+            return try {
+                val seconds = exp.toLong()
+                val date = Date(seconds * 1000L)
+                SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(date)
+            } catch (e: Exception) {
+                exp
+            }
+        }
+
+        private fun fetchCategories(urlStr: String): List<Category> {
+            val list = ArrayList<Category>()
+            val body = httpGet(urlStr)
+            val arr = JSONArray(body)
+            var i = 0
+            while (i < arr.length()) {
+                val obj = arr.getJSONObject(i)
+                val id = obj.optString("category_id", "")
+                val name = obj.optString("category_name", "Kategori " + i)
+
+                val isAdult = obj.optString("is_adult", "0") == "1" ||
+                        name.contains("18", ignoreCase = true) ||
+                        name.contains("adult", ignoreCase = true)
+
+                list.add(Category(id, name, isAdult))
+                i++ }
+            return list
+        }
+
+        private fun fetchStreams(urlStr: String): List<StreamItem> {
+            val list = ArrayList<StreamItem>()
+            val body = httpGet(urlStr)
+            val arr = JSONArray(body)
+            var i = 0
+            while (i < arr.length()) {
+                val obj = arr.getJSONObject(i)
+                val name = obj.optString("name", "Bilinmeyen")
+                val catId = obj.optString("category_id", "")
+                val streamId = obj.optString("stream_id", null)
+                val seriesId = obj.optString("series_id", null)
+                val ext = obj.optString("container_extension", null)
+                list.add(
+                    StreamItem(
+                        name,
+                        streamId,
+                        seriesId,
+                        ext,
+                        catId,
+                        null,
+                        null,
+                        null
+                    )
+                )
+                i++
+            }
+            return list
+        }
+
+        // TV için HTTP/HTTPS otomatik fallback:
+        // - Önce kullanıcının girdiği URL'yi dener
+        // - HTTPS + handshake/SSL/sertifika hatasında -> HTTP fallback
+        // - HTTP + HTTP 404 durumunda              -> HTTPS fallback
+        private fun httpGet(urlStr: String): String {
+            val original = urlStr
+            return try {
+                doHttpGet(original)
+            } catch (e: Exception) {
+                val msg = (e.message ?: "").lowercase(Locale.getDefault())
+
+                // HTTPS + TLS/sertifika/handshake hatası -> HTTP'ye düş
+                if (original.startsWith("https://", ignoreCase = true) &&
+                    (msg.contains("handshake") ||
+                     msg.contains("ssl") ||
+                     msg.contains("certificate"))
+                ) {
+                    val httpUrl = "http://" + original.substringAfter("://")
+                    doHttpGet(httpUrl)
+                }
+                // HTTP + HTTP 404 -> HTTPS dene
+                else if (original.startsWith("http://", ignoreCase = true) &&
+                    msg.startsWith("http 404")
+                ) {
+                    val httpsUrl = "https://" + original.substringAfter("://")
+                    doHttpGet(httpsUrl)
+                } else {
+                    throw e
+                }
+            }
+        }
+
+        private fun doHttpGet(urlStr: String): String {
+            val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                instanceFollowRedirects = true
+                connectTimeout = 20000
+                readTimeout = 30000
+                requestMethod = "GET"
+                setRequestProperty(
+                    "User-Agent",
+                    "Mozilla/5.0 (Linux; Android 9; AndroidTV) " +
+                            "AppleWebKit/537.36 (KHTML, like Gecko) " +
+                            "Chrome/119.0.0.0 Safari/537.36 ErdinPlayer/1.7"
+                )
+                setRequestProperty("Accept", "application/json,text/plain,*/*")
+                setRequestProperty("Accept-Encoding", "gzip")
+                setRequestProperty("Connection", "close")
+            }
+
+            try {
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                val encoding = (conn.contentEncoding ?: "").lowercase(Locale.getDefault())
+                val raw = stream ?: throw Exception("HTTP " + code + " boş response")
+
+                val input = if (encoding.contains("gzip")) {
+                    GZIPInputStream(raw)
+                } else {
+                    raw
+                }
+
+                val body = input.bufferedReader(Charsets.UTF_8).use { it.readText() }
+
+                val trimmed = body.trimStart()
+                if (trimmed.startsWith("<!DOCTYPE", true) || trimmed.startsWith("<html", true)) {
+                    throw Exception("JSON yerine HTML döndü. İlk 200: " + trimmed.take(200))
+                }
+
+                if (code !in 200..299) {
+                    throw Exception("HTTP " + code + ": " + body.take(300))
+                }
+
+                return body
+            } finally {
+                try {
+                    conn.disconnect()
+                } catch (_: Exception) { }
+            }
+        }
+    }
+    EOF
+    
         # SERIES DETAIL
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
