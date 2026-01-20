@@ -2824,20 +2824,22 @@ jobs:
     - name: 5. Build APK + AAB (Release / Signed)
       run: |
         cd ErdinPlayer
-        ./gradlew assembleRelease --no-daemon
-        ./gradlew bundleRelease --no-daemon
+        gradle assembleRelease --no-daemon
+        gradle bundleRelease --no-daemon
 
     - name: 6. APK'yi GitHub Artifact Olarak Yükle
+      id: upload_apk
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Ultra-TV-Fix-APK
-        path: ErdinPlayer/app/build/outputs/apk/release/app-release.apk
+        name: ErdinPlayer-Pro-Ultra-APK
+        path: ErdinPlayer/app/build/outputs/apk/release/*.apk
 
     - name: 7. AAB'yi GitHub Artifact Olarak Yükle
+      id: upload_aab
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Ultra-TV-Fix-AAB
-        path: ErdinPlayer/app/build/outputs/bundle/release/app-release.aab
+        name: ErdinPlayer-Pro-Ultra-AAB
+        path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
 
     - name: 8. Artifact URL'lerini Göster
       run: |
