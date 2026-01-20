@@ -1095,7 +1095,7 @@ jobs:
 
             private var gridAdapter: GridAdapter? = null
 
-            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 9; TX6S) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Safari/537.36"
+            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -1699,7 +1699,7 @@ jobs:
             private var inSeason = false
             private var selectedSeason = 0
 
-            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 9; TX6S) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Safari/537.36"
+            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -1915,7 +1915,7 @@ jobs:
             private var tapCountLeft: Int = 0
             private var tapCountRight: Int = 0
 
-            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 9; TX6S) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Safari/537.36"
+            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
