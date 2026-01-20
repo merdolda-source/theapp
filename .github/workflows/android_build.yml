@@ -2131,7 +2131,6 @@ jobs:
             ads:adUnitId="@string/admob_banner_test"
             android:layout_marginBottom="16dp"/>
 
-        <!-- Header Bölümü -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -2169,7 +2168,6 @@ jobs:
             android:textSize="14sp"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Seçim Kartları -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -2224,8 +2222,7 @@ jobs:
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Ortak İsim Alanı -->
-           <EditText
+        <EditText
             android:id="@+id/etName"
             android:layout_width="match_parent"
             android:layout_height="60dp"
@@ -2239,8 +2236,7 @@ jobs:
             android:layout_marginBottom="12dp"
             android:focusable="true"/>
 
-        <!-- Xtream Formu -->
-            <LinearLayout
+        <LinearLayout
             android:id="@+id/layoutXtream"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -2289,7 +2285,6 @@ jobs:
                 android:focusable="true"/>
         </LinearLayout>
 
-        <!-- M3U Formu -->
         <LinearLayout
             android:id="@+id/layoutM3u"
             android:layout_width="match_parent"
@@ -2344,8 +2339,6 @@ jobs:
             android:textSize="14sp"
             android:layout_marginBottom="12dp"/>
 
-        <!-- ListView ScrollView içinde olduğu için sabit yükseklik verilmeli veya nested scrolling kapatılmalı, 
-             fakat basitlik için weight yerine wrap_content ve minHeight kullanıyoruz -->
         <ListView
             android:id="@+id/lvAccounts"
             android:layout_width="match_parent"
@@ -2366,8 +2359,7 @@ jobs:
           android:layout_width="match_parent"
            android:layout_height="match_parent">
 
-                <!-- Ana İçerik -->
-              <LinearLayout
+               <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
@@ -2381,7 +2373,6 @@ jobs:
             ads:adUnitId="@string/admob_banner_test"
             android:layout_marginBottom="4dp"/>
 
-        <!-- Modern Toolbar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="64dp"
@@ -2478,8 +2469,7 @@ jobs:
             app:menu="@menu/bottom_nav_menu" />
                   </LinearLayout>
 
-                  <!-- Yan Menü (Drawer) -->
-                   <LinearLayout
+                  <LinearLayout
         android:layout_width="320dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
@@ -2587,8 +2577,8 @@ jobs:
             android:textSize="12sp"
             android:layout_marginTop="6dp"
             android:visibility="gone"/>
-                 </LinearLayout>
-                 </LinearLayout>
+                  </LinearLayout>
+                  </LinearLayout>
              EOF
 
                 # 4. HESAP LİSTESİ ÖĞESİ
@@ -2711,8 +2701,7 @@ jobs:
         android:layout_height="match_parent"
         android:keepScreenOn="true"/>
 
-         <!-- Dokunmatik Kontrol Alanı -->
-        <LinearLayout
+         <LinearLayout
         android:id="@+id/overlayContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -2732,8 +2721,7 @@ jobs:
             android:layout_weight="1" />
           </LinearLayout>
 
-            <!-- Bilgi Göstergeleri -->
-          <TextView
+            <TextView
         android:id="@+id/tvInfoCenter"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -2769,7 +2757,6 @@ jobs:
         android:layout_margin="24dp"
         android:visibility="gone"/>
 
-        <!-- Alt Kontroller -->
         <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -2852,9 +2839,9 @@ jobs:
             <certificates src="system" />
             <certificates src="user" />
         </trust-anchors>
-         </base-config>
-        </network-security-config>
-           EOF
+          </base-config>
+         </network-security-config>
+            EOF
 
         
     - name: 4. Gradle Kurulumu
