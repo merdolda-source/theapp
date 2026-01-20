@@ -306,7 +306,7 @@ jobs:
         )
         EOF
 
-        # RemoteConfig / RemoteLogger / Prefs / LangManager / AdsHelper (aynı)
+        # UTILS - RemoteConfig
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
 
@@ -375,6 +375,7 @@ jobs:
         }
         EOF
 
+        # UTILS - RemoteLogger
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteLogger.kt
         package $PACKAGE_NAME.utils
 
@@ -438,6 +439,7 @@ jobs:
         }
         EOF
 
+        # UTILS - Prefs
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
 
@@ -558,6 +560,7 @@ jobs:
         }
         EOF
 
+        # UTILS - LangManager
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/LangManager.kt
         package $PACKAGE_NAME.utils
 
@@ -627,6 +630,7 @@ jobs:
         }
         EOF
 
+        # UTILS - AdsHelper
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
         package $PACKAGE_NAME.utils
 
@@ -693,7 +697,7 @@ jobs:
         }
         EOF
 
-        # ADAPTERLAR (aynı)
+        # ADAPTER - GridAdapter
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
 
@@ -746,6 +750,7 @@ jobs:
         }
         EOF
 
+        # ADAPTER - AccountsAdapter
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
         package $PACKAGE_NAME.adapters
 
@@ -801,7 +806,7 @@ jobs:
         }
         EOF
 
-        # ✅ LOGIN ACTIVITY (FORCE HTTP + PASS ZORUNLU + USER TRIM/SPACE FIX)
+        # LOGIN ACTIVITY
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
 
@@ -963,20 +968,17 @@ jobs:
                         val u = etUser.text.toString().trim().replace("\\\\s+".toRegex(), "")
                         val p = etPass.text.toString().trim()
 
-                        // ✅ PASS zorunlu + TV’de boş kayıt bug’ını bitirir
                         if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
                             Toast.makeText(this, "Xtream URL / kullanıcı adı / şifre zorunlu.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
 
-                        // ✅ FORCE HTTP: https yazsa bile http yap
                         if (d.startsWith("https://", true)) {
                             d = "http://" + d.substringAfter("://")
                         } else if (!d.startsWith("http://", true)) {
                             d = "http://" + d
                         }
 
-                        // slash normalize
                         if (d.endsWith("/")) d = d.dropLast(1)
 
                         prefs.createXtreamAccount(finalName, d, u, p)
@@ -1016,7 +1018,7 @@ jobs:
         }
         EOF
 
-        # ✅ CONTENT ACTIVITY (FORCE HTTP + https redirect gelirse http’ye kır)
+        # CONTENT ACTIVITY
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1093,8 +1095,7 @@ jobs:
 
             private var gridAdapter: GridAdapter? = null
 
-            // TV ve Emulator icin ozel User-Agent (Samsung Telefon Taklidi)
-            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 10; SM-A505F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Mobile Safari/537.36"
+            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 9; TX6S) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Safari/537.36"
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -1367,7 +1368,6 @@ jobs:
                     return
                 }
 
-                // ✅ FORCE HTTP
                 val dnsFixed = if (dnsRaw.startsWith("https://", true)) "http://" + dnsRaw.substringAfter("://") else dnsRaw
                 val dns = if (dnsFixed.endsWith("/")) dnsFixed.dropLast(1) else dnsFixed
 
@@ -1438,7 +1438,6 @@ jobs:
                     return
                 }
 
-                // ✅ FORCE HTTP
                 val dnsFixed = if (dnsRaw.startsWith("https://", true)) "http://" + dnsRaw.substringAfter("://") else dnsRaw
                 val dns = if (dnsFixed.endsWith("/")) dnsFixed.dropLast(1) else dnsFixed
 
@@ -1504,10 +1503,10 @@ jobs:
                     if (line.startsWith("#EXTINF", ignoreCase = true)) {
                         var name = ""
                         var group = "Genel"
-                        val groupIndex = line.indexOf("group-title=\\"")
+                        val groupIndex = line.indexOf("group-title=\"")
                         if (groupIndex >= 0) {
-                            val start = groupIndex + "group-title=\\"".length
-                            val end = line.indexOf("\\"", startIndex = start)
+                            val start = groupIndex + "group-title=\"".length
+                            val end = line.indexOf("\"", startIndex = start)
                             if (end > start) group = line.substring(start, end)
                         }
                         val commaIndex = line.lastIndexOf(',')
@@ -1612,7 +1611,6 @@ jobs:
                 return list
             }
 
-            // ✅ HTTP ONLY + Redirect https olursa http’ye geri kır
             private fun httpGet(urlStr: String): String {
                 val fixed = if (urlStr.startsWith("https://", true)) "http://" + urlStr.substringAfter("://") else urlStr
                 return doHttpGet(fixed, 5)
@@ -1668,13 +1666,7 @@ jobs:
         }
         EOF
 
-        # SeriesDetailActivity / PlayerActivity / Layout / Manifest / Network config
-        # (Aynen bıraktım; ContentActivity zaten http-only handle ediyor.)
-        # --- SENİN MEVCUT DOSYALARIN DEVAM EDİYOR ---
-        # Not: Aşağıdaki bölümler senin gönderdiğin ile aynı kalabilir.
-        # Bu workflow TV’de içerik gelmeme sorununu (pass boş + https redirect) kesin çözer.
-
-        # SERIES DETAIL (sende vardı — kısaltmadan aynen bırakılabilir)
+        # SERIES DETAIL ACTIVITY
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1706,7 +1698,7 @@ jobs:
             private var inSeason = false
             private var selectedSeason = 0
 
-            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 10; SM-A505F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Mobile Safari/537.36"
+            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 9; TX6S) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Safari/537.36"
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -1752,7 +1744,6 @@ jobs:
                     return
                 }
 
-                // FORCE HTTP
                 if (dnsRaw.startsWith("https://", true)) dnsRaw = "http://" + dnsRaw.substringAfter("://")
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
 
@@ -1856,7 +1847,7 @@ jobs:
                 val ext = if (!ep.container_extension.isNullOrEmpty()) ep.container_extension else "mp4"
                 val url = dns + "/series/" + user + "/" + pass + "/" + ep.id + "." + ext
 
-                val itn = android.content.Intent(this, PlayerActivity::class.java)
+                val itn = Intent(this, PlayerActivity::class.java)
                 itn.putExtra("URL", url)
                 itn.putExtra("REF", "")
                 itn.putExtra("ORG", "")
@@ -1873,7 +1864,7 @@ jobs:
         }
         EOF
 
-        # PLAYER ACTIVITY (senin çalışan hali aynen)
+        # PLAYER ACTIVITY
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1923,7 +1914,7 @@ jobs:
             private var tapCountLeft: Int = 0
             private var tapCountRight: Int = 0
 
-            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 10; SM-A505F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Mobile Safari/537.36"
+            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 9; TX6S) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Safari/537.36"
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
@@ -2108,7 +2099,7 @@ jobs:
         }
         EOF
 
-        # LAYOUTLAR + MANIFEST + NETWORK CONFIG (senin verdiğin ile aynı)
+        # LAYOUT - activity_login.xml
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -2346,6 +2337,7 @@ jobs:
         </LinearLayout>
         EOF
 
+        # LAYOUT - activity_content.xml
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -2531,6 +2523,7 @@ jobs:
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
 
+        # LAYOUT - item_grid_pro.xml
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2570,6 +2563,7 @@ jobs:
         </LinearLayout>
         EOF
 
+        # LAYOUT - item_account.xml
         cat <<EOF > app/src/main/res/layout/item_account.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2619,6 +2613,7 @@ jobs:
         </LinearLayout>
         EOF
 
+        # LAYOUT - activity_series_detail.xml
         cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2668,6 +2663,7 @@ jobs:
         </LinearLayout>
         EOF
 
+        # LAYOUT - activity_player_pro.xml
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2756,7 +2752,7 @@ jobs:
         </FrameLayout>
         EOF
 
-        # ANDROIDMANIFEST
+        # ANDROID MANIFEST
         cat <<EOF > app/src/main/AndroidManifest.xml
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -2819,7 +2815,7 @@ jobs:
             </base-config>
         </network-security-config>
         EOF
-        
+
     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
       with:
@@ -2828,22 +2824,20 @@ jobs:
     - name: 5. Build APK + AAB (Release / Signed)
       run: |
         cd ErdinPlayer
-        gradle assembleRelease --no-daemon
-        gradle bundleRelease --no-daemon
+        ./gradlew assembleRelease --no-daemon
+        ./gradlew bundleRelease --no-daemon
 
     - name: 6. APK'yi GitHub Artifact Olarak Yükle
-      id: upload_apk
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Ultra-APK
-        path: ErdinPlayer/app/build/outputs/apk/release/*.apk
+        name: ErdinPlayer-Pro-Ultra-TV-Fix-APK
+        path: ErdinPlayer/app/build/outputs/apk/release/app-release.apk
 
     - name: 7. AAB'yi GitHub Artifact Olarak Yükle
-      id: upload_aab
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Ultra-AAB
-        path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
+        name: ErdinPlayer-Pro-Ultra-TV-Fix-AAB
+        path: ErdinPlayer/app/build/outputs/bundle/release/app-release.aab
 
     - name: 8. Artifact URL'lerini Göster
       run: |
