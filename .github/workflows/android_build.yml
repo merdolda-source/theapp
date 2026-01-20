@@ -2108,7 +2108,7 @@ jobs:
         }
         EOF
 
-        # 1. LOGIN EKRANI (Daha modern giriş kutuları ve kartlar)
+          # 1. LOGIN EKRANI (Daha modern giriş kutuları ve kartlar)
          cat <<EOF > app/src/main/res/layout/activity_login.xml
          <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
          xmlns:ads="http://schemas.android.com/apk/res-auto"
@@ -2355,7 +2355,7 @@ jobs:
             android:focusable="true"/>
             </LinearLayout>
              </ScrollView>
-             EOF
+            EOF
 
         # 2. İÇERİK EKRANI (Drawer ve Arama Çubuğu İyileştirmeleri)
          cat <<EOF > app/src/main/res/layout/activity_content.xml
