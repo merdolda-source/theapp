@@ -2225,7 +2225,7 @@ jobs:
         </LinearLayout>
 
         <!-- Ortak İsim Alanı -->
-        <EditText
+           <EditText
             android:id="@+id/etName"
             android:layout_width="match_parent"
             android:layout_height="60dp"
@@ -2240,13 +2240,13 @@ jobs:
             android:focusable="true"/>
 
         <!-- Xtream Formu -->
-        <LinearLayout
+            <LinearLayout
             android:id="@+id/layoutXtream"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <EditText
+                <EditText
                 android:id="@+id/etDns"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
@@ -2260,7 +2260,7 @@ jobs:
                 android:layout_marginBottom="12dp"
                 android:focusable="true"/>
 
-            <EditText
+               <EditText
                 android:id="@+id/etUser"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
@@ -2274,7 +2274,7 @@ jobs:
                 android:layout_marginBottom="12dp"
                 android:focusable="true"/>
 
-            <EditText
+              <EditText
                 android:id="@+id/etPass"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
@@ -2790,10 +2790,10 @@ jobs:
             android:focusable="true"/>
            </LinearLayout>
           </FrameLayout>
-          EOF
+           EOF
 
         # ANDROIDMANIFEST (Aynı kaldı)
-        cat <<EOF > app/src/main/AndroidManifest.xml
+           cat <<EOF > app/src/main/AndroidManifest.xml
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
          <uses-permission android:name="android.permission.INTERNET" />
@@ -2854,7 +2854,7 @@ jobs:
         </trust-anchors>
          </base-config>
         </network-security-config>
-         EOF
+           EOF
 
         
     - name: 4. Gradle Kurulumu
