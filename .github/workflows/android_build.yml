@@ -182,7 +182,7 @@ jobs:
 
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
-            <string name="app_name">ErdinPlayer Pro</string>
+            <string name="app_name">ErdinPlayer</string>
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
