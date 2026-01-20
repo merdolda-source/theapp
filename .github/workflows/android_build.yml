@@ -1670,6 +1670,7 @@ jobs:
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
+        import android.content.Intent
         import android.os.Bundle
         import android.view.View
         import android.widget.AdapterView
