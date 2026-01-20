@@ -816,7 +816,7 @@ jobs:
                     val finalName = if (name.isNotEmpty()) name else "Hesap"
                     if (isXtream) {
                         var d = etDns.text.toString().trim()
-                        val u = etUser.text.toString().trim().replace("\\s+".toRegex(), "")
+                        val u = etUser.text.toString().trim().replace("""\s+""".toRegex(), "")
                         val p = etPass.text.toString().trim()
                         if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
                             Toast.makeText(this, "Xtream URL / kullanıcı adı / şifre zorunlu.", Toast.LENGTH_SHORT).show()
@@ -1199,7 +1199,7 @@ jobs:
                     return
                 }
                 var dnsRaw = (acc.dns ?: "").trim()
-                val user = (acc.user ?: "").trim().replace("\\s+".toRegex(), "")
+                val user = (acc.user ?: "").trim().replace("""\s+""".toRegex(), "")
                 val pass = (acc.pass ?: "").trim()
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                     pb.visibility = View.GONE
@@ -1567,7 +1567,7 @@ jobs:
             }
             private fun playEpisode(ep: EpisodeItem) {
                 var dnsRaw = prefs.getDns().trim()
-                val user = prefs.getUser().trim().replace("\\s+".toRegex(), "")
+                val user = prefs.getUser().trim().replace("""\s+""".toRegex(), "")
                 val pass = prefs.getPass().trim()
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val ext = if (!ep.container_extension.isNullOrEmpty()) ep.container_extension else "mp4"
