@@ -89,975 +89,975 @@ jobs:
         echo "include ':app'" > settings.gradle
 
         cat <<EOF > gradle.properties
-        android.useAndroidX=true
-        android.enableJetifier=true
-        org.gradle.jvmargs=-Xmx2048m
-        EOF
+android.useAndroidX=true
+android.enableJetifier=true
+org.gradle.jvmargs=-Xmx2048m
+EOF
 
         cat <<EOF > build.gradle
-        buildscript {
-            repositories { google(); mavenCentral() }
-            dependencies {
-                classpath 'com.android.tools.build:gradle:8.0.0'
-                classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
-            }
-        }
-        allprojects { repositories { google(); mavenCentral() } }
-        EOF
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.0.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
+    }
+}
+allprojects { repositories { google(); mavenCentral() } }
+EOF
 
         mkdir -p app
 
         cat <<EOF > app/build.gradle
-        plugins {
-            id 'com.android.application'
-            id 'kotlin-android'
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+}
+
+android {
+    namespace '$PACKAGE_NAME'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "$PACKAGE_NAME"
+        minSdk 24
+        targetSdk 34
+        versionCode 6
+        versionName "1.8.3-tv-fix-resume-scroll"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("keystore.jks")
+            storePassword "$STORE_PASS"
+            keyAlias "$KEY_ALIAS"
+            keyPassword "$KEY_PASS"
         }
+    }
 
-        android {
-            namespace '$PACKAGE_NAME'
-            compileSdk 34
-
-            defaultConfig {
-                applicationId "$PACKAGE_NAME"
-                minSdk 24
-                targetSdk 35
-                versionCode 5
-                versionName "1.8.2-tv-fix-resume-scroll"
-            }
-
-            signingConfigs {
-                release {
-                    storeFile file("keystore.jks")
-                    storePassword "$STORE_PASS"
-                    keyAlias "$KEY_ALIAS"
-                    keyPassword "$KEY_PASS"
-                }
-            }
-
-            buildTypes {
-                release {
-                    minifyEnabled false
-                    signingConfig signingConfigs.release
-                    proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
-                }
-            }
-
-            compileOptions {
-                sourceCompatibility JavaVersion.VERSION_17
-                targetCompatibility JavaVersion.VERSION_17
-            }
-
-            kotlinOptions { jvmTarget = '17' }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
         }
+    }
 
-        dependencies {
-            implementation 'androidx.core:core-ktx:1.7.0'
-            implementation 'androidx.appcompat:appcompat:1.6.1'
-            implementation 'com.google.android.material:material:1.9.0'
-            implementation 'androidx.recyclerview:recyclerview:1.3.0'
-            implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
 
-            implementation 'androidx.media3:media3-exoplayer:1.1.0'
-            implementation 'androidx.media3:media3-ui:1.1.0'
-            implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
-            implementation 'androidx.media3:media3-exoplayer-dash:1.1.0'
+    kotlinOptions { jvmTarget = '17' }
+}
 
-            implementation 'com.github.bumptech.glide:glide:4.15.1'
+dependencies {
+    implementation 'androidx.core:core-ktx:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.0'
+    implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
 
-            implementation 'com.google.android.gms:play-services-ads:23.4.0'
-        }
-        EOF
+    implementation 'androidx.media3:media3-exoplayer:1.1.0'
+    implementation 'androidx.media3:media3-ui:1.1.0'
+    implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
+    implementation 'androidx.media3:media3-exoplayer-dash:1.1.0'
+
+    implementation 'com.github.bumptech.glide:glide:4.15.1'
+
+    implementation 'com.google.android.gms:play-services-ads:23.4.0'
+}
+EOF
 
         # ============ RENK PALETİ ============
         cat <<EOF > app/src/main/res/values/colors.xml
-        <resources>
-            <color name="bg_dark">#050710</color>
-            <color name="bg_card">#111320</color>
-            <color name="bg_card_soft">#171A28</color>
+<resources>
+    <color name="bg_dark">#050710</color>
+    <color name="bg_card">#111320</color>
+    <color name="bg_card_soft">#171A28</color>
 
-            <color name="primary_cyan">#00E5FF</color>
-            <color name="primary_purple">#7C4DFF</color>
-            <color name="accent_gold">#FFC400</color>
+    <color name="primary_cyan">#00E5FF</color>
+    <color name="primary_purple">#7C4DFF</color>
+    <color name="accent_gold">#FFC400</color>
 
-            <color name="white">#FFFFFF</color>
-            <color name="black">#000000</color>
-            <color name="gray_800">#1E2230</color>
-            <color name="gray_700">#25293A</color>
-            <color name="gray_600">#30354A</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="gray_800">#1E2230</color>
+    <color name="gray_700">#25293A</color>
+    <color name="gray_600">#30354A</color>
 
-            <color name="error_red">#FF5252</color>
-            <color name="drawer_bg">#05060C</color>
-            <color name="hint_yellow">#FFD600</color>
-            <color name="focus_ring">#00E5FF</color>
-        </resources>
-        EOF
+    <color name="error_red">#FF5252</color>
+    <color name="drawer_bg">#05060C</color>
+    <color name="hint_yellow">#FFD600</color>
+    <color name="focus_ring">#00E5FF</color>
+</resources>
+EOF
 
         cat <<EOF > app/src/main/res/values/styles.xml
-        <resources>
-            <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.DayNight.NoActionBar">
-                <item name="android:windowBackground">@color/bg_dark</item>
-                <item name="android:textColor">@color/white</item>
-                <item name="colorAccent">@color/primary_cyan</item>
-                <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-                <item name="android:windowFullscreen">true</item>
-            </style>
-        </resources>
-        EOF
+<resources>
+    <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="colorAccent">@color/primary_cyan</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+</resources>
+EOF
 
         cat <<EOF > app/src/main/res/values/strings.xml
-        <resources>
-            <string name="app_name">ErdinPlayer</string>
-            <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
-            <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
-            <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
-        </resources>
-        EOF
+<resources>
+    <string name="app_name">ErdinPlayer</string>
+    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
+</resources>
+EOF
 
         cat <<EOF > app/src/main/res/values-tr/strings.xml
-        <resources>
-            <string name="app_name">ErdinPlayer</string>
-            <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
-            <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
-            <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
-        </resources>
-        EOF
+<resources>
+    <string name="app_name">ErdinPlayer</string>
+    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
+    <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
+</resources>
+EOF
 
         # ============ DRAWABLE ============
         cat <<EOF > app/src/main/res/drawable/bg_input_dark.xml
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <solid android:color="@color/bg_card_soft"/>
-            <corners android:radius="12dp"/>
-            <stroke android:width="1dp" android:color="@color/gray_600"/>
-        </shape>
-        EOF
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/bg_card_soft"/>
+    <corners android:radius="12dp"/>
+    <stroke android:width="1dp" android:color="@color/gray_600"/>
+</shape>
+EOF
 
         cat <<EOF > app/src/main/res/drawable/bg_header_card.xml
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <corners android:radius="16dp"/>
-            <gradient
-                android:startColor="@color/primary_cyan"
-                android:endColor="@color/primary_purple"
-                android:angle="135"/>
-            <padding android:left="12dp" android:top="12dp" android:right="12dp" android:bottom="12dp"/>
-        </shape>
-        EOF
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="16dp"/>
+    <gradient
+        android:startColor="@color/primary_cyan"
+        android:endColor="@color/primary_purple"
+        android:angle="135"/>
+    <padding android:left="12dp" android:top="12dp" android:right="12dp" android:bottom="12dp"/>
+</shape>
+EOF
 
         cat <<EOF > app/src/main/res/drawable/bg_account_card.xml
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <solid android:color="@color/bg_card"/>
-            <corners android:radius="18dp"/>
-            <stroke android:width="1dp" android:color="@color/gray_600"/>
-            <padding android:left="16dp" android:top="14dp" android:right="16dp" android:bottom="14dp"/>
-        </shape>
-        EOF
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/bg_card"/>
+    <corners android:radius="18dp"/>
+    <stroke android:width="1dp" android:color="@color/gray_600"/>
+    <padding android:left="16dp" android:top="14dp" android:right="16dp" android:bottom="14dp"/>
+</shape>
+EOF
 
         cat <<EOF > app/src/main/res/drawable/bg_focusable.xml
-        <selector xmlns:android="http://schemas.android.com/apk/res/android">
-            <item android:state_focused="true">
-                <shape>
-                    <solid android:color="@color/bg_card_soft"/>
-                    <corners android:radius="14dp"/>
-                    <stroke android:width="3dp" android:color="@color/focus_ring"/>
-                </shape>
-            </item>
-            <item>
-                <shape>
-                    <solid android:color="@color/bg_card"/>
-                    <corners android:radius="14dp"/>
-                    <stroke android:width="1dp" android:color="@color/gray_600"/>
-                </shape>
-            </item>
-        </selector>
-        EOF
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <shape>
+            <solid android:color="@color/bg_card_soft"/>
+            <corners android:radius="14dp"/>
+            <stroke android:width="3dp" android:color="@color/focus_ring"/>
+        </shape>
+    </item>
+    <item>
+        <shape>
+            <solid android:color="@color/bg_card"/>
+            <corners android:radius="14dp"/>
+            <stroke android:width="1dp" android:color="@color/gray_600"/>
+        </shape>
+    </item>
+</selector>
+EOF
 
         # ============ BOTTOM NAV ============
         cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
-        <menu xmlns:android="http://schemas.android.com/apk/res/android">
-            <item
-                android:id="@+id/nav_live"
-                android:icon="@android:drawable/ic_media_play"
-                android:title="Canlı TV" />
-            <item
-                android:id="@+id/nav_vod"
-                android:icon="@android:drawable/ic_menu_slideshow"
-                android:title="Filmler" />
-            <item
-                android:id="@+id/nav_series"
-                android:icon="@android:drawable/ic_menu_agenda"
-                android:title="Diziler" />
-        </menu>
-        EOF
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_live"
+        android:icon="@android:drawable/ic_media_play"
+        android:title="Canlı TV" />
+    <item
+        android:id="@+id/nav_vod"
+        android:icon="@android:drawable/ic_menu_slideshow"
+        android:title="Filmler" />
+    <item
+        android:id="@+id/nav_series"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Diziler" />
+</menu>
+EOF
 
         # ============ MODELLER ============
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
-        package $PACKAGE_NAME.models
+package $PACKAGE_NAME.models
 
-        data class AccountProfile(
-            val id: Int,
-            val name: String,
-            val type: String,
-            val dns: String?,
-            val user: String?,
-            val pass: String?,
-            val m3u: String?
-        )
+data class AccountProfile(
+    val id: Int,
+    val name: String,
+    val type: String,
+    val dns: String?,
+    val user: String?,
+    val pass: String?,
+    val m3u: String?
+)
 
-        data class Category(
-            val category_id: String,
-            val category_name: String,
-            val is_adult: Boolean = false
-        )
+data class Category(
+    val category_id: String,
+    val category_name: String,
+    val is_adult: Boolean = false
+)
 
-        data class StreamItem(
-            val name: String,
-            val stream_id: String?,
-            val series_id: String?,
-            val container_extension: String?,
-            val category_id: String?,
-            val full_url: String?,
-            val referer: String?,
-            val origin: String?
-        )
+data class StreamItem(
+    val name: String,
+    val stream_id: String?,
+    val series_id: String?,
+    val container_extension: String?,
+    val category_id: String?,
+    val full_url: String?,
+    val referer: String?,
+    val origin: String?
+)
 
-        data class EpisodeItem(
-            val id: String,
-            val title: String,
-            val seasonNumber: Int,
-            val episodeNumber: Int,
-            val container_extension: String?
-        )
-        EOF
+data class EpisodeItem(
+    val id: String,
+    val title: String,
+    val seasonNumber: Int,
+    val episodeNumber: Int,
+    val container_extension: String?
+)
+EOF
 
         # ============ UTILS: RemoteConfig ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
-        package $PACKAGE_NAME.utils
+package $PACKAGE_NAME.utils
 
-        import android.content.Context
-        import android.util.Log
-        import org.json.JSONObject
-        import java.net.HttpURLConnection
-        import java.net.URL
-        import $PACKAGE_NAME.R
+import android.content.Context
+import android.util.Log
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import $PACKAGE_NAME.R
 
-        object RemoteConfig {
-            private const val TAG = "RemoteConfig"
-            private const val CONFIG_URL = "https://creatorapp24.com/erdin/api/config.php"
+object RemoteConfig {
+    private const val TAG = "RemoteConfig"
+    private const val CONFIG_URL = "https://creatorapp24.com/erdin/api/config.php"
 
-            @Volatile private var initialized = false
-            @Volatile private var bannerId: String? = null
-            @Volatile private var interstitialId: String? = null
-            @Volatile private var channelInterval: Int = 4
+    @Volatile private var initialized = false
+    @Volatile private var bannerId: String? = null
+    @Volatile private var interstitialId: String? = null
+    @Volatile private var channelInterval: Int = 4
 
-            fun init(context: Context) {
-                if (initialized) return
-                synchronized(this) {
-                    if (initialized) return
-                    initialized = true
+    fun init(context: Context) {
+        if (initialized) return
+        synchronized(this) {
+            if (initialized) return
+            initialized = true
 
-                    Thread {
-                        try {
-                            val url = URL(CONFIG_URL)
-                            val conn = url.openConnection() as HttpURLConnection
-                            conn.connectTimeout = 8000
-                            conn.readTimeout = 8000
-                            conn.requestMethod = "GET"
+            Thread {
+                try {
+                    val url = URL(CONFIG_URL)
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.connectTimeout = 8000
+                    conn.readTimeout = 8000
+                    conn.requestMethod = "GET"
 
-                            if (conn.responseCode != HttpURLConnection.HTTP_OK) return@Thread
-                            val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                            val obj = JSONObject(body)
-                            val ads = obj.optJSONObject("ads") ?: obj
-                            bannerId = ads.optString("admob_banner_id", null)
-                            interstitialId = ads.optString("admob_interstitial_id", null)
-                            val interval = ads.optInt("channel_interval", 0)
-                            if (interval > 0) channelInterval = interval
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Config load failed: " + (e.message ?: ""))
-                        }
-                    }.start()
+                    if (conn.responseCode != HttpURLConnection.HTTP_OK) return@Thread
+                    val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                    val obj = JSONObject(body)
+                    val ads = obj.optJSONObject("ads") ?: obj
+                    bannerId = ads.optString("admob_banner_id", null)
+                    interstitialId = ads.optString("admob_interstitial_id", null)
+                    val interval = ads.optInt("channel_interval", 0)
+                    if (interval > 0) channelInterval = interval
+                } catch (e: Exception) {
+                    Log.w(TAG, "Config load failed: " + (e.message ?: ""))
                 }
-            }
-
-            fun getBannerId(context: Context): String {
-                init(context)
-                return bannerId ?: context.getString(R.string.admob_banner_test)
-            }
-
-            fun getInterstitialId(context: Context): String {
-                init(context)
-                return interstitialId ?: context.getString(R.string.admob_interstitial_test)
-            }
-
-            fun getChannelInterval(context: Context, defaultInterval: Int): Int {
-                init(context)
-                return if (channelInterval > 0) channelInterval else defaultInterval
-            }
+            }.start()
         }
-        EOF
+    }
+
+    fun getBannerId(context: Context): String {
+        init(context)
+        return bannerId ?: context.getString(R.string.admob_banner_test)
+    }
+
+    fun getInterstitialId(context: Context): String {
+        init(context)
+        return interstitialId ?: context.getString(R.string.admob_interstitial_test)
+    }
+
+    fun getChannelInterval(context: Context, defaultInterval: Int): Int {
+        init(context)
+        return if (channelInterval > 0) channelInterval else defaultInterval
+    }
+}
+EOF
 
         # ============ UTILS: RemoteLogger ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteLogger.kt
-        package $PACKAGE_NAME.utils
+package $PACKAGE_NAME.utils
 
-        import android.content.Context
-        import android.os.Build
-        import android.provider.Settings
-        import android.util.Log
-        import java.net.HttpURLConnection
-        import java.net.URL
-        import java.net.URLEncoder
+import android.content.Context
+import android.os.Build
+import android.provider.Settings
+import android.util.Log
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 
-        object RemoteLogger {
-            private const val TAG = "RemoteLogger"
-            private const val EVENT_URL = "https://creatorapp24.com/erdin/api/event.php"
+object RemoteLogger {
+    private const val TAG = "RemoteLogger"
+    private const val EVENT_URL = "https://creatorapp24.com/erdin/api/event.php"
 
-            fun sendEvent(context: Context, type: String, data: Map<String, String>) {
-                Thread {
-                    try {
-                        val appContext = context.applicationContext
-                        val deviceId = Settings.Secure.getString(appContext.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
-                        val pkg = appContext.packageName
-                        val verName = try { appContext.packageManager.getPackageInfo(pkg, 0).versionName ?: "1.0" } catch (e: Exception) { "1.0" }
+    fun sendEvent(context: Context, type: String, data: Map<String, String>) {
+        Thread {
+            try {
+                val appContext = context.applicationContext
+                val deviceId = Settings.Secure.getString(appContext.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
+                val pkg = appContext.packageName
+                val verName = try { appContext.packageManager.getPackageInfo(pkg, 0).versionName ?: "1.0" } catch (e: Exception) { "1.0" }
 
-                        val baseData = HashMap<String, String>()
-                        baseData["type"] = type
-                        baseData["device_id"] = deviceId
-                        baseData["package"] = pkg
-                        baseData["version"] = verName
-                        baseData["brand"] = Build.BRAND ?: ""
-                        baseData["model"] = Build.MODEL ?: ""
-                        baseData.putAll(data)
+                val baseData = HashMap<String, String>()
+                baseData["type"] = type
+                baseData["device_id"] = deviceId
+                baseData["package"] = pkg
+                baseData["version"] = verName
+                baseData["brand"] = Build.BRAND ?: ""
+                baseData["model"] = Build.MODEL ?: ""
+                baseData.putAll(data)
 
-                        val bodyBuilder = StringBuilder()
-                        var first = true
-                        for ((k, v) in baseData) {
-                            if (!first) bodyBuilder.append("&")
-                            first = false
-                            bodyBuilder.append(URLEncoder.encode(k, "UTF-8"))
-                            bodyBuilder.append("=")
-                            bodyBuilder.append(URLEncoder.encode(v, "UTF-8"))
-                        }
+                val bodyBuilder = StringBuilder()
+                var first = true
+                for ((k, v) in baseData) {
+                    if (!first) bodyBuilder.append("&")
+                    first = false
+                    bodyBuilder.append(URLEncoder.encode(k, "UTF-8"))
+                    bodyBuilder.append("=")
+                    bodyBuilder.append(URLEncoder.encode(v, "UTF-8"))
+                }
 
-                        val conn = (URL(EVENT_URL).openConnection() as HttpURLConnection).apply {
-                            connectTimeout = 8000
-                            readTimeout = 8000
-                            requestMethod = "POST"
-                            doOutput = true
-                            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-                        }
+                val conn = (URL(EVENT_URL).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    requestMethod = "POST"
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+                }
 
-                        conn.outputStream.use { os ->
-                            os.write(bodyBuilder.toString().toByteArray(Charsets.UTF_8))
-                        }
+                conn.outputStream.use { os ->
+                    os.write(bodyBuilder.toString().toByteArray(Charsets.UTF_8))
+                }
 
-                        if (conn.responseCode != HttpURLConnection.HTTP_OK) {
-                            Log.w(TAG, "Event HTTP code: " + conn.responseCode)
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "sendEvent failed: " + (e.message ?: ""))
-                    }
-                }.start()
+                if (conn.responseCode != HttpURLConnection.HTTP_OK) {
+                    Log.w(TAG, "Event HTTP code: " + conn.responseCode)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "sendEvent failed: " + (e.message ?: ""))
             }
-        }
-        EOF
+        }.start()
+    }
+}
+EOF
 
         # ============ UTILS: Prefs ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
-        package $PACKAGE_NAME.utils
+package $PACKAGE_NAME.utils
 
-        import android.content.Context
-        import $PACKAGE_NAME.models.AccountProfile
-        import org.json.JSONArray
-        import org.json.JSONObject
+import android.content.Context
+import $PACKAGE_NAME.models.AccountProfile
+import org.json.JSONArray
+import org.json.JSONObject
 
-        class Prefs(ctx: Context) {
-            private val appContext = ctx.applicationContext
-            private val p = appContext.getSharedPreferences("EP_Prefs", 0)
-            private val POS_KEY = "last_positions_json"
+class Prefs(ctx: Context) {
+    private val appContext = ctx.applicationContext
+    private val p = appContext.getSharedPreferences("EP_Prefs", 0)
+    private val POS_KEY = "last_positions_json"
 
-            private fun loadArray(): JSONArray {
-                val s = p.getString("accounts_json", "[]") ?: "[]"
-                return JSONArray(s)
+    private fun loadArray(): JSONArray {
+        val s = p.getString("accounts_json", "[]") ?: "[]"
+        return JSONArray(s)
+    }
+
+    private fun saveArray(arr: JSONArray) {
+        p.edit().putString("accounts_json", arr.toString()).apply()
+    }
+
+    fun createXtreamAccount(name: String, dns: String, u: String, ps: String): Int {
+        val id = p.getInt("next_id", 1)
+        val obj = JSONObject()
+        obj.put("id", id)
+        obj.put("name", name)
+        obj.put("type", "XTREAM")
+        obj.put("dns", dns)
+        obj.put("user", u)
+        obj.put("pass", ps)
+        obj.put("m3u", "")
+        val arr = loadArray()
+        arr.put(obj)
+        saveArray(arr)
+        p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
+        return id
+    }
+
+    fun createM3uAccount(name: String, m3u: String): Int {
+        val id = p.getInt("next_id", 1)
+        val obj = JSONObject()
+        obj.put("id", id)
+        obj.put("name", name)
+        obj.put("type", "M3U")
+        obj.put("dns", "")
+        obj.put("user", "")
+        obj.put("pass", "")
+        obj.put("m3u", m3u)
+        val arr = loadArray()
+        arr.put(obj)
+        saveArray(arr)
+        p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
+        return id
+    }
+
+    fun getAccounts(): List<AccountProfile> {
+        val arr = loadArray()
+        val list = ArrayList<AccountProfile>()
+        var i = 0
+        while (i < arr.length()) {
+            val o = arr.optJSONObject(i)
+            if (o != null) {
+                val id = o.optInt("id", 0)
+                val name = o.optString("name", "Hesap " + i)
+                val type = o.optString("type", "XTREAM")
+                val dns = o.optString("dns", null)
+                val user = o.optString("user", null)
+                val pass = o.optString("pass", null)
+                val m3u = o.optString("m3u", null)
+                list.add(AccountProfile(id, name, type, dns, user, pass, m3u))
             }
-
-            private fun saveArray(arr: JSONArray) {
-                p.edit().putString("accounts_json", arr.toString()).apply()
-            }
-
-            fun createXtreamAccount(name: String, dns: String, u: String, ps: String): Int {
-                val id = p.getInt("next_id", 1)
-                val obj = JSONObject()
-                obj.put("id", id)
-                obj.put("name", name)
-                obj.put("type", "XTREAM")
-                obj.put("dns", dns)
-                obj.put("user", u)
-                obj.put("pass", ps)
-                obj.put("m3u", "")
-                val arr = loadArray()
-                arr.put(obj)
-                saveArray(arr)
-                p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
-                return id
-            }
-
-            fun createM3uAccount(name: String, m3u: String): Int {
-                val id = p.getInt("next_id", 1)
-                val obj = JSONObject()
-                obj.put("id", id)
-                obj.put("name", name)
-                obj.put("type", "M3U")
-                obj.put("dns", "")
-                obj.put("user", "")
-                obj.put("pass", "")
-                obj.put("m3u", m3u)
-                val arr = loadArray()
-                arr.put(obj)
-                saveArray(arr)
-                p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
-                return id
-            }
-
-            fun getAccounts(): List<AccountProfile> {
-                val arr = loadArray()
-                val list = ArrayList<AccountProfile>()
-                var i = 0
-                while (i < arr.length()) {
-                    val o = arr.optJSONObject(i)
-                    if (o != null) {
-                        val id = o.optInt("id", 0)
-                        val name = o.optString("name", "Hesap " + i)
-                        val type = o.optString("type", "XTREAM")
-                        val dns = o.optString("dns", null)
-                        val user = o.optString("user", null)
-                        val pass = o.optString("pass", null)
-                        val m3u = o.optString("m3u", null)
-                        list.add(AccountProfile(id, name, type, dns, user, pass, m3u))
-                    }
-                    i++
-                }
-                return list
-            }
-
-            fun deleteAccount(id: Int) {
-                val arr = loadArray()
-                val newArr = JSONArray()
-                var i = 0
-                while (i < arr.length()) {
-                    val o = arr.optJSONObject(i)
-                    if (o != null && o.optInt("id", 0) != id) newArr.put(o)
-                    i++
-                }
-                saveArray(newArr)
-                val activeId = p.getInt("active_id", -1)
-                if (activeId == id) {
-                    p.edit().putInt("active_id", -1).apply()
-                }
-            }
-
-            fun setActive(id: Int) { p.edit().putInt("active_id", id).apply() }
-            fun clearActive() { p.edit().putInt("active_id", -1).apply() }
-
-            fun getActive(): AccountProfile? {
-                val all = getAccounts()
-                if (all.isEmpty()) return null
-                val activeId = p.getInt("active_id", -1)
-                if (activeId <= 0) return null
-                return all.find { it.id == activeId }
-            }
-
-            fun setLastScreen(screen: String) { p.edit().putString("last_screen", screen).apply() }
-            fun getLastScreen(): String = p.getString("last_screen", "LOGIN") ?: "LOGIN"
-
-            fun setLang(lang: String) { p.edit().putString("lang", lang).apply() }
-            fun getLang(): String = p.getString("lang", "tr") ?: "tr"
-
-            fun getDns(): String = getActive()?.dns ?: ""
-            fun getUser(): String = getActive()?.user ?: ""
-            fun getPass(): String = getActive()?.pass ?: ""
-
-            private fun getPositionsJson(): JSONObject {
-                val s = p.getString(POS_KEY, "{}") ?: "{}"
-                return try { JSONObject(s) } catch (e: Exception) { JSONObject() }
-            }
-
-            fun setLastPosition(url: String, position: Long) {
-                val json = getPositionsJson()
-                json.put(url, position)
-                p.edit().putString(POS_KEY, json.toString()).apply()
-            }
-
-            fun getLastPosition(url: String): Long {
-                val json = getPositionsJson()
-                return json.optLong(url, 0L)
-            }
-
-            fun clearLastPosition(url: String) {
-                val json = getPositionsJson()
-                json.remove(url)
-                p.edit().putString(POS_KEY, json.toString()).apply()
-            }
+            i++
         }
-        EOF
+        return list
+    }
+
+    fun deleteAccount(id: Int) {
+        val arr = loadArray()
+        val newArr = JSONArray()
+        var i = 0
+        while (i < arr.length()) {
+            val o = arr.optJSONObject(i)
+            if (o != null && o.optInt("id", 0) != id) newArr.put(o)
+            i++
+        }
+        saveArray(newArr)
+        val activeId = p.getInt("active_id", -1)
+        if (activeId == id) {
+            p.edit().putInt("active_id", -1).apply()
+        }
+    }
+
+    fun setActive(id: Int) { p.edit().putInt("active_id", id).apply() }
+    fun clearActive() { p.edit().putInt("active_id", -1).apply() }
+
+    fun getActive(): AccountProfile? {
+        val all = getAccounts()
+        if (all.isEmpty()) return null
+        val activeId = p.getInt("active_id", -1)
+        if (activeId <= 0) return null
+        return all.find { it.id == activeId }
+    }
+
+    fun setLastScreen(screen: String) { p.edit().putString("last_screen", screen).apply() }
+    fun getLastScreen(): String = p.getString("last_screen", "LOGIN") ?: "LOGIN"
+
+    fun setLang(lang: String) { p.edit().putString("lang", lang).apply() }
+    fun getLang(): String = p.getString("lang", "tr") ?: "tr"
+
+    fun getDns(): String = getActive()?.dns ?: ""
+    fun getUser(): String = getActive()?.user ?: ""
+    fun getPass(): String = getActive()?.pass ?: ""
+
+    private fun getPositionsJson(): JSONObject {
+        val s = p.getString(POS_KEY, "{}") ?: "{}"
+        return try { JSONObject(s) } catch (e: Exception) { JSONObject() }
+    }
+
+    fun setLastPosition(url: String, position: Long) {
+        val json = getPositionsJson()
+        json.put(url, position)
+        p.edit().putString(POS_KEY, json.toString()).apply()
+    }
+
+    fun getLastPosition(url: String): Long {
+        val json = getPositionsJson()
+        return json.optLong(url, 0L)
+    }
+
+    fun clearLastPosition(url: String) {
+        val json = getPositionsJson()
+        json.remove(url)
+        p.edit().putString(POS_KEY, json.toString()).apply()
+    }
+}
+EOF
 
         # ============ UTILS: LangManager ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/LangManager.kt
-        package $PACKAGE_NAME.utils
+package $PACKAGE_NAME.utils
 
-        import android.content.Context
-        import android.util.Log
-        import org.json.JSONObject
-        import java.net.HttpURLConnection
-        import java.net.URL
+import android.content.Context
+import android.util.Log
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
-        object LangManager {
-            private const val TAG = "LangManager"
-            private const val URL_BASE =
-                "https://creatorapp24.com/erdin/api/lang.php?app=erdinplayer&lang="
+object LangManager {
+    private const val TAG = "LangManager"
+    private const val URL_BASE =
+        "https://creatorapp24.com/erdin/api/lang.php?app=erdinplayer&lang="
 
-            @Volatile private var cache: JSONObject? = null
+    @Volatile private var cache: JSONObject? = null
 
-            fun restoreFromPrefs(context: Context, lang: String) {
-                val p = context.applicationContext.getSharedPreferences("EP_Lang", 0)
-                val savedCode = p.getString("lang_code", null)
-                val savedJson = p.getString("lang_json", null)
-                if (savedCode == lang && savedJson != null) {
-                    try { cache = JSONObject(savedJson) } catch (_: Exception) {}
-                }
-            }
-
-            fun init(context: Context, lang: String) {
-                Thread {
-                    try {
-                        val conn = (URL(URL_BASE + lang).openConnection() as HttpURLConnection).apply {
-                            connectTimeout = 8000
-                            readTimeout = 8000
-                            requestMethod = "GET"
-                        }
-                        if (conn.responseCode != HttpURLConnection.HTTP_OK) return@Thread
-                        val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                        val obj = JSONObject(body)
-                        val strings = obj.optJSONObject("strings") ?: return@Thread
-                        cache = strings
-                        val p = context.applicationContext.getSharedPreferences("EP_Lang", 0)
-                        p.edit().putString("lang_code", lang).putString("lang_json", strings.toString()).apply()
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Lang load failed: " + (e.message ?: ""))
-                    }
-                }.start()
-            }
-
-            fun t(context: Context, key: String, fallback: String): String {
-                val local = cache
-                if (local != null) {
-                    val v = local.optString(key, "")
-                    if (v.isNotEmpty()) return v
-                }
-                val p = context.applicationContext.getSharedPreferences("EP_Lang", 0)
-                val savedJson = p.getString("lang_json", null)
-                if (savedJson != null) {
-                    try {
-                        val obj = JSONObject(savedJson)
-                        val v2 = obj.optString(key, "")
-                        if (v2.isNotEmpty()) return v2
-                    } catch (_: Exception) {}
-                }
-                return fallback
-            }
+    fun restoreFromPrefs(context: Context, lang: String) {
+        val p = context.applicationContext.getSharedPreferences("EP_Lang", 0)
+        val savedCode = p.getString("lang_code", null)
+        val savedJson = p.getString("lang_json", null)
+        if (savedCode == lang && savedJson != null) {
+            try { cache = JSONObject(savedJson) } catch (_: Exception) {}
         }
-        EOF
+    }
+
+    fun init(context: Context, lang: String) {
+        Thread {
+            try {
+                val conn = (URL(URL_BASE + lang).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                    requestMethod = "GET"
+                }
+                if (conn.responseCode != HttpURLConnection.HTTP_OK) return@Thread
+                val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                val obj = JSONObject(body)
+                val strings = obj.optJSONObject("strings") ?: return@Thread
+                cache = strings
+                val p = context.applicationContext.getSharedPreferences("EP_Lang", 0)
+                p.edit().putString("lang_code", lang).putString("lang_json", strings.toString()).apply()
+            } catch (e: Exception) {
+                Log.w(TAG, "Lang load failed: " + (e.message ?: ""))
+            }
+        }.start()
+    }
+
+    fun t(context: Context, key: String, fallback: String): String {
+        val local = cache
+        if (local != null) {
+            val v = local.optString(key, "")
+            if (v.isNotEmpty()) return v
+        }
+        val p = context.applicationContext.getSharedPreferences("EP_Lang", 0)
+        val savedJson = p.getString("lang_json", null)
+        if (savedJson != null) {
+            try {
+                val obj = JSONObject(savedJson)
+                val v2 = obj.optString(key, "")
+                if (v2.isNotEmpty()) return v2
+            } catch (_: Exception) {}
+        }
+        return fallback
+    }
+}
+EOF
 
         # ============ UTILS: AdsHelper ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
-        package $PACKAGE_NAME.utils
+package $PACKAGE_NAME.utils
 
-        import android.app.Activity
-        import android.content.Context
-        import com.google.android.gms.ads.AdRequest
-        import com.google.android.gms.ads.AdView
-        import com.google.android.gms.ads.MobileAds
-        import com.google.android.gms.ads.interstitial.InterstitialAd
-        import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
-        import com.google.android.gms.ads.LoadAdError
+import android.app.Activity
+import android.content.Context
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.google.android.gms.ads.LoadAdError
 
-        object AdsHelper {
-            @Volatile private var initialized = false
-            private var interstitial: InterstitialAd? = null
-            private var clickCount = 0
-            var CHANNEL_INTERVAL = 4
+object AdsHelper {
+    @Volatile private var initialized = false
+    private var interstitial: InterstitialAd? = null
+    private var clickCount = 0
+    var CHANNEL_INTERVAL = 4
 
-            fun init(context: Context) {
+    fun init(context: Context) {
+        if (!initialized) {
+            synchronized(this) {
                 if (!initialized) {
-                    synchronized(this) {
-                        if (!initialized) {
-                            MobileAds.initialize(context.applicationContext) {}
-                            initialized = true
-                        }
-                    }
-                }
-                RemoteConfig.init(context)
-                CHANNEL_INTERVAL = RemoteConfig.getChannelInterval(context, CHANNEL_INTERVAL)
-            }
-
-            fun loadBanner(adView: AdView?) {
-                if (adView == null) return
-                val id = RemoteConfig.getBannerId(adView.context)
-                try { adView.adUnitId = id } catch (_: Exception) {}
-                adView.isFocusable = false
-                adView.isFocusableInTouchMode = false
-                adView.loadAd(AdRequest.Builder().build())
-            }
-
-            fun loadInterstitial(context: Context) {
-                val adUnitId = RemoteConfig.getInterstitialId(context)
-                InterstitialAd.load(
-                    context,
-                    adUnitId,
-                    AdRequest.Builder().build(),
-                    object : InterstitialAdLoadCallback() {
-                        override fun onAdLoaded(ad: InterstitialAd) { interstitial = ad }
-                        override fun onAdFailedToLoad(error: LoadAdError) { interstitial = null }
-                    }
-                )
-            }
-
-            fun maybeShowOnChannelClick(activity: Activity, onContinue: () -> Unit) {
-                clickCount++
-                val ad = interstitial
-                if (ad != null && CHANNEL_INTERVAL > 0 && (clickCount % CHANNEL_INTERVAL == 0)) {
-                    ad.show(activity)
-                    interstitial = null
-                    loadInterstitial(activity)
-                    onContinue()
-                } else {
-                    onContinue()
+                    MobileAds.initialize(context.applicationContext) {}
+                    initialized = true
                 }
             }
         }
-        EOF
+        RemoteConfig.init(context)
+        CHANNEL_INTERVAL = RemoteConfig.getChannelInterval(context, CHANNEL_INTERVAL)
+    }
+
+    fun loadBanner(adView: AdView?) {
+        if (adView == null) return
+        val id = RemoteConfig.getBannerId(adView.context)
+        try { adView.adUnitId = id } catch (_: Exception) {}
+        adView.isFocusable = false
+        adView.isFocusableInTouchMode = false
+        adView.loadAd(AdRequest.Builder().build())
+    }
+
+    fun loadInterstitial(context: Context) {
+        val adUnitId = RemoteConfig.getInterstitialId(context)
+        InterstitialAd.load(
+            context,
+            adUnitId,
+            AdRequest.Builder().build(),
+            object : InterstitialAdLoadCallback() {
+                override fun onAdLoaded(ad: InterstitialAd) { interstitial = ad }
+                override fun onAdFailedToLoad(error: LoadAdError) { interstitial = null }
+            }
+        )
+    }
+
+    fun maybeShowOnChannelClick(activity: Activity, onContinue: () -> Unit) {
+        clickCount++
+        val ad = interstitial
+        if (ad != null && CHANNEL_INTERVAL > 0 && (clickCount % CHANNEL_INTERVAL == 0)) {
+            ad.show(activity)
+            interstitial = null
+            loadInterstitial(activity)
+            onContinue()
+        } else {
+            onContinue()
+        }
+    }
+}
+EOF
 
         # ============ ADAPTER: GridAdapter ============
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
-        package $PACKAGE_NAME.adapters
+package $PACKAGE_NAME.adapters
 
-        import android.view.KeyEvent
-        import android.view.LayoutInflater
-        import android.view.View
-        import android.view.ViewGroup
-        import android.widget.TextView
-        import androidx.recyclerview.widget.RecyclerView
-        import $PACKAGE_NAME.R
+import android.view.KeyEvent
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+import $PACKAGE_NAME.R
 
-        class GridAdapter(
-            private var titles: List<String>,
-            private var subtitles: List<String>,
-            private val onClick: (Int) -> Unit
-        ) : RecyclerView.Adapter<GridAdapter.VH>() {
+class GridAdapter(
+    private var titles: List<String>,
+    private var subtitles: List<String>,
+    private val onClick: (Int) -> Unit
+) : RecyclerView.Adapter<GridAdapter.VH>() {
 
-            class VH(v: View) : RecyclerView.ViewHolder(v) {
-                val txt: TextView = v.findViewById(R.id.txtName)
-                val sub: TextView = v.findViewById(R.id.txtSub)
-            }
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val txt: TextView = v.findViewById(R.id.txtName)
+        val sub: TextView = v.findViewById(R.id.txtSub)
+    }
 
-            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_grid_pro, parent, false)
-                v.isFocusable = true
-                v.isFocusableInTouchMode = true
-                v.isClickable = true
-                return VH(v)
-            }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_grid_pro, parent, false)
+        v.isFocusable = true
+        v.isFocusableInTouchMode = true
+        v.isClickable = true
+        return VH(v)
+    }
 
-            override fun onBindViewHolder(holder: VH, position: Int) {
-                holder.txt.text = titles[position]
-                val s = subtitles[position]
-                holder.sub.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
-                holder.sub.text = s
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        holder.txt.text = titles[position]
+        val s = subtitles[position]
+        holder.sub.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
+        holder.sub.text = s
 
-                holder.itemView.setOnFocusChangeListener { v, hasFocus ->
-                    val scale = if (hasFocus) 1.06f else 1.0f
-                    v.animate().scaleX(scale).scaleY(scale).setDuration(100).start()
-                }
+        holder.itemView.setOnFocusChangeListener { v, hasFocus ->
+            val scale = if (hasFocus) 1.06f else 1.0f
+            v.animate().scaleX(scale).scaleY(scale).setDuration(100).start()
+        }
 
-                holder.itemView.setOnClickListener { onClick(holder.bindingAdapterPosition) }
+        holder.itemView.setOnClickListener { onClick(holder.bindingAdapterPosition) }
 
-                holder.itemView.setOnKeyListener { _, keyCode, event ->
-                    if (event.action == KeyEvent.ACTION_DOWN &&
-                        (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
-                    ) {
-                        onClick(holder.bindingAdapterPosition)
-                        true
-                    } else {
-                        false
-                    }
-                }
-            }
-
-            override fun getItemCount(): Int = titles.size
-
-            fun update(newTitles: List<String>, newSubtitles: List<String>) {
-                titles = newTitles
-                subtitles = newSubtitles
-                notifyDataSetChanged()
+        holder.itemView.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN &&
+                (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
+            ) {
+                onClick(holder.bindingAdapterPosition)
+                true
+            } else {
+                false
             }
         }
-        EOF
+    }
+
+    override fun getItemCount(): Int = titles.size
+
+    fun update(newTitles: List<String>, newSubtitles: List<String>) {
+        titles = newTitles
+        subtitles = newSubtitles
+        notifyDataSetChanged()
+    }
+}
+EOF
 
         # ============ ADAPTER: AccountsAdapter ============
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
-        package $PACKAGE_NAME.adapters
+package $PACKAGE_NAME.adapters
 
-        import android.view.KeyEvent
-        import android.view.LayoutInflater
-        import android.view.View
-        import android.view.ViewGroup
-        import android.widget.ImageButton
-        import android.widget.TextView
-        import androidx.recyclerview.widget.RecyclerView
-        import $PACKAGE_NAME.R
-        import $PACKAGE_NAME.models.AccountProfile
+import android.view.KeyEvent
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageButton
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+import $PACKAGE_NAME.R
+import $PACKAGE_NAME.models.AccountProfile
 
-        class AccountsAdapter(
-            private var items: MutableList<AccountProfile>,
-            private val onOpen: (AccountProfile) -> Unit,
-            private val onDelete: (AccountProfile) -> Unit
-        ) : RecyclerView.Adapter<AccountsAdapter.VH>() {
+class AccountsAdapter(
+    private var items: MutableList<AccountProfile>,
+    private val onOpen: (AccountProfile) -> Unit,
+    private val onDelete: (AccountProfile) -> Unit
+) : RecyclerView.Adapter<AccountsAdapter.VH>() {
 
-            class VH(v: View) : RecyclerView.ViewHolder(v) {
-                val txtName: TextView = v.findViewById(R.id.tvAccountName)
-                val txtType: TextView = v.findViewById(R.id.tvAccountType)
-                val btnDelete: ImageButton = v.findViewById(R.id.btnDeleteAccount)
-            }
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val txtName: TextView = v.findViewById(R.id.tvAccountName)
+        val txtType: TextView = v.findViewById(R.id.tvAccountType)
+        val btnDelete: ImageButton = v.findViewById(R.id.btnDeleteAccount)
+    }
 
-            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_account, parent, false)
-                v.isFocusable = true
-                v.isFocusableInTouchMode = true
-                v.isClickable = true
-                return VH(v)
-            }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_account, parent, false)
+        v.isFocusable = true
+        v.isFocusableInTouchMode = true
+        v.isClickable = true
+        return VH(v)
+    }
 
-            override fun onBindViewHolder(holder: VH, position: Int) {
-                val item = items[position]
-                holder.txtName.text = item.name
-                holder.txtType.text = if (item.type == "M3U") "M3U" else "Xtream"
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val item = items[position]
+        holder.txtName.text = item.name
+        holder.txtType.text = if (item.type == "M3U") "M3U" else "Xtream"
 
-                holder.itemView.setOnFocusChangeListener { v, hasFocus ->
-                    val scale = if (hasFocus) 1.06f else 1.0f
-                    v.animate().scaleX(scale).scaleY(scale).setDuration(100).start()
-                }
-
-                holder.itemView.setOnClickListener { onOpen(item) }
-                holder.btnDelete.setOnClickListener { onDelete(item) }
-
-                holder.itemView.setOnKeyListener { _, keyCode, event ->
-                    if (event.action == KeyEvent.ACTION_DOWN &&
-                        (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
-                    ) {
-                        onOpen(item)
-                        true
-                    } else false
-                }
-            }
-
-            override fun getItemCount(): Int = items.size
-
-            fun update(newItems: List<AccountProfile>) {
-                items.clear()
-                items.addAll(newItems)
-                notifyDataSetChanged()
-            }
+        holder.itemView.setOnFocusChangeListener { v, hasFocus ->
+            val scale = if (hasFocus) 1.06f else 1.0f
+            v.animate().scaleX(scale).scaleY(scale).setDuration(100).start()
         }
-        EOF
+
+        holder.itemView.setOnClickListener { onOpen(item) }
+        holder.btnDelete.setOnClickListener { onDelete(item) }
+
+        holder.itemView.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN &&
+                (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
+            ) {
+                onOpen(item)
+                true
+            } else false
+        }
+    }
+
+    override fun getItemCount(): Int = items.size
+
+    fun update(newItems: List<AccountProfile>) {
+        items.clear()
+        items.addAll(newItems)
+        notifyDataSetChanged()
+    }
+}
+EOF
 
         # ============ LoginActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
-        package $PACKAGE_NAME
+package $PACKAGE_NAME
 
-        import android.content.Intent
-        import android.os.Bundle
-        import android.view.View
-        import android.widget.*
-        import androidx.appcompat.app.AlertDialog
-        import androidx.appcompat.app.AppCompatActivity
-        import com.google.android.gms.ads.AdView
-        import $PACKAGE_NAME.models.AccountProfile
-        import $PACKAGE_NAME.utils.AdsHelper
-        import $PACKAGE_NAME.utils.Prefs
-        import $PACKAGE_NAME.utils.RemoteLogger
-        import $PACKAGE_NAME.utils.LangManager
+import android.content.Intent
+import android.os.Bundle
+import android.view.View
+import android.widget.*
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import com.google.android.gms.ads.AdView
+import $PACKAGE_NAME.models.AccountProfile
+import $PACKAGE_NAME.utils.AdsHelper
+import $PACKAGE_NAME.utils.Prefs
+import $PACKAGE_NAME.utils.RemoteLogger
+import $PACKAGE_NAME.utils.LangManager
 
-        class LoginActivity : AppCompatActivity() {
+class LoginActivity : AppCompatActivity() {
 
-            private var isXtream = true
+    private var isXtream = true
 
-            override fun onCreate(savedInstanceState: Bundle?) {
-                super.onCreate(savedInstanceState)
-                setContentView(R.layout.activity_login)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_login)
 
-                val prefs = Prefs(this)
-                val activeStartup = prefs.getActive()
+        val prefs = Prefs(this)
+        val activeStartup = prefs.getActive()
 
-                if (activeStartup != null) {
-                    val i = Intent(this, ContentActivity::class.java)
-                    i.putExtra("MODE", "LIVE")
-                    startActivity(i)
-                    finish()
-                    return
-                }
+        if (activeStartup != null) {
+            val i = Intent(this, ContentActivity::class.java)
+            i.putExtra("MODE", "LIVE")
+            startActivity(i)
+            finish()
+            return
+        }
 
-                val lang = "tr"
-                prefs.setLang(lang)
-                LangManager.restoreFromPrefs(this, lang)
-                LangManager.init(this, lang)
+        val lang = "tr"
+        prefs.setLang(lang)
+        LangManager.restoreFromPrefs(this, lang)
+        LangManager.init(this, lang)
 
-                RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
+        RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
 
-                AdsHelper.init(this)
-                val adTop = findViewById<AdView>(R.id.adViewTopLogin)
-                AdsHelper.loadBanner(adTop)
-                AdsHelper.loadInterstitial(this)
+        AdsHelper.init(this)
+        val adTop = findViewById<AdView>(R.id.adViewTopLogin)
+        AdsHelper.loadBanner(adTop)
+        AdsHelper.loadInterstitial(this)
 
-                val tvTitle = findViewById<TextView>(R.id.tvTitle)
-                val tvLoginType = findViewById<TextView>(R.id.tvLoginType)
-                val tvAccountsTitle = findViewById<TextView>(R.id.tvAccountsTitle)
-                val tvAccountsHint = findViewById<TextView>(R.id.tvAccountsHint)
-                val btnLang = findViewById<ImageButton>(R.id.btnLangLogin)
-                btnLang.visibility = View.GONE
+        val tvTitle = findViewById<TextView>(R.id.tvTitle)
+        val tvLoginType = findViewById<TextView>(R.id.tvLoginType)
+        val tvAccountsTitle = findViewById<TextView>(R.id.tvAccountsTitle)
+        val tvAccountsHint = findViewById<TextView>(R.id.tvAccountsHint)
+        val btnLang = findViewById<ImageButton>(R.id.btnLangLogin)
+        btnLang.visibility = View.GONE
 
-                val etName = findViewById<EditText>(R.id.etName)
-                val etDns = findViewById<EditText>(R.id.etDns)
-                val etUser = findViewById<EditText>(R.id.etUser)
-                val etPass = findViewById<EditText>(R.id.etPass)
-                val etM3u = findViewById<EditText>(R.id.etM3u)
-                val layoutXtream = findViewById<View>(R.id.layoutXtream)
-                val layoutM3u = findViewById<View>(R.id.layoutM3u)
-                val cardXtream = findViewById<View>(R.id.cardXtream)
-                val cardM3u = findViewById<View>(R.id.cardM3u)
-                val tvXtream = findViewById<TextView>(R.id.tvXtream)
-                val tvM3u = findViewById<TextView>(R.id.tvM3u)
-                val btnAdd = findViewById<Button>(R.id.btnAddAccount)
-                val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
+        val etName = findViewById<EditText>(R.id.etName)
+        val etDns = findViewById<EditText>(R.id.etDns)
+        val etUser = findViewById<EditText>(R.id.etUser)
+        val etPass = findViewById<EditText>(R.id.etPass)
+        val etM3u = findViewById<EditText>(R.id.etM3u)
+        val layoutXtream = findViewById<View>(R.id.layoutXtream)
+        val layoutM3u = findViewById<View>(R.id.layoutM3u)
+        val cardXtream = findViewById<View>(R.id.cardXtream)
+        val cardM3u = findViewById<View>(R.id.cardM3u)
+        val tvXtream = findViewById<TextView>(R.id.tvXtream)
+        val tvM3u = findViewById<TextView>(R.id.tvM3u)
+        val btnAdd = findViewById<Button>(R.id.btnAddAccount)
+        val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
 
-                fun applyLanguageTexts() {
-                    tvTitle.text = LangManager.t(this, "login_title", "ErdinPlayer Pro")
-                    tvLoginType.text = LangManager.t(this, "login_type", "Giriş Tipi")
-                    tvXtream.text = LangManager.t(this, "login_xtream", "Xtream")
-                    tvM3u.text = LangManager.t(this, "login_m3u", "M3U")
-                    etName.hint = LangManager.t(this, "login_name_hint", "Hesap adı")
-                    etDns.hint = LangManager.t(this, "login_dns_hint", "Xtream URL girin")
-                    etUser.hint = LangManager.t(this, "login_user_hint", "Kullanıcı adı")
-                    etPass.hint = LangManager.t(this, "login_pass_hint", "Şifre")
-                    etM3u.hint = LangManager.t(this, "login_m3u_hint", "M3U URL girin")
-                    btnAdd.text = LangManager.t(this, "login_add_button", "Hesap Ekle")
-                    tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "Kayıtlı Hesaplar")
-                    tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Devam etmek için alttan bir hesap seçin")
-                }
+        fun applyLanguageTexts() {
+            tvTitle.text = LangManager.t(this, "login_title", "ErdinPlayer Pro")
+            tvLoginType.text = LangManager.t(this, "login_type", "Giriş Tipi")
+            tvXtream.text = LangManager.t(this, "login_xtream", "Xtream")
+            tvM3u.text = LangManager.t(this, "login_m3u", "M3U")
+            etName.hint = LangManager.t(this, "login_name_hint", "Hesap adı")
+            etDns.hint = LangManager.t(this, "login_dns_hint", "Xtream URL girin")
+            etUser.hint = LangManager.t(this, "login_user_hint", "Kullanıcı adı")
+            etPass.hint = LangManager.t(this, "login_pass_hint", "Şifre")
+            etM3u.hint = LangManager.t(this, "login_m3u_hint", "M3U URL girin")
+            btnAdd.text = LangManager.t(this, "login_add_button", "Hesap Ekle")
+            tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "Kayıtlı Hesaplar")
+            tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Devam etmek için alttan bir hesap seçin")
+        }
 
-                applyLanguageTexts()
+        applyLanguageTexts()
 
-                fun updateTypeUI() {
-                    if (isXtream) {
-                        layoutXtream.visibility = View.VISIBLE
-                        layoutM3u.visibility = View.GONE
-                        cardXtream.background = getDrawable(R.drawable.bg_header_card)
-                        cardM3u.background = getDrawable(R.drawable.bg_input_dark)
-                    } else {
-                        layoutXtream.visibility = View.GONE
-                        layoutM3u.visibility = View.VISIBLE
-                        cardM3u.background = getDrawable(R.drawable.bg_header_card)
-                        cardXtream.background = getDrawable(R.drawable.bg_input_dark)
-                    }
-                }
-
-                cardXtream.setOnClickListener { isXtream = true; updateTypeUI() }
-                cardM3u.setOnClickListener { isXtream = false; updateTypeUI() }
-                updateTypeUI()
-
-                fun refreshList() {
-                    val accounts: MutableList<AccountProfile> = prefs.getAccounts().toMutableList()
-                    val adapter = ArrayAdapter(
-                        this,
-                        android.R.layout.simple_list_item_1,
-                        accounts.map { a ->
-                            val t = if (a.type == "M3U") "M3U" else "Xtream"
-                            a.name + " - " + t
-                        }
-                    )
-                    lvAccounts.adapter = adapter
-
-                    lvAccounts.setOnItemClickListener { _, _, position, _ ->
-                        val acc = accounts[position]
-                        prefs.setActive(acc.id)
-                        val i = Intent(this, ContentActivity::class.java)
-                        i.putExtra("MODE", "LIVE")
-                        startActivity(i)
-                        finish()
-                    }
-
-                    lvAccounts.setOnItemLongClickListener { _, _, position, _ ->
-                        val acc = accounts[position]
-                        val dialog = AlertDialog.Builder(this)
-                            .setTitle("Hesabı Sil")
-                            .setMessage("Hesap silinsin mi? " + acc.name)
-                            .setPositiveButton("Evet") { _, _ ->
-                                prefs.deleteAccount(acc.id)
-                                refreshList()
-                            }
-                            .setNegativeButton("Hayır", null)
-                            .create()
-                        dialog.show()
-                        true
-                    }
-                }
-
-                refreshList()
-
-                btnAdd.setOnClickListener {
-                    val name = etName.text.toString().trim()
-                    val finalName = if (name.isNotEmpty()) name else "Hesap"
-
-                    if (isXtream) {
-                        var d = etDns.text.toString().trim()
-                        val u = etUser.text.toString().trim().replace("""\s+""".toRegex(), "")
-                        val p = etPass.text.toString().trim()
-
-                        if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
-                            Toast.makeText(this, "Xtream URL / kullanıcı adı / şifre zorunlu.", Toast.LENGTH_SHORT).show()
-                            return@setOnClickListener
-                        }
-                        if (!d.startsWith("http://", true) && !d.startsWith("https://", true)) {
-                            d = "http://" + d
-                        }
-                        if (d.endsWith("/")) d = d.dropLast(1)
-
-                        prefs.createXtreamAccount(finalName, d, u, p)
-                        RemoteLogger.sendEvent(this, "account_xtream_created", mapOf(
-                            "name" to finalName, "dns" to d, "user" to u
-                        ))
-                        Toast.makeText(this, "Hesap eklendi. Canlı TV ile açılıyor...", Toast.LENGTH_SHORT).show()
-                        val i = Intent(this, ContentActivity::class.java)
-                        i.putExtra("MODE", "LIVE")
-                        startActivity(i)
-                        finish()
-                    } else {
-                        val m = etM3u.text.toString().trim()
-                        if (m.isEmpty()) {
-                            Toast.makeText(this, "M3U URL boş olamaz.", Toast.LENGTH_SHORT).show()
-                            return@setOnClickListener
-                        }
-                        prefs.createM3uAccount(finalName, m)
-                        RemoteLogger.sendEvent(this, "account_m3u_created", mapOf(
-                            "name" to finalName, "m3u_prefix" to m.take(160)
-                        ))
-                        Toast.makeText(this, "Hesap eklendi. Canlı TV ile açılıyor...", Toast.LENGTH_SHORT).show()
-                        val i = Intent(this, ContentActivity::class.java)
-                        i.putExtra("MODE", "LIVE")
-                        startActivity(i)
-                        finish()
-                    }
-                }
+        fun updateTypeUI() {
+            if (isXtream) {
+                layoutXtream.visibility = View.VISIBLE
+                layoutM3u.visibility = View.GONE
+                cardXtream.background = getDrawable(R.drawable.bg_header_card)
+                cardM3u.background = getDrawable(R.drawable.bg_input_dark)
+            } else {
+                layoutXtream.visibility = View.GONE
+                layoutM3u.visibility = View.VISIBLE
+                cardM3u.background = getDrawable(R.drawable.bg_header_card)
+                cardXtream.background = getDrawable(R.drawable.bg_input_dark)
             }
         }
-        EOF
+
+        cardXtream.setOnClickListener { isXtream = true; updateTypeUI() }
+        cardM3u.setOnClickListener { isXtream = false; updateTypeUI() }
+        updateTypeUI()
+
+        fun refreshList() {
+            val accounts: MutableList<AccountProfile> = prefs.getAccounts().toMutableList()
+            val adapter = ArrayAdapter(
+                this,
+                android.R.layout.simple_list_item_1,
+                accounts.map { a ->
+                    val t = if (a.type == "M3U") "M3U" else "Xtream"
+                    a.name + " - " + t
+                }
+            )
+            lvAccounts.adapter = adapter
+
+            lvAccounts.setOnItemClickListener { _, _, position, _ ->
+                val acc = accounts[position]
+                prefs.setActive(acc.id)
+                val i = Intent(this, ContentActivity::class.java)
+                i.putExtra("MODE", "LIVE")
+                startActivity(i)
+                finish()
+            }
+
+            lvAccounts.setOnItemLongClickListener { _, _, position, _ ->
+                val acc = accounts[position]
+                val dialog = AlertDialog.Builder(this)
+                    .setTitle("Hesabı Sil")
+                    .setMessage("Hesap silinsin mi? " + acc.name)
+                    .setPositiveButton("Evet") { _, _ ->
+                        prefs.deleteAccount(acc.id)
+                        refreshList()
+                    }
+                    .setNegativeButton("Hayır", null)
+                    .create()
+                dialog.show()
+                true
+            }
+        }
+
+        refreshList()
+
+        btnAdd.setOnClickListener {
+            val name = etName.text.toString().trim()
+            val finalName = if (name.isNotEmpty()) name else "Hesap"
+
+            if (isXtream) {
+                var d = etDns.text.toString().trim()
+                val u = etUser.text.toString().trim().replace("""\s+""".toRegex(), "")
+                val p = etPass.text.toString().trim()
+
+                if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
+                    Toast.makeText(this, "Xtream URL / kullanıcı adı / şifre zorunlu.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (!d.startsWith("http://", true) && !d.startsWith("https://", true)) {
+                    d = "http://" + d
+                }
+                if (d.endsWith("/")) d = d.dropLast(1)
+
+                prefs.createXtreamAccount(finalName, d, u, p)
+                RemoteLogger.sendEvent(this, "account_xtream_created", mapOf(
+                    "name" to finalName, "dns" to d, "user" to u
+                ))
+                Toast.makeText(this, "Hesap eklendi. Canlı TV ile açılıyor...", Toast.LENGTH_SHORT).show()
+                val i = Intent(this, ContentActivity::class.java)
+                i.putExtra("MODE", "LIVE")
+                startActivity(i)
+                finish()
+            } else {
+                val m = etM3u.text.toString().trim()
+                if (m.isEmpty()) {
+                    Toast.makeText(this, "M3U URL boş olamaz.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                prefs.createM3uAccount(finalName, m)
+                RemoteLogger.sendEvent(this, "account_m3u_created", mapOf(
+                    "name" to finalName, "m3u_prefix" to m.take(160)
+                ))
+                Toast.makeText(this, "Hesap eklendi. Canlı TV ile açılıyor...", Toast.LENGTH_SHORT).show()
+                val i = Intent(this, ContentActivity::class.java)
+                i.putExtra("MODE", "LIVE")
+                startActivity(i)
+                finish()
+            }
+        }
+    }
+}
+EOF
 
         # ============ ContentActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
@@ -1941,7 +1941,7 @@ jobs:
         EOF
 
         # ============ PlayerActivity ============
-cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
+        cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
 package $PACKAGE_NAME
 
 import android.content.Context
@@ -1969,13 +1969,13 @@ class PlayerActivity : AppCompatActivity() {
 
     private var player: ExoPlayer? = null
     private var currentMode: Int = 0
-
     private lateinit var playerView: PlayerView
     private lateinit var leftOverlay: View
     private lateinit var rightOverlay: View
     private lateinit var tvCenterInfo: TextView
     private lateinit var tvBrightness: TextView
     private lateinit var tvVolume: TextView
+    private lateinit var btnMode: ImageButton
     private lateinit var btnPlayPause: ImageButton
 
     private var audioManager: AudioManager? = null
@@ -1994,9 +1994,8 @@ class PlayerActivity : AppCompatActivity() {
     private var playUrl: String = ""
     private var contentType: String = "LIVE"
 
-    // ✅ Resume fix: sadece 1 kere uygula
+    // ✅ Resume fix: sadece 1 kere uygula (READY tekrarlarında geri zıplama biter)
     private var resumeApplied = false
-    private var pendingResumeMs: Long = 0L
 
     private val FAKE_USER_AGENT =
         "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
@@ -2008,11 +2007,11 @@ class PlayerActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
         window.decorView.systemUiVisibility =
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                View.SYSTEM_UI_FLAG_FULLSCREEN or
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
 
         setContentView(R.layout.activity_player_pro)
 
@@ -2028,7 +2027,7 @@ class PlayerActivity : AppCompatActivity() {
         }
 
         playerView = findViewById(R.id.pvMain)
-        val btnMode = findViewById<ImageButton>(R.id.btnMode)
+        btnMode = findViewById(R.id.btnMode)
         btnPlayPause = findViewById(R.id.btnPlayPause)
 
         leftOverlay = findViewById(R.id.overlayLeft)
@@ -2037,7 +2036,7 @@ class PlayerActivity : AppCompatActivity() {
         tvBrightness = findViewById(R.id.tvBrightness)
         tvVolume = findViewById(R.id.tvVolume)
 
-        // Default controller aktif (senin mantığın bozulmasın)
+        // Controller açık (isteyen controller da kullanır)
         playerView.useController = true
         playerView.controllerAutoShow = true
         playerView.controllerHideOnTouch = true
@@ -2054,18 +2053,8 @@ class PlayerActivity : AppCompatActivity() {
             applyResizeMode(playerView)
         }
 
-        // ✅ Özel Play/Pause butonu
-        btnPlayPause.isFocusable = true
-        btnPlayPause.isFocusableInTouchMode = true
-        btnPlayPause.isClickable = true
-        btnPlayPause.setOnClickListener { togglePlayPause() }
-        btnPlayPause.setOnKeyListener { _, keyCode, event ->
-            if (event.action == KeyEvent.ACTION_DOWN &&
-                (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
-            ) {
-                togglePlayPause()
-                true
-            } else false
+        btnPlayPause.setOnClickListener {
+            togglePlayPause()
         }
 
         setupGestureOverlay(leftOverlay, true)
@@ -2088,38 +2077,40 @@ class PlayerActivity : AppCompatActivity() {
             val exo = player!!
             playerView.player = exo
 
-            // ✅ Resume pozisyonunu baştan al
-            if (contentType != "LIVE") {
-                pendingResumeMs = Prefs(this@PlayerActivity).getLastPosition(playUrl)
-            }
-
             exo.setMediaItem(MediaItem.fromUri(playUrl))
-            exo.playWhenReady = true
             exo.prepare()
 
             exo.addListener(object : Player.Listener {
 
-                override fun onPlaybackStateChanged(state: Int) {
-                    // ✅ Resume: sadece 1 kere, READY olduğunda, zorla play()
-                    if (state == Player.STATE_READY && contentType != "LIVE") {
-                        applyResumeIfNeeded(exo)
-                    }
-
-                    // ✅ Bitince resume kaydını sil
-                    if (state == Player.STATE_ENDED && contentType != "LIVE") {
-                        Prefs(this@PlayerActivity).clearLastPosition(playUrl)
-                    }
-
-                    updatePlayPauseIcon()
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    updatePlayPauseIcon(isPlaying)
                 }
 
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    updatePlayPauseIcon()
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_READY) {
+
+                        // ✅ Resume fix: sadece 1 kere uygula + seek sonrası play()
+                        if (!resumeApplied && contentType != "LIVE") {
+                            resumeApplied = true
+
+                            val savedPos = Prefs(this@PlayerActivity).getLastPosition(playUrl)
+                            if (savedPos > 30000) {
+                                exo.seekTo(savedPos)
+                                exo.playWhenReady = true
+                                exo.play() // ✅ "gidiyor ama oynamıyor" fix
+                                Toast.makeText(this@PlayerActivity, "Kalan yerden devam ediliyor...", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        // İlk READY geldiğinde ikon güncelle
+                        updatePlayPauseIcon(exo.isPlaying)
+                    }
                 }
             })
 
-            // İlk ikon durumu
-            updatePlayPauseIcon()
+            exo.playWhenReady = true
+            exo.play()
+            updatePlayPauseIcon(true)
 
         } catch (e: Exception) {
             Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
@@ -2127,54 +2118,13 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    // ✅ Resume fix: tekrar tekrar seek atmasını engeller + play() zorlar
-    private fun applyResumeIfNeeded(exo: ExoPlayer) {
-        if (resumeApplied) return
-        val savedPos = pendingResumeMs
-        if (savedPos > 30000) {
-            // Eğer zaten ilerlemişse (ör: kullanıcı sarınca) tekrar bastırma
-            if (exo.currentPosition < 1500L) {
-                resumeApplied = true
-                exo.seekTo(savedPos)
-                exo.playWhenReady = true
-                exo.play()
-                Toast.makeText(this@PlayerActivity, "Kalan yerden devam ediliyor...", Toast.LENGTH_SHORT).show()
-            } else {
-                resumeApplied = true
-            }
-        } else {
-            resumeApplied = true
-        }
-    }
-
-    private fun togglePlayPause() {
-        val exo = player ?: return
-        if (exo.isPlaying) {
-            exo.pause()
-            showCenterInfo("⏸ Duraklatıldı")
-        } else {
-            exo.playWhenReady = true
-            exo.play()
-            showCenterInfo("▶ Oynatılıyor")
-        }
-        updatePlayPauseIcon()
-    }
-
-    private fun updatePlayPauseIcon() {
-        val exo = player
-        val playing = exo?.isPlaying == true
-        btnPlayPause.setImageResource(
-            if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
-        )
-    }
-
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        // ✅ TV kumandası / klavye play-pause
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
-                KeyEvent.KEYCODE_SPACE,
-                KeyEvent.KEYCODE_P -> {
+                KeyEvent.KEYCODE_MEDIA_PLAY,
+                KeyEvent.KEYCODE_MEDIA_PAUSE,
+                KeyEvent.KEYCODE_SPACE -> {
                     togglePlayPause()
                     return true
                 }
@@ -2183,26 +2133,45 @@ class PlayerActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
-    override fun onPause() {
-        super.onPause()
-        savePositionIfNeeded()
-    }
-
     override fun onStop() {
         super.onStop()
-        savePositionIfNeeded()
-    }
-
-    private fun savePositionIfNeeded() {
         val p = player ?: return
+
         if (contentType != "LIVE") {
             val pos = p.currentPosition
             val dur = p.duration
-            // 30sn üstü izlenmişse kaydet, sona yakınsa kaydetme
-            if (dur > 0 && pos > 30000 && dur - pos > 60000) {
-                Prefs(this).setLastPosition(playUrl, pos)
+
+            if (dur > 0) {
+                // ✅ 30sn üstü ve bitmeye 60sn'den fazla varsa kaydet
+                if (pos > 30000 && (dur - pos) > 60000) {
+                    Prefs(this).setLastPosition(playUrl, pos)
+                } else {
+                    // ✅ Film bitti / başa yakın -> resume temizle
+                    Prefs(this).clearLastPosition(playUrl)
+                }
             }
         }
+    }
+
+    private fun togglePlayPause() {
+        val p = player ?: return
+        if (p.isPlaying) {
+            p.pause()
+            showCenterInfo("⏸ Duraklatıldı")
+        } else {
+            p.playWhenReady = true
+            p.play()
+            showCenterInfo("▶ Oynatılıyor")
+        }
+        updatePlayPauseIcon(p.isPlaying)
+    }
+
+    private fun updatePlayPauseIcon(isPlaying: Boolean) {
+        try {
+            btnPlayPause.setImageResource(
+                if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+            )
+        } catch (_: Exception) {}
     }
 
     private fun setupGestureOverlay(view: View, isLeft: Boolean) {
@@ -2266,7 +2235,7 @@ class PlayerActivity : AppCompatActivity() {
         if (newVol > maxVolume) newVol = maxVolume
         am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
         val percent = if (maxVolume > 0) (newVol * 100 / maxVolume) else 0
-        tvVolume.text = "Ses: \$percent%"
+        tvVolume.text = "Ses: " + percent + "%"
         tvVolume.visibility = View.VISIBLE
     }
 
@@ -2278,7 +2247,7 @@ class PlayerActivity : AppCompatActivity() {
         lp.screenBrightness = newB
         window.attributes = lp
         currentBrightness = newB
-        tvBrightness.text = "Parlaklık: \${(currentBrightness * 100f).toInt()}%"
+        tvBrightness.text = "Parlaklık: " + ((currentBrightness * 100f).toInt()) + "%"
         tvBrightness.visibility = View.VISIBLE
     }
 
@@ -2313,537 +2282,7 @@ class PlayerActivity : AppCompatActivity() {
 }
 EOF
 
-        # ============ LAYOUTLAR ============
-        cat <<EOF > app/src/main/res/layout/activity_login.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:ads="http://schemas.android.com/apk/res-auto"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:background="@color/bg_dark">
-
-            <com.google.android.gms.ads.AdView
-                android:id="@+id/adViewTopLogin"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                ads:adSize="BANNER"
-                ads:adUnitId="@string/admob_banner_test"
-                android:layout_marginBottom="8dp"
-                android:focusable="false"
-                android:focusableInTouchMode="false"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="10dp">
-
-                <TextView
-                    android:id="@+id/tvTitle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="ErdinPlayer Pro"
-                    android:textColor="@color/primary_cyan"
-                    android:textStyle="bold"
-                    android:textSize="22sp"/>
-
-                <ImageButton
-                    android:id="@+id/btnLangLogin"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_menu_manage"
-                    android:tint="@color/white"/>
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvLoginType"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Giriş Tipi"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:layout_marginBottom="4dp"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="14dp">
-
-                <LinearLayout
-                    android:id="@+id/cardXtream"
-                    android:layout_width="0dp"
-                    android:layout_height="72dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="8dp"
-                    android:background="@drawable/bg_header_card"
-                    android:layout_marginRight="6dp"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true">
-
-                    <TextView
-                        android:id="@+id/tvXtream"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Xtream"
-                        android:textStyle="bold"
-                        android:textColor="@color/white"
-                        android:textSize="16sp"/>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/cardM3u"
-                    android:layout_width="0dp"
-                    android:layout_height="72dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="8dp"
-                    android:background="@drawable/bg_input_dark"
-                    android:layout_marginLeft="6dp"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true">
-
-                    <TextView
-                        android:id="@+id/tvM3u"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="M3U"
-                        android:textStyle="bold"
-                        android:textColor="@color/white"
-                        android:textSize="16sp"/>
-                </LinearLayout>
-            </LinearLayout>
-
-            <EditText
-                android:id="@+id/etName"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:hint="Hesap adı"
-                android:background="@drawable/bg_input_dark"
-                android:padding="12dp"
-                android:textColor="@color/white"
-                android:textColorHint="@color/gray_600"
-                android:inputType="textPersonName"
-                android:layout_marginBottom="10dp"/>
-
-            <LinearLayout
-                android:id="@+id/layoutXtream"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <EditText
-                    android:id="@+id/etDns"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="Xtream URL girin"
-                    android:background="@drawable/bg_input_dark"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/gray_600"
-                    android:inputType="textUri"
-                    android:layout_marginBottom="8dp"/>
-
-                <EditText
-                    android:id="@+id/etUser"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="Kullanıcı adı"
-                    android:background="@drawable/bg_input_dark"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/gray_600"
-                    android:inputType="textEmailAddress"
-                    android:layout_marginBottom="8dp"/>
-
-                <EditText
-                    android:id="@+id/etPass"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="Şifre"
-                    android:inputType="textVisiblePassword"
-                    android:background="@drawable/bg_input_dark"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/gray_600"
-                    android:layout_marginBottom="8dp"/>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/layoutM3u"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <EditText
-                    android:id="@+id/etM3u"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="M3U URL girin"
-                    android:background="@drawable/bg_input_dark"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/hint_yellow"
-                    android:inputType="textUri"
-                    android:layout_marginBottom="10dp"/>
-            </LinearLayout>
-
-            <Button
-                android:id="@+id/btnAddAccount"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:text="Hesap Ekle"
-                android:textStyle="bold"
-                android:textColor="@color/black"
-                android:textSize="16sp"
-                android:background="@color/primary_cyan"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="16dp"/>
-
-            <TextView
-                android:id="@+id/tvAccountsTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Kayıtlı Hesaplar"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="2dp"/>
-
-            <TextView
-                android:id="@+id/tvAccountsHint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Devam etmek için alttan bir hesap seçin"
-                android:textColor="@color/hint_yellow"
-                android:textSize="13sp"
-                android:layout_marginBottom="6dp"/>
-
-            <ListView
-                android:id="@+id/lvAccounts"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:divider="@android:color/transparent"
-                android:dividerHeight="10dp"/>
-        </LinearLayout>
-        EOF
-
-        cat <<EOF > app/src/main/res/layout/activity_content.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
-            xmlns:ads="http://schemas.android.com/apk/res-auto"
-            android:id="@+id/drawerLayout"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:background="@color/bg_dark">
-
-                <com.google.android.gms.ads.AdView
-                    android:id="@+id/adViewTopContent"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_banner_test"
-                    android:layout_marginBottom="4dp"
-                    android:focusable="false"
-                    android:focusableInTouchMode="false"/>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:background="@color/bg_card"
-                    android:paddingLeft="12dp"
-                    android:paddingRight="12dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp">
-
-                    <TextView
-                        android:id="@+id/tvOpenDrawer"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="☰"
-                        android:textColor="@color/white"
-                        android:textSize="22sp"
-                        android:paddingRight="12dp"/>
-
-                    <TextView
-                        android:id="@+id/tvTitleBar"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Canlı TV"
-                        android:textColor="@color/white"
-                        android:textSize="18sp"
-                        android:textStyle="bold"/>
-
-                    <EditText
-                        android:id="@+id/etSearch"
-                        android:layout_width="200dp"
-                        android:layout_height="40dp"
-                        android:hint="Ara..."
-                        android:background="@drawable/bg_input_dark"
-                        android:paddingLeft="10dp"
-                        android:paddingRight="10dp"
-                        android:textColor="@color/white"
-                        android:textColorHint="@color/hint_yellow"
-                        android:singleLine="true"
-                        android:imeOptions="actionSearch"/>
-                </LinearLayout>
-
-                <ProgressBar
-                    android:id="@+id/pbLoading"
-                    style="?android:attr/progressBarStyleLarge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginBottom="8dp"
-                    android:visibility="gone"/>
-
-                <TextView
-                    android:id="@+id/tvStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/error_red"
-                    android:textSize="14sp"
-                    android:padding="8dp"
-                    android:visibility="gone"/>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvContent"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:padding="8dp"/>
-
-                <com.google.android.gms.ads.AdView
-                    android:id="@+id/adViewBottomContent"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_banner_test"
-                    android:layout_marginTop="4dp"
-                    android:focusable="false"
-                    android:focusableInTouchMode="false"/>
-
-                <com.google.android.material.bottomnavigation.BottomNavigationView
-                    android:id="@+id/bottomNav"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@color/bg_card_soft"
-                    app:menu="@menu/bottom_nav_menu"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"/>
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="300dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="start"
-                android:orientation="vertical"
-                android:background="@color/drawer_bg"
-                android:padding="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/bg_header_card"
-                    android:padding="12dp">
-
-                    <TextView
-                        android:id="@+id/tvDrawerUser"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Hesap: -"
-                        android:textColor="@color/white"
-                        android:textStyle="bold"
-                        android:textSize="16sp"/>
-
-                    <TextView
-                        android:id="@+id/tvDrawerExpire"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Süre: -"
-                        android:textColor="@color/white"
-                        android:textSize="14sp"
-                        android:layout_marginTop="4dp"/>
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Ekli Hesaplar"
-                    android:textColor="@color/hint_yellow"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:layout_marginTop="12dp"
-                    android:layout_marginBottom="8dp"/>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvAccounts"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"/>
-
-                <TextView
-                    android:id="@+id/tvLogout"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:gravity="center"
-                    android:text="Çıkış"
-                    android:textColor="@color/white"
-                    android:textStyle="bold"
-                    android:background="@drawable/bg_focusable"
-                    android:layout_marginTop="10dp"/>
-            </LinearLayout>
-        </androidx.drawerlayout.widget.DrawerLayout>
-        EOF
-
-        cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="8dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="72dp"
-                android:orientation="vertical"
-                android:background="@drawable/bg_focusable"
-                android:padding="12dp">
-
-                <TextView
-                    android:id="@+id/txtName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/white"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:maxLines="2"
-                    android:ellipsize="end"/>
-
-                <TextView
-                    android:id="@+id/txtSub"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/hint_yellow"
-                    android:textSize="12sp"
-                    android:layout_marginTop="4dp"
-                    android:visibility="gone"/>
-            </LinearLayout>
-        </LinearLayout>
-        EOF
-
-        cat <<EOF > app/src/main/res/layout/item_account.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:background="@drawable/bg_focusable"
-            android:gravity="center_vertical"
-            android:minHeight="72dp"
-            android:padding="10dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvAccountName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Hesap Adı"
-                    android:textColor="@color/white"
-                    android:textStyle="bold"
-                    android:textSize="15sp"/>
-
-                <TextView
-                    android:id="@+id/tvAccountType"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Xtream"
-                    android:textColor="@color/primary_cyan"
-                    android:textSize="12sp"
-                    android:layout_marginTop="2dp"/>
-            </LinearLayout>
-
-            <ImageButton
-                android:id="@+id/btnDeleteAccount"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="@android:color/transparent"
-                android:src="@android:drawable/ic_menu_delete"
-                android:tint="@color/error_red"/>
-        </LinearLayout>
-        EOF
-
-        cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="@color/bg_dark">
-
-            <TextView
-                android:id="@+id/tvSeriesTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/white"
-                android:background="@color/bg_card"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:padding="16dp"/>
-
-            <ProgressBar
-                android:id="@+id/pbSeries"
-                style="?android:attr/progressBarStyleLarge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:visibility="gone"/>
-
-            <TextView
-                android:id="@+id/tvSeriesStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/error_red"
-                android:textSize="14sp"
-                android:padding="8dp"
-                android:visibility="gone"/>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvEpisodes"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:padding="8dp"/>
-        </LinearLayout>
-        EOF
-
+        # ============ LAYOUT: activity_player_pro.xml (Play/Pause butonlu) ============
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2854,7 +2293,7 @@ EOF
     <androidx.media3.ui.PlayerView
         android:id="@+id/pvMain"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"/>
 
     <LinearLayout
         android:id="@+id/overlayContainer"
@@ -2885,7 +2324,7 @@ EOF
         android:background="#80000000"
         android:padding="8dp"
         android:layout_gravity="center"
-        android:visibility="gone" />
+        android:visibility="gone"/>
 
     <TextView
         android:id="@+id/tvBrightness"
@@ -2897,7 +2336,7 @@ EOF
         android:padding="6dp"
         android:layout_gravity="top|left"
         android:layout_margin="12dp"
-        android:visibility="gone" />
+        android:visibility="gone"/>
 
     <TextView
         android:id="@+id/tvVolume"
@@ -2909,7 +2348,7 @@ EOF
         android:padding="6dp"
         android:layout_gravity="top|right"
         android:layout_margin="12dp"
-        android:visibility="gone" />
+        android:visibility="gone"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -2917,9 +2356,8 @@ EOF
         android:orientation="horizontal"
         android:padding="8dp"
         android:layout_gravity="bottom|center_horizontal"
-        android:gravity="right">
+        android:gravity="end">
 
-        <!-- ✅ Özel Play/Pause -->
         <ImageButton
             android:id="@+id/btnPlayPause"
             android:layout_width="56dp"
@@ -2929,7 +2367,7 @@ EOF
             android:padding="8dp"
             android:tint="@android:color/white"
             android:focusable="true"
-            android:focusableInTouchMode="true" />
+            android:focusableInTouchMode="true"/>
 
         <ImageButton
             android:id="@+id/btnMode"
@@ -2940,73 +2378,74 @@ EOF
             android:padding="8dp"
             android:tint="@android:color/white"
             android:focusable="true"
-            android:focusableInTouchMode="true" />
+            android:focusableInTouchMode="true"/>
     </LinearLayout>
 </FrameLayout>
 EOF
 
         # ============ MANIFEST ============
         cat <<EOF > app/src/main/AndroidManifest.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-            <uses-permission android:name="android.permission.INTERNET" />
-            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-            <uses-feature
-                android:name="android.software.leanback"
-                android:required="false" />
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
 
-            <application
-                android:theme="@style/Theme.ErdinPlayer"
-                android:icon="@mipmap/ic_launcher"
-                android:label="@string/app_name"
-                android:usesCleartextTraffic="true"
-                android:networkSecurityConfig="@xml/network_security_config">
+    <application
+        android:theme="@style/Theme.ErdinPlayer"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config">
 
-                <meta-data
-                    android:name="com.google.android.gms.ads.APPLICATION_ID"
-                    android:value="@string/admob_app_id" />
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="@string/admob_app_id" />
 
-                <activity
-                    android:name=".LoginActivity"
-                    android:exported="true">
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN"/>
-                        <category android:name="android.intent.category.LAUNCHER"/>
-                        <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
-                    </intent-filter>
-                </activity>
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
+            </intent-filter>
+        </activity>
 
-                <activity
-                    android:name=".ContentActivity"
-                    android:exported="false" />
+        <activity
+            android:name=".ContentActivity"
+            android:exported="false" />
 
-                <activity
-                    android:name=".SeriesDetailActivity"
-                    android:exported="false" />
+        <activity
+            android:name=".SeriesDetailActivity"
+            android:exported="false" />
 
-                <activity
-                    android:name=".PlayerActivity"
-                    android:screenOrientation="fullSensor"
-                    android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection|screenLayout|smallestScreenSize"
-                    android:exported="false" />
-            </application>
-        </manifest>
-        EOF
+        <activity
+            android:name=".PlayerActivity"
+            android:screenOrientation="fullSensor"
+            android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection|screenLayout|smallestScreenSize"
+            android:exported="false" />
+    </application>
+</manifest>
+EOF
 
-        mkdir -p app/src/main/res/xml
         cat <<EOF > app/src/main/res/xml/network_security_config.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <network-security-config>
-            <base-config cleartextTrafficPermitted="true">
-                <trust-anchors>
-                    <certificates src="system" />
-                    <certificates src="user" />
-                </trust-anchors>
-            </base-config>
-        </network-security-config>
-        EOF
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
+EOF
+
+        echo "✅ Proje dosyaları üretildi."
 
     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
@@ -3020,20 +2459,23 @@ EOF
         gradle bundleRelease --no-daemon
 
     - name: 6. APK'yi GitHub Artifact Olarak Yükle
-      id: upload_apk
       uses: actions/upload-artifact@v4
       with:
         name: ErdinPlayer-Pro-Ultra-APK
         path: ErdinPlayer/app/build/outputs/apk/release/*.apk
 
     - name: 7. AAB'yi GitHub Artifact Olarak Yükle
-      id: upload_aab
       uses: actions/upload-artifact@v4
       with:
         name: ErdinPlayer-Pro-Ultra-AAB
         path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
 
-    - name: 8. Artifact URL'lerini Göster
+    - name: 8. Bilgi
       run: |
         echo "====================================="
-        echo " 📦
+        echo "✅ Build tamamlandı"
+        echo "Artifacts:"
+        echo "- ErdinPlayer-Pro-Ultra-APK"
+        echo "- ErdinPlayer-Pro-Ultra-AAB"
+        echo "GitHub Actions > Run > Artifacts bölümünden indir."
+        echo "====================================="
