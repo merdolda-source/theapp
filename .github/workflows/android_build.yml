@@ -1060,7 +1060,7 @@ jobs:
         }
         EOF
 
-        # ============ ContentActivity (Scroll pozisyon koruma eklendi) ============
+        # ============ ContentActivity (Tam fetch fonksiyonları ile) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
 
@@ -1439,21 +1439,298 @@ jobs:
                 }
             }
 
-            // fetchCategoriesAndStreams, fetchM3u, fetchAccountInfo, formatExp, fetchCategories, fetchStreams, httpGet, doHttpGet fonksiyonları tamamen aynı (önceki versiyondan kopyalanmış)
-            // (uzunluk nedeniyle burada aynı kalıyor, ama gerçek dosyada tam olarak mevcut kodlar kullanılacak)
+            private fun fetchCategoriesAndStreams() {
+                val acc = activeAcc ?: return
+                pb.visibility = View.VISIBLE
+                tvStatus.visibility = View.GONE
 
-            private fun fetchCategoriesAndStreams() { /* aynı kod */ }
-            private fun fetchM3u(urlStr: String): Pair<List<Category>, List<StreamItem>> { /* aynı kod */ }
-            private fun fetchAccountInfo(baseUrl: String): Pair<String?, String?> { /* aynı kod */ }
-            private fun formatExp(exp: String?): String { /* aynı kod */ }
-            private fun fetchCategories(urlStr: String): List<Category> { /* aynı kod */ }
-            private fun fetchStreams(urlStr: String): List<StreamItem> { /* aynı kod */ }
-            private fun httpGet(urlStr: String): String { /* aynı kod */ }
-            private fun doHttpGet(urlStr: String, redirectsLeft: Int): String { /* aynı kod */ }
+                if (acc.type == "M3U") {
+                    var m3uUrl = acc.m3u?.trim() ?: ""
+                    if (m3uUrl.isEmpty()) {
+                        pb.visibility = View.GONE
+                        tvStatus.text = "Bu M3U hesabında link yok."
+                        tvStatus.visibility = View.VISIBLE
+                        return
+                    }
+
+                    Thread {
+                        try {
+                            val result = fetchM3u(m3uUrl)
+                            val cats = result.first
+                            val streamsList = result.second
+
+                            runOnUiThread {
+                                pb.visibility = View.GONE
+                                categoriesAll = cats
+                                streamsAll = streamsList
+                                tvDrawerExpire.text = "Süre: M3U Playlist"
+                                showCategories()
+                            }
+                        } catch (e: Exception) {
+                            runOnUiThread {
+                                pb.visibility = View.GONE
+                                tvStatus.text = "M3U okunamadı: " + (e.message ?: "bilinmeyen hata")
+                                tvStatus.visibility = View.VISIBLE
+                            }
+                            RemoteLogger.sendEvent(this, "m3u_fetch_failed", mapOf("error" to (e.message ?: "")))
+                        }
+                    }.start()
+                    return
+                }
+
+                var dnsRaw = (acc.dns ?: "").trim()
+                val user = (acc.user ?: "").trim().replace("""\s+""".toRegex(), "")
+                val pass = (acc.pass ?: "").trim()
+
+                if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
+                    pb.visibility = View.GONE
+                    tvStatus.text = "DNS / kullanıcı / şifre boş."
+                    tvStatus.visibility = View.VISIBLE
+                    return
+                }
+
+                val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
+                val base = dns + "/player_api.php?username=" + user + "&password=" + pass
+
+                val catAction = when (currentMode) {
+                    "VOD" -> "get_vod_categories"
+                    "SERIES" -> "get_series_categories"
+                    else -> "get_live_categories"
+                }
+                val streamsAction = when (currentMode) {
+                    "VOD" -> "get_vod_streams"
+                    "SERIES" -> "get_series"
+                    else -> "get_live_streams"
+                }
+
+                val catUrl = base + "&action=" + catAction
+                val streamsUrl = base + "&action=" + streamsAction
+
+                Thread {
+                    try {
+                        val accInfo = fetchAccountInfo(base)
+                        val fetchedCategories = fetchCategories(catUrl)
+                        val fetchedStreams = fetchStreams(streamsUrl)
+
+                        runOnUiThread {
+                            pb.visibility = View.GONE
+                            categoriesAll = fetchedCategories
+                            streamsAll = fetchedStreams
+                            val expText = formatExp(accInfo.second)
+                            tvDrawerExpire.text = "Süre: " + expText
+                            showCategories()
+                        }
+                    } catch (e: Exception) {
+                        runOnUiThread {
+                            pb.visibility = View.GONE
+                            tvStatus.text = "Veriler alınamadı: " + (e.message ?: "bilinmeyen hata")
+                            tvStatus.visibility = View.VISIBLE
+                        }
+                        RemoteLogger.sendEvent(this, "xtream_fetch_failed", mapOf("error" to (e.message ?: "")))
+                    }
+                }.start()
+            }
+
+            private fun fetchM3u(urlStr: String): Pair<List<Category>, List<StreamItem>> {
+                val categoriesMap = LinkedHashMap<String, Category>()
+                val streamsList = ArrayList<StreamItem>()
+
+                val body = httpGet(urlStr)
+                val lines = body.split("\n")
+                var currentName = ""
+                var currentGroup = "Genel"
+                var currentRef: String? = null
+                var currentOrg: String? = null
+
+                for (raw in lines) {
+                    val line = raw.trim()
+                    if (line.isEmpty()) continue
+                    if (line.startsWith("#EXTM3U", ignoreCase = true)) continue
+
+                    if (line.startsWith("#EXTINF", ignoreCase = true)) {
+                        var name = ""
+                        var group = "Genel"
+
+                        val groupIndex = line.indexOf("group-title=\"")
+                        if (groupIndex >= 0) {
+                            val start = groupIndex + "group-title=\"".length
+                            val end = line.indexOf("\"", startIndex = start)
+                            if (end > start) group = line.substring(start, end)
+                        }
+
+                        val commaIndex = line.lastIndexOf(',')
+                        if (commaIndex >= 0 && commaIndex < line.length - 1) {
+                            name = line.substring(commaIndex + 1).trim()
+                        }
+
+                        currentName = if (name.isNotEmpty()) name else "Kanal"
+                        currentGroup = if (group.isNotEmpty()) group else "Genel"
+                        currentRef = null
+                        currentOrg = null
+                    } else if (line.startsWith("#EXTVLCOPT:http-referrer=", ignoreCase = true)) {
+                        val idx = line.indexOf("=")
+                        if (idx >= 0 && idx < line.length - 1) currentRef = line.substring(idx + 1).trim()
+                    } else if (line.startsWith("#EXTVLCOPT:http-origin=", ignoreCase = true)) {
+                        val idx = line.indexOf("=")
+                        if (idx >= 0 && idx < line.length - 1) currentOrg = line.substring(idx + 1).trim()
+                    } else if (!line.startsWith("#")) {
+                        val urlPlay = line
+                        val groupId = if (currentGroup.isNotEmpty()) currentGroup else "Genel"
+
+                        val cat = categoriesMap.getOrPut(groupId) {
+                            Category(groupId, groupId, false)
+                        }
+
+                        streamsList.add(
+                            StreamItem(
+                                name = currentName,
+                                stream_id = null,
+                                series_id = null,
+                                container_extension = null,
+                                category_id = cat.category_id,
+                                full_url = urlPlay,
+                                referer = currentRef,
+                                origin = currentOrg
+                            )
+                        )
+                        currentRef = null
+                        currentOrg = null
+                    }
+                }
+
+                return Pair(categoriesMap.values.toList(), streamsList)
+            }
+
+            private fun fetchAccountInfo(baseUrl: String): Pair<String?, String?> {
+                return try {
+                    val body = httpGet(baseUrl)
+                    val obj = JSONObject(body)
+                    val userInfo = obj.optJSONObject("user_info")
+                    if (userInfo != null) {
+                        Pair(userInfo.optString("username", null), userInfo.optString("exp_date", null))
+                    } else Pair(null, null)
+                } catch (e: Exception) {
+                    Pair(null, null)
+                }
+            }
+
+            private fun formatExp(exp: String?): String {
+                if (exp.isNullOrEmpty() || exp == "0" || exp == "null") return "Sınırsız"
+                return try {
+                    val seconds = exp.toLong()
+                    val date = Date(seconds * 1000L)
+                    SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(date)
+                } catch (e: Exception) {
+                    exp
+                }
+            }
+
+            private fun fetchCategories(urlStr: String): List<Category> {
+                val list = ArrayList<Category>()
+                val body = httpGet(urlStr)
+                val arr = JSONArray(body)
+                var i = 0
+                while (i < arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val id = obj.optString("category_id", "")
+                    val name = obj.optString("category_name", "Kategori " + i)
+                    val isAdult = obj.optString("is_adult", "0") == "1" ||
+                            name.contains("18", ignoreCase = true) ||
+                            name.contains("adult", ignoreCase = true)
+                    list.add(Category(id, name, isAdult))
+                    i++
+                }
+                return list
+            }
+
+            private fun fetchStreams(urlStr: String): List<StreamItem> {
+                val list = ArrayList<StreamItem>()
+                val body = httpGet(urlStr)
+                val arr = JSONArray(body)
+                var i = 0
+                while (i < arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val name = obj.optString("name", "Bilinmeyen")
+                    val catId = obj.optString("category_id", "")
+                    val streamId = obj.optString("stream_id", null)
+                    val seriesId = obj.optString("series_id", null)
+                    val ext = obj.optString("container_extension", null)
+                    list.add(StreamItem(name, streamId, seriesId, ext, catId, null, null, null))
+                    i++
+                }
+                return list
+            }
+
+            private fun httpGet(urlStr: String): String {
+                try {
+                    return doHttpGet(urlStr, 5)
+                } catch (e: Exception) {
+                    if (urlStr.startsWith("https://")) {
+                        val httpUrl = "http://" + urlStr.substringAfter("https://")
+                        try {
+                            return doHttpGet(httpUrl, 5)
+                        } catch (e2: Exception) {
+                            throw e2
+                        }
+                    } else if (urlStr.startsWith("http://")) {
+                        val httpsUrl = "https://" + urlStr.substringAfter("http://")
+                        try {
+                            return doHttpGet(httpsUrl, 5)
+                        } catch (e2: Exception) {
+                            throw e2
+                        }
+                    }
+                    throw e
+                }
+            }
+
+            private fun doHttpGet(urlStr: String, redirectsLeft: Int): String {
+                if (redirectsLeft <= 0) throw Exception("Çok fazla yönlendirme")
+
+                val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+                    instanceFollowRedirects = false
+                    connectTimeout = 25000
+                    readTimeout = 35000
+                    requestMethod = "GET"
+                    setRequestProperty("User-Agent", FAKE_USER_AGENT)
+                    setRequestProperty("Accept", "application/json,text/plain,*/*")
+                    setRequestProperty("Accept-Encoding", "gzip")
+                    setRequestProperty("Connection", "close")
+                }
+
+                try {
+                    val code = conn.responseCode
+                    if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+                        val locRaw = conn.getHeaderField("Location") ?: ""
+                        if (locRaw.isNotEmpty()) {
+                            val loc = if (locRaw.startsWith("//")) urlStr.substringBefore(":") + ":" + locRaw else locRaw
+                            conn.disconnect()
+                            return doHttpGet(loc, redirectsLeft - 1)
+                        }
+                    }
+
+                    val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                    val encoding = (conn.contentEncoding ?: "").lowercase(Locale.getDefault())
+                    val raw = stream ?: throw Exception("HTTP " + code + " boş response")
+                    val input = if (encoding.contains("gzip")) java.util.zip.GZIPInputStream(raw) else raw
+                    val body = input.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                    val trimmed = body.trimStart()
+
+                    if (trimmed.startsWith("<!DOCTYPE", true) || trimmed.startsWith("<html", true)) {
+                        throw Exception("JSON yerine HTML döndü (muhtemel engel/koruma). İlk 200: " + trimmed.take(200))
+                    }
+                    if (code !in 200..299) {
+                        throw Exception("HTTP " + code + ": " + body.take(300))
+                    }
+                    return body
+                } finally {
+                    try { conn.disconnect() } catch (_: Exception) {}
+                }
+            }
         }
         EOF
 
-        # ============ SeriesDetailActivity (Grid tasarım + scroll koruma) ============
+        # ============ SeriesDetailActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
 
@@ -1664,7 +1941,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (Resume özelliği eklendi) ============
+        # ============ PlayerActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
 
@@ -1713,7 +1990,7 @@ jobs:
             private var tapCountRight: Int = 0
 
             private var playUrl: String = ""
-            private var contentType: String = "LIVE" // LIVE veya VOD
+            private var contentType: String = "LIVE"
 
             private val FAKE_USER_AGENT =
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
@@ -1793,7 +2070,7 @@ jobs:
                         override fun onPlaybackStateChanged(state: Int) {
                             if (state == Player.STATE_READY && contentType != "LIVE") {
                                 val savedPos = Prefs(this@PlayerActivity).getLastPosition(playUrl)
-                                if (savedPos > 30000) { // 30 saniyeden fazla izlenmişse
+                                if (savedPos > 30000) {
                                     exo.seekTo(savedPos)
                                     Toast.makeText(this@PlayerActivity, "Önceki konumdan devam ediliyor...", Toast.LENGTH_SHORT).show()
                                 }
@@ -1814,7 +2091,7 @@ jobs:
                 if (contentType != "LIVE") {
                     val pos = p.currentPosition
                     val dur = p.duration
-                    if (dur > 0 && pos > 30000 && dur - pos > 60000) { // kalan 1 dakikadan fazla ve 30sn'den fazla izlenmişse kaydet
+                    if (dur > 0 && pos > 30000 && dur - pos > 60000) {
                         Prefs(this).setLastPosition(playUrl, pos)
                     }
                 }
@@ -1939,7 +2216,490 @@ jobs:
         }
         EOF
 
-        # ============ LAYOUTLAR (series detail için RecyclerView) ============
+        # ============ LAYOUTLAR ============
+        cat <<EOF > app/src/main/res/layout/activity_login.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:ads="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@color/bg_dark">
+
+            <com.google.android.gms.ads.AdView
+                android:id="@+id/adViewTopLogin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                ads:adSize="BANNER"
+                ads:adUnitId="@string/admob_banner_test"
+                android:layout_marginBottom="8dp"
+                android:focusable="false"
+                android:focusableInTouchMode="false"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:id="@+id/tvTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="ErdinPlayer Pro"
+                    android:textColor="@color/primary_cyan"
+                    android:textStyle="bold"
+                    android:textSize="22sp"/>
+
+                <ImageButton
+                    android:id="@+id/btnLangLogin"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@android:color/transparent"
+                    android:src="@android:drawable/ic_menu_manage"
+                    android:tint="@color/white"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvLoginType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Giriş Tipi"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:layout_marginBottom="4dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="14dp">
+
+                <LinearLayout
+                    android:id="@+id/cardXtream"
+                    android:layout_width="0dp"
+                    android:layout_height="72dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:background="@drawable/bg_header_card"
+                    android:layout_marginRight="6dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true">
+
+                    <TextView
+                        android:id="@+id/tvXtream"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Xtream"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/cardM3u"
+                    android:layout_width="0dp"
+                    android:layout_height="72dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:background="@drawable/bg_input_dark"
+                    android:layout_marginLeft="6dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true">
+
+                    <TextView
+                        android:id="@+id/tvM3u"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="M3U"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:textSize="16sp"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/etName"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:hint="Hesap adı"
+                android:background="@drawable/bg_input_dark"
+                android:padding="12dp"
+                android:textColor="@color/white"
+                android:textColorHint="@color/gray_600"
+                android:inputType="textPersonName"
+                android:layout_marginBottom="10dp"/>
+
+            <LinearLayout
+                android:id="@+id/layoutXtream"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <EditText
+                    android:id="@+id/etDns"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:hint="Xtream URL girin"
+                    android:background="@drawable/bg_input_dark"
+                    android:padding="12dp"
+                    android:textColor="@color/white"
+                    android:textColorHint="@color/gray_600"
+                    android:inputType="textUri"
+                    android:layout_marginBottom="8dp"/>
+
+                <EditText
+                    android:id="@+id/etUser"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:hint="Kullanıcı adı"
+                    android:background="@drawable/bg_input_dark"
+                    android:padding="12dp"
+                    android:textColor="@color/white"
+                    android:textColorHint="@color/gray_600"
+                    android:inputType="textEmailAddress"
+                    android:layout_marginBottom="8dp"/>
+
+                <EditText
+                    android:id="@+id/etPass"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:hint="Şifre"
+                    android:inputType="textVisiblePassword"
+                    android:background="@drawable/bg_input_dark"
+                    android:padding="12dp"
+                    android:textColor="@color/white"
+                    android:textColorHint="@color/gray_600"
+                    android:layout_marginBottom="8dp"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutM3u"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <EditText
+                    android:id="@+id/etM3u"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:hint="M3U URL girin"
+                    android:background="@drawable/bg_input_dark"
+                    android:padding="12dp"
+                    android:textColor="@color/white"
+                    android:textColorHint="@color/hint_yellow"
+                    android:inputType="textUri"
+                    android:layout_marginBottom="10dp"/>
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnAddAccount"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="Hesap Ekle"
+                android:textStyle="bold"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:background="@color/primary_cyan"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:id="@+id/tvAccountsTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Kayıtlı Hesaplar"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="2dp"/>
+
+            <TextView
+                android:id="@+id/tvAccountsHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Devam etmek için alttan bir hesap seçin"
+                android:textColor="@color/hint_yellow"
+                android:textSize="13sp"
+                android:layout_marginBottom="6dp"/>
+
+            <ListView
+                android:id="@+id/lvAccounts"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:divider="@android:color/transparent"
+                android:dividerHeight="10dp"/>
+        </LinearLayout>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/activity_content.xml
+        <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            xmlns:ads="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/drawerLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:background="@color/bg_dark">
+
+                <com.google.android.gms.ads.AdView
+                    android:id="@+id/adViewTopContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    ads:adSize="BANNER"
+                    ads:adUnitId="@string/admob_banner_test"
+                    android:layout_marginBottom="4dp"
+                    android:focusable="false"
+                    android:focusableInTouchMode="false"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@color/bg_card"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp">
+
+                    <TextView
+                        android:id="@+id/tvOpenDrawer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="☰"
+                        android:textColor="@color/white"
+                        android:textSize="22sp"
+                        android:paddingRight="12dp"/>
+
+                    <TextView
+                        android:id="@+id/tvTitleBar"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Canlı TV"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <EditText
+                        android:id="@+id/etSearch"
+                        android:layout_width="200dp"
+                        android:layout_height="40dp"
+                        android:hint="Ara..."
+                        android:background="@drawable/bg_input_dark"
+                        android:paddingLeft="10dp"
+                        android:paddingRight="10dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/hint_yellow"
+                        android:singleLine="true"
+                        android:imeOptions="actionSearch"/>
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/pbLoading"
+                    style="?android:attr/progressBarStyleLarge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone"/>
+
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/error_red"
+                    android:textSize="14sp"
+                    android:padding="8dp"
+                    android:visibility="gone"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:padding="8dp"/>
+
+                <com.google.android.gms.ads.AdView
+                    android:id="@+id/adViewBottomContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    ads:adSize="BANNER"
+                    ads:adUnitId="@string/admob_banner_test"
+                    android:layout_marginTop="4dp"
+                    android:focusable="false"
+                    android:focusableInTouchMode="false"/>
+
+                <com.google.android.material.bottomnavigation.BottomNavigationView
+                    android:id="@+id/bottomNav"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/bg_card_soft"
+                    app:menu="@menu/bottom_nav_menu"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="300dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="start"
+                android:orientation="vertical"
+                android:background="@color/drawer_bg"
+                android:padding="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_header_card"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:id="@+id/tvDrawerUser"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Hesap: -"
+                        android:textColor="@color/white"
+                        android:textStyle="bold"
+                        android:textSize="16sp"/>
+
+                    <TextView
+                        android:id="@+id/tvDrawerExpire"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Süre: -"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Ekli Hesaplar"
+                    android:textColor="@color/hint_yellow"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvAccounts"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"/>
+
+                <TextView
+                    android:id="@+id/tvLogout"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:gravity="center"
+                    android:text="Çıkış"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_focusable"
+                    android:layout_marginTop="10dp"/>
+            </LinearLayout>
+        </androidx.drawerlayout.widget.DrawerLayout>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="72dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_focusable"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/txtName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:maxLines="2"
+                    android:ellipsize="end"/>
+
+                <TextView
+                    android:id="@+id/txtSub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/hint_yellow"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"
+                    android:visibility="gone"/>
+            </LinearLayout>
+        </LinearLayout>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/item_account.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/bg_focusable"
+            android:gravity="center_vertical"
+            android:minHeight="72dp"
+            android:padding="10dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvAccountName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hesap Adı"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="15sp"/>
+
+                <TextView
+                    android:id="@+id/tvAccountType"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Xtream"
+                    android:textColor="@color/primary_cyan"
+                    android:textSize="12sp"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnDeleteAccount"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_menu_delete"
+                android:tint="@color/error_red"/>
+        </LinearLayout>
+        EOF
+
         cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -1982,7 +2742,91 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Diğer layout'lar (activity_login.xml, activity_content.xml, item_grid_pro.xml, item_account.xml, activity_player_pro.xml) tamamen aynı
+        cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
+        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/black">
+
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/pvMain"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+
+            <LinearLayout
+                android:id="@+id/overlayContainer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:layout_marginBottom="72dp">
+
+                <View
+                    android:id="@+id/overlayLeft"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+
+                <View
+                    android:id="@+id/overlayRight"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvInfoCenter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:background="#80000000"
+                android:padding="8dp"
+                android:layout_gravity="center"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/tvBrightness"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:background="#80000000"
+                android:padding="6dp"
+                android:layout_gravity="top|left"
+                android:layout_margin="12dp"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/tvVolume"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:background="#80000000"
+                android:padding="6dp"
+                android:layout_gravity="top|right"
+                android:layout_margin="12dp"
+                android:visibility="gone"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="8dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:gravity="right">
+
+                <ImageButton
+                    android:id="@+id/btnMode"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@android:color/transparent"
+                    android:src="@android:drawable/ic_menu_crop"
+                    android:padding="8dp"
+                    android:tint="@android:color/white"/>
+            </LinearLayout>
+        </FrameLayout>
+        EOF
 
         # ============ MANIFEST ve NETWORK CONFIG ============
         cat <<EOF > app/src/main/AndroidManifest.xml
@@ -2080,8 +2924,4 @@ jobs:
         echo "${{ steps.upload_aab.outputs.artifact-url }}"
         echo "====================================="
 
-        echo "### ErdinPlayer Pro Çıktılar" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+        echo "### ErdinPlayer Pro Çı
