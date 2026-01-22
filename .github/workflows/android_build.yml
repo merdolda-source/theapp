@@ -2912,6 +2912,7 @@ jobs:
         EOF
 
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
+                cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
@@ -2921,7 +2922,7 @@ jobs:
             <androidx.media3.ui.PlayerView
                 android:id="@+id/pvMain"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
+                android:layout_height="match_parent" />
 
             <LinearLayout
                 android:id="@+id/overlayContainer"
@@ -2952,7 +2953,7 @@ jobs:
                 android:background="#80000000"
                 android:padding="8dp"
                 android:layout_gravity="center"
-                android:visibility="gone"/>
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvBrightness"
@@ -2964,7 +2965,7 @@ jobs:
                 android:padding="6dp"
                 android:layout_gravity="top|left"
                 android:layout_margin="12dp"
-                android:visibility="gone"/>
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvVolume"
@@ -2976,8 +2977,9 @@ jobs:
                 android:padding="6dp"
                 android:layout_gravity="top|right"
                 android:layout_margin="12dp"
-                android:visibility="gone"/>
+                android:visibility="gone" />
 
+            <!-- ✅ Alt kontrol barı: Play/Pause + Mode -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -2987,16 +2989,31 @@ jobs:
                 android:gravity="right">
 
                 <ImageButton
+                    android:id="@+id/btnPlayPause"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@android:color/transparent"
+                    android:src="@android:drawable/ic_media_play"
+                    android:padding="8dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
+
+                <ImageButton
                     android:id="@+id/btnMode"
                     android:layout_width="56dp"
                     android:layout_height="56dp"
                     android:background="@android:color/transparent"
                     android:src="@android:drawable/ic_menu_crop"
                     android:padding="8dp"
-                    android:tint="@android:color/white"/>
+                    android:tint="@android:color/white"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true" />
             </LinearLayout>
+
         </FrameLayout>
         EOF
+
 
         # ============ MANIFEST ============
         cat <<EOF > app/src/main/AndroidManifest.xml
