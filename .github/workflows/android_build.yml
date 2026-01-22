@@ -1941,271 +1941,377 @@ jobs:
         EOF
 
         # ============ PlayerActivity ============
-        cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
-        package $PACKAGE_NAME
+cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
+package $PACKAGE_NAME
 
-        import android.content.Context
-        import android.media.AudioManager
-        import android.os.Bundle
-        import android.view.MotionEvent
-        import android.view.View
-        import android.view.WindowManager
-        import android.widget.ImageButton
-        import android.widget.TextView
-        import android.widget.Toast
-        import androidx.appcompat.app.AppCompatActivity
-        import androidx.media3.common.MediaItem
-        import androidx.media3.common.Player
-        import androidx.media3.datasource.DefaultHttpDataSource
-        import androidx.media3.exoplayer.ExoPlayer
-        import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-        import androidx.media3.ui.AspectRatioFrameLayout
-        import androidx.media3.ui.PlayerView
-        import $PACKAGE_NAME.utils.Prefs
-        import kotlin.math.abs
+import android.content.Context
+import android.media.AudioManager
+import android.os.Bundle
+import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
+import android.widget.ImageButton
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+import $PACKAGE_NAME.utils.Prefs
+import kotlin.math.abs
 
-        class PlayerActivity : AppCompatActivity() {
+class PlayerActivity : AppCompatActivity() {
 
-            private var player: ExoPlayer? = null
-            private var currentMode: Int = 0
-            private lateinit var playerView: PlayerView
-            private lateinit var leftOverlay: View
-            private lateinit var rightOverlay: View
-            private lateinit var tvCenterInfo: TextView
-            private lateinit var tvBrightness: TextView
-            private lateinit var tvVolume: TextView
+    private var player: ExoPlayer? = null
+    private var currentMode: Int = 0
 
-            private var audioManager: AudioManager? = null
-            private var maxVolume: Int = 0
-            private var gestureStartVolume: Int = 0
-            private var currentBrightness: Float = 0.5f
-            private var gestureStartBrightness: Float = 0.5f
-            private var gestureStartY: Float = 0f
-            private var isGesture: Boolean = false
+    private lateinit var playerView: PlayerView
+    private lateinit var leftOverlay: View
+    private lateinit var rightOverlay: View
+    private lateinit var tvCenterInfo: TextView
+    private lateinit var tvBrightness: TextView
+    private lateinit var tvVolume: TextView
+    private lateinit var btnPlayPause: ImageButton
 
-            private var lastTapLeft: Long = 0
-            private var lastTapRight: Long = 0
-            private var tapCountLeft: Int = 0
-            private var tapCountRight: Int = 0
+    private var audioManager: AudioManager? = null
+    private var maxVolume: Int = 0
+    private var gestureStartVolume: Int = 0
+    private var currentBrightness: Float = 0.5f
+    private var gestureStartBrightness: Float = 0.5f
+    private var gestureStartY: Float = 0f
+    private var isGesture: Boolean = false
 
-            private var playUrl: String = ""
-            private var contentType: String = "LIVE"
+    private var lastTapLeft: Long = 0
+    private var lastTapRight: Long = 0
+    private var tapCountLeft: Int = 0
+    private var tapCountRight: Int = 0
 
-            private val FAKE_USER_AGENT =
-                "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
+    private var playUrl: String = ""
+    private var contentType: String = "LIVE"
 
-            override fun onCreate(savedInstanceState: Bundle?) {
-                super.onCreate(savedInstanceState)
+    // ✅ Resume fix: sadece 1 kere uygula
+    private var resumeApplied = false
+    private var pendingResumeMs: Long = 0L
 
-                window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
-                window.decorView.systemUiVisibility =
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+    private val FAKE_USER_AGENT =
+        "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
 
-                setContentView(R.layout.activity_player_pro)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-                playUrl = intent.getStringExtra("URL") ?: ""
-                contentType = intent.getStringExtra("TYPE") ?: "LIVE"
-                val ref = intent.getStringExtra("REF") ?: ""
-                val org = intent.getStringExtra("ORG") ?: ""
+        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
 
-                if (playUrl.isEmpty()) {
-                    Toast.makeText(this, "Geçersiz yayın URL'si.", Toast.LENGTH_SHORT).show()
-                    finish()
-                    return
-                }
+        setContentView(R.layout.activity_player_pro)
 
-                playerView = findViewById(R.id.pvMain)
-                val btnMode = findViewById<ImageButton>(R.id.btnMode)
-                leftOverlay = findViewById(R.id.overlayLeft)
-                rightOverlay = findViewById(R.id.overlayRight)
-                tvCenterInfo = findViewById(R.id.tvInfoCenter)
-                tvBrightness = findViewById(R.id.tvBrightness)
-                tvVolume = findViewById(R.id.tvVolume)
+        playUrl = intent.getStringExtra("URL") ?: ""
+        contentType = intent.getStringExtra("TYPE") ?: "LIVE"
+        val ref = intent.getStringExtra("REF") ?: ""
+        val org = intent.getStringExtra("ORG") ?: ""
 
-                // Default controller aktif
-                playerView.useController = true
-                playerView.controllerAutoShow = true
-                playerView.controllerHideOnTouch = true
+        if (playUrl.isEmpty()) {
+            Toast.makeText(this, "Geçersiz yayın URL'si.", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
-                audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
-                val lp = window.attributes
-                currentBrightness = if (lp.screenBrightness in 0f..1f) lp.screenBrightness else 0.5f
+        playerView = findViewById(R.id.pvMain)
+        val btnMode = findViewById<ImageButton>(R.id.btnMode)
+        btnPlayPause = findViewById(R.id.btnPlayPause)
 
-                applyResizeMode(playerView)
+        leftOverlay = findViewById(R.id.overlayLeft)
+        rightOverlay = findViewById(R.id.overlayRight)
+        tvCenterInfo = findViewById(R.id.tvInfoCenter)
+        tvBrightness = findViewById(R.id.tvBrightness)
+        tvVolume = findViewById(R.id.tvVolume)
 
-                btnMode.setOnClickListener {
-                    currentMode = (currentMode + 1) % 3
-                    applyResizeMode(playerView)
-                }
+        // Default controller aktif (senin mantığın bozulmasın)
+        playerView.useController = true
+        playerView.controllerAutoShow = true
+        playerView.controllerHideOnTouch = true
 
-                setupGestureOverlay(leftOverlay, true)
-                setupGestureOverlay(rightOverlay, false)
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
+        val lp = window.attributes
+        currentBrightness = if (lp.screenBrightness in 0f..1f) lp.screenBrightness else 0.5f
 
-                try {
-                    val headers = mutableMapOf<String, String>()
-                    headers["User-Agent"] = FAKE_USER_AGENT
-                    if (ref.isNotEmpty()) headers["Referer"] = ref
-                    if (org.isNotEmpty()) headers["Origin"] = org
+        applyResizeMode(playerView)
 
-                    val httpFactory = DefaultHttpDataSource.Factory()
-                        .setConnectTimeoutMs(15000)
-                        .setReadTimeoutMs(30000)
-                        .setDefaultRequestProperties(headers)
+        btnMode.setOnClickListener {
+            currentMode = (currentMode + 1) % 3
+            applyResizeMode(playerView)
+        }
 
-                    val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
+        // ✅ Özel Play/Pause butonu
+        btnPlayPause.isFocusable = true
+        btnPlayPause.isFocusableInTouchMode = true
+        btnPlayPause.isClickable = true
+        btnPlayPause.setOnClickListener { togglePlayPause() }
+        btnPlayPause.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN &&
+                (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
+            ) {
+                togglePlayPause()
+                true
+            } else false
+        }
 
-                    player = ExoPlayer.Builder(this).setMediaSourceFactory(mediaSourceFactory).build()
-                    val exo = player!!
-                    playerView.player = exo
+        setupGestureOverlay(leftOverlay, true)
+        setupGestureOverlay(rightOverlay, false)
 
-                    exo.setMediaItem(MediaItem.fromUri(playUrl))
-                    exo.prepare()
+        try {
+            val headers = mutableMapOf<String, String>()
+            headers["User-Agent"] = FAKE_USER_AGENT
+            if (ref.isNotEmpty()) headers["Referer"] = ref
+            if (org.isNotEmpty()) headers["Origin"] = org
 
-                    exo.addListener(object : Player.Listener {
-                        override fun onPlaybackStateChanged(state: Int) {
-                            if (state == Player.STATE_READY && contentType != "LIVE") {
-                                val savedPos = Prefs(this@PlayerActivity).getLastPosition(playUrl)
-                                if (savedPos > 30000) {
-                                    exo.seekTo(savedPos)
-                                    Toast.makeText(this@PlayerActivity, "Kalan yerden devam ediliyor...", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }
-                    })
+            val httpFactory = DefaultHttpDataSource.Factory()
+                .setConnectTimeoutMs(15000)
+                .setReadTimeoutMs(30000)
+                .setDefaultRequestProperties(headers)
 
-                    exo.playWhenReady = true
-                } catch (e: Exception) {
-                    Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
-                    finish()
-                }
+            val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
+
+            player = ExoPlayer.Builder(this).setMediaSourceFactory(mediaSourceFactory).build()
+            val exo = player!!
+            playerView.player = exo
+
+            // ✅ Resume pozisyonunu baştan al
+            if (contentType != "LIVE") {
+                pendingResumeMs = Prefs(this@PlayerActivity).getLastPosition(playUrl)
             }
 
-            override fun onStop() {
-                super.onStop()
-                val p = player ?: return
-                if (contentType != "LIVE") {
-                    val pos = p.currentPosition
-                    val dur = p.duration
-                    if (dur > 0 && pos > 30000 && dur - pos > 60000) {
-                        Prefs(this).setLastPosition(playUrl, pos)
+            exo.setMediaItem(MediaItem.fromUri(playUrl))
+            exo.playWhenReady = true
+            exo.prepare()
+
+            exo.addListener(object : Player.Listener {
+
+                override fun onPlaybackStateChanged(state: Int) {
+                    // ✅ Resume: sadece 1 kere, READY olduğunda, zorla play()
+                    if (state == Player.STATE_READY && contentType != "LIVE") {
+                        applyResumeIfNeeded(exo)
                     }
-                }
-            }
 
-            private fun setupGestureOverlay(view: View, isLeft: Boolean) {
-                view.setOnTouchListener { v, event ->
-                    val am = audioManager
-                    when (event.action) {
-                        MotionEvent.ACTION_DOWN -> {
-                            gestureStartY = event.y
-                            isGesture = false
-                            gestureStartVolume = am?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: (maxVolume / 2)
-                            gestureStartBrightness = currentBrightness
-                            tvBrightness.visibility = View.GONE
-                            tvVolume.visibility = View.GONE
-                            true
-                        }
-                        MotionEvent.ACTION_MOVE -> {
-                            val dy = event.y - gestureStartY
-                            if (abs(dy) > 50) {
-                                isGesture = true
-                                val percent = -dy / v.height.toFloat()
-                                if (isLeft) adjustBrightness(percent) else adjustVolume(percent)
-                            }
-                            true
-                        }
-                        MotionEvent.ACTION_UP -> {
-                            if (!isGesture) {
-                                playerView.showController()
-                                val now = System.currentTimeMillis()
-                                if (isLeft) {
-                                    tapCountLeft = if (now - lastTapLeft < 350) tapCountLeft + 1 else 1
-                                    lastTapLeft = now
-                                    if (tapCountLeft >= 2) {
-                                        tapCountLeft = 0
-                                        seekBy(-15000L)
-                                        showCenterInfo("◄◄ 15 saniye")
-                                    }
-                                } else {
-                                    tapCountRight = if (now - lastTapRight < 350) tapCountRight + 1 else 1
-                                    lastTapRight = now
-                                    if (tapCountRight >= 2) {
-                                        tapCountRight = 0
-                                        seekBy(15000L)
-                                        showCenterInfo("15 saniye ►►")
-                                    }
-                                }
-                            }
-                            tvBrightness.visibility = View.GONE
-                            tvVolume.visibility = View.GONE
-                            true
-                        }
-                        else -> false
+                    // ✅ Bitince resume kaydını sil
+                    if (state == Player.STATE_ENDED && contentType != "LIVE") {
+                        Prefs(this@PlayerActivity).clearLastPosition(playUrl)
                     }
+
+                    updatePlayPauseIcon()
                 }
-            }
 
-            private fun adjustVolume(percentDelta: Float) {
-                val am = audioManager ?: return
-                val change = (percentDelta * maxVolume).toInt()
-                var newVol = gestureStartVolume + change
-                if (newVol < 0) newVol = 0
-                if (newVol > maxVolume) newVol = maxVolume
-                am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                val percent = if (maxVolume > 0) (newVol * 100 / maxVolume) else 0
-                tvVolume.text = "Ses: \$percent%"
-                tvVolume.visibility = View.VISIBLE
-            }
-
-            private fun adjustBrightness(percentDelta: Float) {
-                var newB = gestureStartBrightness + percentDelta
-                if (newB < 0f) newB = 0f
-                if (newB > 1f) newB = 1f
-                val lp = window.attributes
-                lp.screenBrightness = newB
-                window.attributes = lp
-                currentBrightness = newB
-                tvBrightness.text = "Parlaklık: \${(currentBrightness * 100f).toInt()}%"
-                tvBrightness.visibility = View.VISIBLE
-            }
-
-            private fun seekBy(deltaMs: Long) {
-                val p = player ?: return
-                var newPos = p.currentPosition + deltaMs
-                if (newPos < 0L) newPos = 0L
-                val duration = p.duration
-                if (duration > 0 && newPos > duration) newPos = duration
-                p.seekTo(newPos)
-            }
-
-            private fun applyResizeMode(pv: PlayerView) {
-                pv.resizeMode = when (currentMode) {
-                    0 -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-                    else -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    updatePlayPauseIcon()
                 }
-            }
+            })
 
-            private fun showCenterInfo(text: String) {
-                tvCenterInfo.text = text
-                tvCenterInfo.visibility = View.VISIBLE
-                tvCenterInfo.postDelayed({ tvCenterInfo.visibility = View.GONE }, 1200)
-            }
+            // İlk ikon durumu
+            updatePlayPauseIcon()
 
-            override fun onDestroy() {
-                super.onDestroy()
-                player?.release()
-                player = null
+        } catch (e: Exception) {
+            Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
+            finish()
+        }
+    }
+
+    // ✅ Resume fix: tekrar tekrar seek atmasını engeller + play() zorlar
+    private fun applyResumeIfNeeded(exo: ExoPlayer) {
+        if (resumeApplied) return
+        val savedPos = pendingResumeMs
+        if (savedPos > 30000) {
+            // Eğer zaten ilerlemişse (ör: kullanıcı sarınca) tekrar bastırma
+            if (exo.currentPosition < 1500L) {
+                resumeApplied = true
+                exo.seekTo(savedPos)
+                exo.playWhenReady = true
+                exo.play()
+                Toast.makeText(this@PlayerActivity, "Kalan yerden devam ediliyor...", Toast.LENGTH_SHORT).show()
+            } else {
+                resumeApplied = true
+            }
+        } else {
+            resumeApplied = true
+        }
+    }
+
+    private fun togglePlayPause() {
+        val exo = player ?: return
+        if (exo.isPlaying) {
+            exo.pause()
+            showCenterInfo("⏸ Duraklatıldı")
+        } else {
+            exo.playWhenReady = true
+            exo.play()
+            showCenterInfo("▶ Oynatılıyor")
+        }
+        updatePlayPauseIcon()
+    }
+
+    private fun updatePlayPauseIcon() {
+        val exo = player
+        val playing = exo?.isPlaying == true
+        btnPlayPause.setImageResource(
+            if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
+        )
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // ✅ TV kumandası / klavye play-pause
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+                KeyEvent.KEYCODE_SPACE,
+                KeyEvent.KEYCODE_P -> {
+                    togglePlayPause()
+                    return true
+                }
             }
         }
-        EOF
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        savePositionIfNeeded()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        savePositionIfNeeded()
+    }
+
+    private fun savePositionIfNeeded() {
+        val p = player ?: return
+        if (contentType != "LIVE") {
+            val pos = p.currentPosition
+            val dur = p.duration
+            // 30sn üstü izlenmişse kaydet, sona yakınsa kaydetme
+            if (dur > 0 && pos > 30000 && dur - pos > 60000) {
+                Prefs(this).setLastPosition(playUrl, pos)
+            }
+        }
+    }
+
+    private fun setupGestureOverlay(view: View, isLeft: Boolean) {
+        view.setOnTouchListener { v, event ->
+            val am = audioManager
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    gestureStartY = event.y
+                    isGesture = false
+                    gestureStartVolume = am?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: (maxVolume / 2)
+                    gestureStartBrightness = currentBrightness
+                    tvBrightness.visibility = View.GONE
+                    tvVolume.visibility = View.GONE
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = event.y - gestureStartY
+                    if (abs(dy) > 50) {
+                        isGesture = true
+                        val percent = -dy / v.height.toFloat()
+                        if (isLeft) adjustBrightness(percent) else adjustVolume(percent)
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!isGesture) {
+                        playerView.showController()
+                        val now = System.currentTimeMillis()
+                        if (isLeft) {
+                            tapCountLeft = if (now - lastTapLeft < 350) tapCountLeft + 1 else 1
+                            lastTapLeft = now
+                            if (tapCountLeft >= 2) {
+                                tapCountLeft = 0
+                                seekBy(-15000L)
+                                showCenterInfo("◄◄ 15 saniye")
+                            }
+                        } else {
+                            tapCountRight = if (now - lastTapRight < 350) tapCountRight + 1 else 1
+                            lastTapRight = now
+                            if (tapCountRight >= 2) {
+                                tapCountRight = 0
+                                seekBy(15000L)
+                                showCenterInfo("15 saniye ►►")
+                            }
+                        }
+                    }
+                    tvBrightness.visibility = View.GONE
+                    tvVolume.visibility = View.GONE
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    private fun adjustVolume(percentDelta: Float) {
+        val am = audioManager ?: return
+        val change = (percentDelta * maxVolume).toInt()
+        var newVol = gestureStartVolume + change
+        if (newVol < 0) newVol = 0
+        if (newVol > maxVolume) newVol = maxVolume
+        am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+        val percent = if (maxVolume > 0) (newVol * 100 / maxVolume) else 0
+        tvVolume.text = "Ses: \$percent%"
+        tvVolume.visibility = View.VISIBLE
+    }
+
+    private fun adjustBrightness(percentDelta: Float) {
+        var newB = gestureStartBrightness + percentDelta
+        if (newB < 0f) newB = 0f
+        if (newB > 1f) newB = 1f
+        val lp = window.attributes
+        lp.screenBrightness = newB
+        window.attributes = lp
+        currentBrightness = newB
+        tvBrightness.text = "Parlaklık: \${(currentBrightness * 100f).toInt()}%"
+        tvBrightness.visibility = View.VISIBLE
+    }
+
+    private fun seekBy(deltaMs: Long) {
+        val p = player ?: return
+        var newPos = p.currentPosition + deltaMs
+        if (newPos < 0L) newPos = 0L
+        val duration = p.duration
+        if (duration > 0 && newPos > duration) newPos = duration
+        p.seekTo(newPos)
+    }
+
+    private fun applyResizeMode(pv: PlayerView) {
+        pv.resizeMode = when (currentMode) {
+            0 -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+            1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+            else -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        }
+    }
+
+    private fun showCenterInfo(text: String) {
+        tvCenterInfo.text = text
+        tvCenterInfo.visibility = View.VISIBLE
+        tvCenterInfo.postDelayed({ tvCenterInfo.visibility = View.GONE }, 1200)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        player?.release()
+        player = null
+    }
+}
+EOF
 
         # ============ LAYOUTLAR ============
         cat <<EOF > app/src/main/res/layout/activity_login.xml
@@ -2739,91 +2845,105 @@ jobs:
         EOF
 
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <androidx.media3.ui.PlayerView
+        android:id="@+id/pvMain"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <LinearLayout
+        android:id="@+id/overlayContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:layout_marginBottom="72dp">
+
+        <View
+            android:id="@+id/overlayLeft"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:background="@color/black">
+            android:layout_weight="1" />
 
-            <androidx.media3.ui.PlayerView
-                android:id="@+id/pvMain"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
+        <View
+            android:id="@+id/overlayRight"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+    </LinearLayout>
 
-            <LinearLayout
-                android:id="@+id/overlayContainer"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="horizontal"
-                android:layout_marginBottom="72dp">
+    <TextView
+        android:id="@+id/tvInfoCenter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:background="#80000000"
+        android:padding="8dp"
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
-                <View
-                    android:id="@+id/overlayLeft"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1" />
+    <TextView
+        android:id="@+id/tvBrightness"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:background="#80000000"
+        android:padding="6dp"
+        android:layout_gravity="top|left"
+        android:layout_margin="12dp"
+        android:visibility="gone" />
 
-                <View
-                    android:id="@+id/overlayRight"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1" />
-            </LinearLayout>
+    <TextView
+        android:id="@+id/tvVolume"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:background="#80000000"
+        android:padding="6dp"
+        android:layout_gravity="top|right"
+        android:layout_margin="12dp"
+        android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/tvInfoCenter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:background="#80000000"
-                android:padding="8dp"
-                android:layout_gravity="center"
-                android:visibility="gone"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:gravity="right">
 
-            <TextView
-                android:id="@+id/tvBrightness"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="14sp"
-                android:background="#80000000"
-                android:padding="6dp"
-                android:layout_gravity="top|left"
-                android:layout_margin="12dp"
-                android:visibility="gone"/>
+        <!-- ✅ Özel Play/Pause -->
+        <ImageButton
+            android:id="@+id/btnPlayPause"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@android:color/transparent"
+            android:src="@android:drawable/ic_media_pause"
+            android:padding="8dp"
+            android:tint="@android:color/white"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
 
-            <TextView
-                android:id="@+id/tvVolume"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="14sp"
-                android:background="#80000000"
-                android:padding="6dp"
-                android:layout_gravity="top|right"
-                android:layout_margin="12dp"
-                android:visibility="gone"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="8dp"
-                android:layout_gravity="bottom|center_horizontal"
-                android:gravity="right">
-
-                <ImageButton
-                    android:id="@+id/btnMode"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_menu_crop"
-                    android:padding="8dp"
-                    android:tint="@android:color/white"/>
-            </LinearLayout>
-        </FrameLayout>
-        EOF
+        <ImageButton
+            android:id="@+id/btnMode"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@android:color/transparent"
+            android:src="@android:drawable/ic_menu_crop"
+            android:padding="8dp"
+            android:tint="@android:color/white"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+    </LinearLayout>
+</FrameLayout>
+EOF
 
         # ============ MANIFEST ============
         cat <<EOF > app/src/main/AndroidManifest.xml
