@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Ultra Build (TV Fix - FORCE HTTP/HTTPS - Resume FULL Fix - ScreenOn - Custom PlayPause)
+name: ErdinPlayer Pro Ultra Build (TV Fix - FORCE HTTP/HTTPS - Resume + Scroll Fix)
 
 on:
   push:
@@ -8,11 +8,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     env:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
     steps:
     - name: 1. Depo Çekme
       uses: actions/checkout@v4
@@ -23,20 +25,24 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Resume FULL Fix + ScreenOn + Custom PlayPause) - SIGNED
+    - name: 3. ErdinPlayer Pro Proje Üretimi (TV Fix + FORCE HTTP/HTTPS + Resume + Scroll Fix) - SIGNED
       shell: bash
       run: |
         set -e
+
         APP_NAME="ErdinPlayer"
         PACKAGE_NAME="com.erdin.player"
         PATH_NAME="com/erdin/player"
+
         PASS="erdin123"
         STORE_PASS="${ANDROID_KEYSTORE_PASSWORD:-$PASS}"
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "🚀 ErdinPlayer Pro Ultra (Resume FULL Fix + ScreenOn + Custom PlayPause) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro Ultra (TV Fix + FORCE HTTP/HTTPS + Resume + Scroll Fix) üretiliyor..."
+
         rm -rf "$APP_NAME"
+
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME/models"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME/adapters"
@@ -49,6 +55,7 @@ jobs:
         mkdir -p "$APP_NAME/app/src/main/res/menu"
         mkdir -p "$APP_NAME/app/src/main/res/color"
         mkdir -p "$APP_NAME/app/src/main/res/xml"
+
         cd "$APP_NAME"
 
         # Icon
@@ -80,11 +87,13 @@ jobs:
 
         # Gradle config
         echo "include ':app'" > settings.gradle
+
         cat <<EOF > gradle.properties
         android.useAndroidX=true
         android.enableJetifier=true
         org.gradle.jvmargs=-Xmx2048m
         EOF
+
         cat <<EOF > build.gradle
         buildscript {
             repositories { google(); mavenCentral() }
@@ -95,6 +104,7 @@ jobs:
         }
         allprojects { repositories { google(); mavenCentral() } }
         EOF
+        
         mkdir -p app
         cat <<EOF > app/build.gradle
         plugins {
