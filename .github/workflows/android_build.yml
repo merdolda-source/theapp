@@ -2789,61 +2789,68 @@ jobs:
         </network-security-config>
         EOF
         # AndroidManifest.xml
-        cat <<EOF > app/src/main/AndroidManifest.xml
+         cat <<EOF > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-            package="$PACKAGE_NAME">
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-            <uses-permission android:name="android.permission.INTERNET" />
-            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-            <uses-permission android:name="android.permission.WAKE_LOCK" />
+        <uses-permission android:name="android.permission.INTERNET" />
+        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+        <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-            <uses-feature
-                android:name="android.software.leanback"
-                android:required="false" />
+        <uses-feature
+        android:name="android.software.leanback"
+        android:required="false" />
 
-            <application
-                android:allowBackup="true"
-                android:icon="@mipmap/ic_launcher"
-                android:label="@string/app_name"
-                android:roundIcon="@mipmap/ic_launcher"
-                android:supportsRtl="true"
-                android:theme="@style/Theme.ErdinPlayer"
-                android:networkSecurityConfig="@xml/network_security_config">
+        <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.ErdinPlayer"
+        android:networkSecurityConfig="@xml/network_security_config">
 
-                <meta-data
-                    android:name="com.google.android.gms.ads.APPLICATION_ID"
-                    android:value="@string/admob_app_id" />
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="@string/admob_app_id" />
 
-                <activity
-                    android:name=".PlayerActivity"
-                    android:screenOrientation="sensorLandscape"
-                    android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode" />
+        <activity
+            android:name=".PlayerActivity"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:exported="false" />
 
-                <activity
-                    android:name=".SeriesDetailActivity"
-                    android:screenOrientation="sensorLandscape"
-                    android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode" />
+        <activity
+            android:name=".SeriesDetailActivity"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:exported="false" />
 
-                <activity
-                    android:name=".ContentActivity"
-                    android:screenOrientation="sensorLandscape"
-                    android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode" />
+        <activity
+            android:name=".ContentActivity"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:exported="false" />
 
-                <activity
-                    android:name=".LoginActivity"
-                    android:screenOrientation="sensorLandscape"
-                    android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode">
-                    <intent-filter>
-                        <action android:name="android.intent.action.MAIN" />
-                        <category android:name="android.intent.category.LAUNCHER" />
-                        <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                    </intent-filter>
-                </activity>
+        <!-- 🔴 BURASI ZORUNLU: MAIN + LAUNCHER olduğu için exported = true -->
+        <activity
+            android:name=".LoginActivity"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
 
-            </application>
+        </application>
         </manifest>
         EOF
+
+
+
     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
       with:
