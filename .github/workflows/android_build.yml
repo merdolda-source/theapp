@@ -2513,89 +2513,101 @@ jobs:
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/black">
+
+        <androidx.media3.ui.PlayerView
+        android:id="@+id/pvMain"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+        <LinearLayout
+        android:id="@+id/overlayContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:layout_marginBottom="72dp">
+
+        <View
+            android:id="@+id/overlayLeft"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:background="@color/black">
+            android:layout_weight="1" />
 
-            <androidx.media3.ui.PlayerView
-                android:id="@+id/pvMain"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
+        <View
+            android:id="@+id/overlayRight"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+         </LinearLayout>
 
-            <LinearLayout
-                android:id="@+id/overlayContainer"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="horizontal"
-                android:layout_marginBottom="72dp">
+         <TextView
+        android:id="@+id/tvInfoCenter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:background="#80000000"
+        android:padding="8dp"
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
-                <View
-                    android:id="@+id/overlayLeft"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1" />
+        <TextView
+        android:id="@+id/tvBrightness"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:background="#80000000"
+        android:padding="6dp"
+        android:layout_gravity="top|left"
+        android:layout_margin="12dp"
+        android:visibility="gone" />
 
-                <View
-                    android:id="@+id/overlayRight"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1" />
-            </LinearLayout>
+        <TextView
+        android:id="@+id/tvVolume"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:background="#80000000"
+        android:padding="6dp"
+        android:layout_gravity="top|right"
+        android:layout_margin="12dp"
+        android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/tvInfoCenter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:background="#80000000"
-                android:padding="8dp"
-                android:layout_gravity="center"
-                android:visibility="gone"/>
+        <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:gravity="right">
 
-            <TextView
-                android:id="@+id/tvBrightness"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="14sp"
-                android:background="#80000000"
-                android:padding="6dp"
-                android:layout_gravity="top|left"
-                android:layout_margin="12dp"
-                android:visibility="gone"/>
+        <!-- Özel Oynat / Durdur Butonu -->
+        <ImageButton
+            android:id="@+id/btnPlayPause"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@android:color/transparent"
+            android:src="@android:drawable/ic_media_pause"
+            android:padding="8dp"
+            android:tint="@android:color/white" />
 
-            <TextView
-                android:id="@+id/tvVolume"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="14sp"
-                android:background="#80000000"
-                android:padding="6dp"
-                android:layout_gravity="top|right"
-                android:layout_margin="12dp"
-                android:visibility="gone"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="8dp"
-                android:layout_gravity="bottom|center_horizontal"
-                android:gravity="right">
-
-                <ImageButton
-                    android:id="@+id/btnMode"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_menu_crop"
-                    android:padding="8dp"
-                    android:tint="@android:color/white"/>
-            </LinearLayout>
+        <!-- Görüntü Modu Değiştirme Butonu -->
+        <ImageButton
+            android:id="@+id/btnMode"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@android:color/transparent"
+            android:src="@android:drawable/ic_menu_crop"
+            android:padding="8dp"
+            android:tint="@android:color/white" />
+         </LinearLayout>
         </FrameLayout>
         EOF
+
 
         # ============ MANIFEST ============
         cat <<EOF > app/src/main/AndroidManifest.xml
