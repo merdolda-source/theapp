@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Ultra Build (TV Fix - FORCE HTTP/HTTPS - Resume Fix - ScreenOn - Custom PlayPause)
+name: ErdinPlayer Pro Ultra Build (TV Fix - FORCE HTTP/HTTPS - Resume FULL Fix - ScreenOn - Custom PlayPause)
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (TV Fix + FORCE HTTP/HTTPS + Resume Fix + ScreenOn + Custom PlayPause) - SIGNED
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Resume FULL Fix + ScreenOn + Custom PlayPause) - SIGNED
       shell: bash
       run: |
         set -e
@@ -35,7 +35,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "🚀 ErdinPlayer Pro Ultra (Resume Fix + ScreenOn + Custom PlayPause) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro Ultra (Resume FULL Fix + ScreenOn + Custom PlayPause) üretiliyor..."
         rm -rf "$APP_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME"
         mkdir -p "$APP_NAME/app/src/main/java/$PATH_NAME/models"
@@ -108,8 +108,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 24
                 targetSdk 35
-                versionCode 6
-                versionName "1.8.3-tv-resume-screenon-playpause"
+                versionCode 7
+                versionName "1.8.4-tv-resume-fullfix-screenon-playpause"
             }
             signingConfigs {
                 release {
@@ -1712,12 +1712,14 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (GÜNCELLENMİŞ TAM VERSİYON) ============
+        # ============ PlayerActivity (TAM DÜZELTME - Resume sorunu çözüldü) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
         import android.media.AudioManager
         import android.os.Bundle
+        import android.os.Handler
+        import android.os.Looper
         import android.view.MotionEvent
         import android.view.View
         import android.view.WindowManager
@@ -1726,6 +1728,7 @@ jobs:
         import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
         import androidx.media3.common.MediaItem
+        import androidx.media3.common.PlaybackException
         import androidx.media3.common.Player
         import androidx.media3.datasource.DefaultHttpDataSource
         import androidx.media3.exoplayer.ExoPlayer
@@ -1760,10 +1763,10 @@ jobs:
             private var contentType: String = "LIVE"
             private val FAKE_USER_AGENT =
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
+            private val handler = Handler(Looper.getMainLooper())
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
-                // Ekranın kapanmasını tamamen engelle
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
                 window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
@@ -1797,7 +1800,6 @@ jobs:
                 tvVolume = findViewById(R.id.tvVolume)
                 val btnMode = findViewById<ImageButton>(R.id.btnMode)
 
-                // Default controller açık kalsın
                 playerView.useController = true
                 playerView.controllerAutoShow = true
                 playerView.controllerHideOnTouch = true
@@ -1815,7 +1817,6 @@ jobs:
                     applyResizeMode(playerView)
                 }
 
-                // Custom Play/Pause butonu
                 btnPlayPause.setOnClickListener {
                     player?.let {
                         if (it.isPlaying) it.pause() else it.play()
@@ -1832,8 +1833,8 @@ jobs:
                     if (org.isNotEmpty()) headers["Origin"] = org
 
                     val httpFactory = DefaultHttpDataSource.Factory()
-                        .setConnectTimeoutMs(15000)
-                        .setReadTimeoutMs(30000)
+                        .setConnectTimeoutMs(20000)
+                        .setReadTimeoutMs(40000)
                         .setDefaultRequestProperties(headers)
 
                     val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
@@ -1844,20 +1845,23 @@ jobs:
 
                     exo.setMediaItem(MediaItem.fromUri(playUrl))
                     exo.prepare()
+
+                    // Başlangıçta otomatik oynat
                     exo.playWhenReady = true
 
                     exo.addListener(object : Player.Listener {
                         override fun onPlaybackStateChanged(state: Int) {
-                            if (state == Player.STATE_READY) {
-                                if (contentType != "LIVE") {
-                                    val savedPos = Prefs(this@PlayerActivity).getLastPosition(playUrl)
-                                    if (savedPos > 10000) { // 10 saniyeden fazla ise devam et
+                            if (state == Player.STATE_READY && contentType != "LIVE") {
+                                val savedPos = Prefs(this@PlayerActivity).getLastPosition(playUrl)
+                                if (savedPos > 0) {
+                                    // Seek'i biraz geciktirerek buffering sorununu önle
+                                    handler.postDelayed({
                                         exo.seekTo(savedPos)
                                         exo.playWhenReady = true
+                                        exo.play() // Garanti oynat
                                         Toast.makeText(this@PlayerActivity, "Kalan yerden devam ediliyor...", Toast.LENGTH_SHORT).show()
-                                    }
+                                    }, 500)
                                 }
-                                exo.playWhenReady = true
                             }
                         }
 
@@ -1866,6 +1870,10 @@ jobs:
                                 if (isPlaying) android.R.drawable.ic_media_pause
                                 else android.R.drawable.ic_media_play
                             )
+                        }
+
+                        override fun onPlayerError(error: PlaybackException) {
+                            Toast.makeText(this@PlayerActivity, "Oynatma hatası: \${error.message}", Toast.LENGTH_LONG).show()
                         }
                     })
 
@@ -1880,7 +1888,7 @@ jobs:
                 val p = player ?: return
                 if (contentType != "LIVE") {
                     val pos = p.currentPosition
-                    if (pos > 10000) {
+                    if (pos > 5000) { // 5 saniyeden fazla izlenmişse kaydet
                         Prefs(this).setLastPosition(playUrl, pos)
                     } else {
                         Prefs(this).clearLastPosition(playUrl)
@@ -1990,13 +1998,14 @@ jobs:
 
             override fun onDestroy() {
                 super.onDestroy()
+                handler.removeCallbacksAndMessages(null)
                 player?.release()
                 player = null
             }
         }
         EOF
 
-        # ============ LAYOUTLAR (TAM) ============
+        # ============ LAYOUTLAR ============
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
