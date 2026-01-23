@@ -169,7 +169,6 @@ jobs:
         EOF
 
         # ============ RENK PALETİ ============
-
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
             <color name="bg_dark">#050710</color>
@@ -205,11 +204,8 @@ jobs:
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">ErdinPlayer</string>
-
-            <!-- Manifest bu app_id'yi kullanıyor, prod'da burayı gerçek ID ile güncelle -->
-            <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
-
-            <!-- Test ID'ler, uzaktan banner/interstitial ID zaten config.php'den geliyor -->
+            <!-- Manifest'te kullanılan AdMob App ID; panelden değiştirdiğinle uyumlu olsun -->
+            <string name="admob_app_id">ca-app-pub-2289573527937577~5012458331</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
         </resources>
@@ -218,14 +214,13 @@ jobs:
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">ErdinPlayer</string>
-            <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+            <string name="admob_app_id">ca-app-pub-2289573527937577~5012458331</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
         </resources>
         EOF
 
         # ============ DRAWABLE ============
-
         cat <<EOF > app/src/main/res/drawable/bg_input_dark.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="@color/bg_card_soft"/>
@@ -273,8 +268,7 @@ jobs:
         </selector>
         EOF
 
-        # ============ BOTTOM NAV MENÜ (dursun) ============
-
+        # ============ BOTTOM NAV MENÜ (dursa da olur) ============
         cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
         <menu xmlns:android="http://schemas.android.com/apk/res/android">
             <item
@@ -293,10 +287,8 @@ jobs:
         EOF
 
         # ============ MODELLER ============
-
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
-
         data class AccountProfile(
             val id: Int,
             val name: String,
@@ -306,13 +298,11 @@ jobs:
             val pass: String?,
             val m3u: String?
         )
-
         data class Category(
             val category_id: String,
             val category_name: String,
             val is_adult: Boolean = false
         )
-
         data class StreamItem(
             val name: String,
             val stream_id: String?,
@@ -323,7 +313,6 @@ jobs:
             val referer: String?,
             val origin: String?
         )
-
         data class EpisodeItem(
             val id: String,
             val title: String,
@@ -333,28 +322,22 @@ jobs:
         )
         EOF
 
-        # ============ UTILS ============
-
+        # ============ UTILS: RemoteConfig (list_banner_interval DAHİL) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
-
         import android.content.Context
         import android.util.Log
         import org.json.JSONObject
         import java.net.HttpURLConnection
         import java.net.URL
         import $PACKAGE_NAME.R
-
         object RemoteConfig {
             private const val TAG = "RemoteConfig"
             private const val CONFIG_URL = "https://creatorapp24.com/erdin/api/config.php"
 
             @Volatile private var initialized = false
-
-            @Volatile private var appId: String? = null
             @Volatile private var bannerId: String? = null
             @Volatile private var interstitialId: String? = null
-
             @Volatile private var channelInterval: Int = 4
             @Volatile private var listBannerInterval: Int = 7
 
@@ -363,7 +346,6 @@ jobs:
                 synchronized(this) {
                     if (initialized) return
                     initialized = true
-
                     Thread {
                         try {
                             val url = URL(CONFIG_URL)
@@ -371,14 +353,10 @@ jobs:
                             conn.connectTimeout = 8000
                             conn.readTimeout = 8000
                             conn.requestMethod = "GET"
-
                             if (conn.responseCode != HttpURLConnection.HTTP_OK) return@Thread
-
                             val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                             val obj = JSONObject(body)
                             val ads = obj.optJSONObject("ads") ?: obj
-
-                            appId = ads.optString("admob_app_id", null)
                             bannerId = ads.optString("admob_banner_id", null)
                             interstitialId = ads.optString("admob_interstitial_id", null)
 
@@ -387,17 +365,11 @@ jobs:
 
                             val listInterval = ads.optInt("list_banner_interval", 0)
                             if (listInterval > 0) listBannerInterval = listInterval
-
                         } catch (e: Exception) {
                             Log.w(TAG, "Config load failed: " + (e.message ?: ""))
                         }
                     }.start()
                 }
-            }
-
-            fun getAppId(context: Context): String? {
-                init(context)
-                return appId
             }
 
             fun getBannerId(context: Context): String {
@@ -422,9 +394,9 @@ jobs:
         }
         EOF
 
+        # ============ UTILS: RemoteLogger ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteLogger.kt
         package $PACKAGE_NAME.utils
-
         import android.content.Context
         import android.os.Build
         import android.provider.Settings
@@ -432,19 +404,20 @@ jobs:
         import java.net.HttpURLConnection
         import java.net.URL
         import java.net.URLEncoder
-
         object RemoteLogger {
             private const val TAG = "RemoteLogger"
             private const val EVENT_URL = "https://creatorapp24.com/erdin/api/event.php"
-
             fun sendEvent(context: Context, type: String, data: Map<String, String>) {
                 Thread {
                     try {
                         val appContext = context.applicationContext
                         val deviceId = Settings.Secure.getString(appContext.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
                         val pkg = appContext.packageName
-                        val verName = try { appContext.packageManager.getPackageInfo(pkg, 0).versionName ?: "1.0" } catch (e: Exception) { "1.0" }
-
+                        val verName = try {
+                            appContext.packageManager.getPackageInfo(pkg, 0).versionName ?: "1.0"
+                        } catch (e: Exception) {
+                            "1.0"
+                        }
                         val baseData = HashMap<String, String>()
                         baseData["type"] = type
                         baseData["device_id"] = deviceId
@@ -453,7 +426,6 @@ jobs:
                         baseData["brand"] = Build.BRAND ?: ""
                         baseData["model"] = Build.MODEL ?: ""
                         baseData.putAll(data)
-
                         val bodyBuilder = StringBuilder()
                         var first = true
                         for ((k, v) in baseData) {
@@ -463,7 +435,6 @@ jobs:
                             bodyBuilder.append("=")
                             bodyBuilder.append(URLEncoder.encode(v, "UTF-8"))
                         }
-
                         val conn = (URL(EVENT_URL).openConnection() as HttpURLConnection).apply {
                             connectTimeout = 8000
                             readTimeout = 8000
@@ -474,11 +445,9 @@ jobs:
                         conn.outputStream.use { os ->
                             os.write(bodyBuilder.toString().toByteArray(Charsets.UTF_8))
                         }
-
                         if (conn.responseCode != HttpURLConnection.HTTP_OK) {
                             Log.w(TAG, "Event HTTP code: " + conn.responseCode)
                         }
-
                     } catch (e: Exception) {
                         Log.w(TAG, "sendEvent failed: " + (e.message ?: ""))
                     }
@@ -487,29 +456,23 @@ jobs:
         }
         EOF
 
-        # ===== Prefs: Resume sistemini tamamen kaldırdım =====
-
+        # ===== Prefs: Sadece hesap yönetimi, resume YOK =====
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
-
         import android.content.Context
         import $PACKAGE_NAME.models.AccountProfile
         import org.json.JSONArray
         import org.json.JSONObject
-
         class Prefs(ctx: Context) {
             private val appContext = ctx.applicationContext
             private val p = appContext.getSharedPreferences("EP_Prefs", 0)
-
             private fun loadArray(): JSONArray {
                 val s = p.getString("accounts_json", "[]") ?: "[]"
                 return JSONArray(s)
             }
-
             private fun saveArray(arr: JSONArray) {
                 p.edit().putString("accounts_json", arr.toString()).apply()
             }
-
             fun createXtreamAccount(name: String, dns: String, u: String, ps: String): Int {
                 val id = p.getInt("next_id", 1)
                 val obj = JSONObject()
@@ -520,15 +483,12 @@ jobs:
                 obj.put("user", u)
                 obj.put("pass", ps)
                 obj.put("m3u", "")
-
                 val arr = loadArray()
                 arr.put(obj)
                 saveArray(arr)
-
                 p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
                 return id
             }
-
             fun createM3uAccount(name: String, m3u: String): Int {
                 val id = p.getInt("next_id", 1)
                 val obj = JSONObject()
@@ -539,15 +499,12 @@ jobs:
                 obj.put("user", "")
                 obj.put("pass", "")
                 obj.put("m3u", m3u)
-
                 val arr = loadArray()
                 arr.put(obj)
                 saveArray(arr)
-
                 p.edit().putInt("next_id", id + 1).putInt("active_id", id).apply()
                 return id
             }
-
             fun getAccounts(): List<AccountProfile> {
                 val arr = loadArray()
                 val list = ArrayList<AccountProfile>()
@@ -556,7 +513,7 @@ jobs:
                     val o = arr.optJSONObject(i)
                     if (o != null) {
                         val id = o.optInt("id", 0)
-                            val name = o.optString("name", "Hesap " + i)
+                        val name = o.optString("name", "Hesap " + i)
                         val type = o.optString("type", "XTREAM")
                         val dns = o.optString("dns", null)
                         val user = o.optString("user", null)
@@ -568,7 +525,6 @@ jobs:
                 }
                 return list
             }
-
             fun deleteAccount(id: Int) {
                 val arr = loadArray()
                 val newArr = JSONArray()
@@ -579,16 +535,13 @@ jobs:
                     i++
                 }
                 saveArray(newArr)
-
                 val activeId = p.getInt("active_id", -1)
                 if (activeId == id) {
                     p.edit().putInt("active_id", -1).apply()
                 }
             }
-
             fun setActive(id: Int) { p.edit().putInt("active_id", id).apply() }
             fun clearActive() { p.edit().putInt("active_id", -1).apply() }
-
             fun getActive(): AccountProfile? {
                 val all = getAccounts()
                 if (all.isEmpty()) return null
@@ -596,13 +549,10 @@ jobs:
                 if (activeId <= 0) return null
                 return all.find { it.id == activeId }
             }
-
             fun setLastScreen(screen: String) { p.edit().putString("last_screen", screen).apply() }
             fun getLastScreen(): String = p.getString("last_screen", "LOGIN") ?: "LOGIN"
-
             fun setLang(lang: String) { p.edit().putString("lang", lang).apply() }
             fun getLang(): String = p.getString("lang", "tr") ?: "tr"
-
             fun getDns(): String = getActive()?.dns ?: ""
             fun getUser(): String = getActive()?.user ?: ""
             fun getPass(): String = getActive()?.pass ?: ""
@@ -611,20 +561,16 @@ jobs:
 
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/LangManager.kt
         package $PACKAGE_NAME.utils
-
         import android.content.Context
         import android.util.Log
         import org.json.JSONObject
         import java.net.HttpURLConnection
         import java.net.URL
-
         object LangManager {
             private const val TAG = "LangManager"
             private const val URL_BASE =
                 "https://creatorapp24.com/erdin/api/lang.php?app=erdinplayer&lang="
-
             @Volatile private var cache: JSONObject? = null
-
             fun restoreFromPrefs(context: Context, lang: String) {
                 val p = context.applicationContext.getSharedPreferences("EP_Lang", 0)
                 val savedCode = p.getString("lang_code", null)
@@ -633,7 +579,6 @@ jobs:
                     try { cache = JSONObject(savedJson) } catch (_: Exception) {}
                 }
             }
-
             fun init(context: Context, lang: String) {
                 Thread {
                     try {
@@ -654,7 +599,6 @@ jobs:
                     }
                 }.start()
             }
-
             fun t(context: Context, key: String, fallback: String): String {
                 val local = cache
                 if (local != null) {
@@ -675,9 +619,9 @@ jobs:
         }
         EOF
 
+        # ============ UTILS: AdsHelper (CHANNEL_INTERVAL + panelden gelen) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
         package $PACKAGE_NAME.utils
-
         import android.app.Activity
         import android.content.Context
         import com.google.android.gms.ads.AdRequest
@@ -686,42 +630,31 @@ jobs:
         import com.google.android.gms.ads.interstitial.InterstitialAd
         import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
         import com.google.android.gms.ads.LoadAdError
-
         object AdsHelper {
             @Volatile private var initialized = false
-
             private var interstitial: InterstitialAd? = null
             private var clickCount = 0
-
             var CHANNEL_INTERVAL = 4
-            var LIST_BANNER_INTERVAL = 7
-
             fun init(context: Context) {
                 if (!initialized) {
                     synchronized(this) {
                         if (!initialized) {
-                            // App ID manifest'ten okunur, RemoteConfig sadece unit ID ve aralıkları getirir
                             MobileAds.initialize(context.applicationContext) {}
                             initialized = true
                         }
                     }
                 }
-
                 RemoteConfig.init(context)
                 CHANNEL_INTERVAL = RemoteConfig.getChannelInterval(context, CHANNEL_INTERVAL)
-                LIST_BANNER_INTERVAL = RemoteConfig.getListBannerInterval(context, LIST_BANNER_INTERVAL)
             }
-
             fun loadBanner(adView: AdView?) {
                 if (adView == null) return
                 val id = RemoteConfig.getBannerId(adView.context)
                 try { adView.adUnitId = id } catch (_: Exception) {}
                 adView.isFocusable = false
                 adView.isFocusableInTouchMode = false
-                adView.isClickable = false
                 adView.loadAd(AdRequest.Builder().build())
             }
-
             fun loadInterstitial(context: Context) {
                 val adUnitId = RemoteConfig.getInterstitialId(context)
                 InterstitialAd.load(
@@ -734,7 +667,6 @@ jobs:
                     }
                 )
             }
-
             fun maybeShowOnChannelClick(activity: Activity, onContinue: () -> Unit) {
                 clickCount++
                 val ad = interstitial
@@ -750,11 +682,9 @@ jobs:
         }
         EOF
 
-        # ============ ADAPTERS ============
-
+        # ============ ADAPTERS: GridAdapter (liste içi banner) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
-
         import android.view.KeyEvent
         import android.view.LayoutInflater
         import android.view.View
@@ -768,58 +698,104 @@ jobs:
         class GridAdapter(
             private var titles: List<String>,
             private var subtitles: List<String>,
+            private val bannerInterval: Int,
             private val onClick: (Int) -> Unit
-        ) : RecyclerView.Adapter<GridAdapter.VH>() {
+        ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-            class VH(v: View) : RecyclerView.ViewHolder(v) {
+            companion object {
+                private const val TYPE_ITEM = 0
+                private const val TYPE_AD = 1
+            }
+
+            class ItemVH(v: View) : RecyclerView.ViewHolder(v) {
                 val txt: TextView = v.findViewById(R.id.txtName)
                 val sub: TextView = v.findViewById(R.id.txtSub)
-                val adInline: AdView? = v.findViewById(R.id.adInlineBanner)
             }
 
-            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_grid_pro, parent, false)
-                v.isFocusable = true
-                v.isFocusableInTouchMode = true
-                v.isClickable = true
-                return VH(v)
+            class AdVH(v: View) : RecyclerView.ViewHolder(v) {
+                val adView: AdView? = v.findViewById(R.id.adViewList)
             }
 
-            override fun onBindViewHolder(holder: VH, position: Int) {
-                holder.txt.text = titles[position]
-                val s = subtitles[position]
-                holder.sub.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
-                holder.sub.text = s
+            override fun getItemViewType(position: Int): Int {
+                return if (bannerInterval > 0 && titles.isNotEmpty() &&
+                    ((position + 1) % (bannerInterval + 1) == 0)
+                ) {
+                    TYPE_AD
+                } else {
+                    TYPE_ITEM
+                }
+            }
 
-                // Focus animasyonu
-                holder.itemView.setOnFocusChangeListener { v, hasFocus ->
+            override fun getItemCount(): Int {
+                if (titles.isEmpty()) return 0
+                if (bannerInterval <= 0) return titles.size
+                val adsCount = titles.size / bannerInterval
+                return titles.size + adsCount
+            }
+
+            private fun dataIndexForAdapter(position: Int): Int {
+                if (bannerInterval <= 0) return position
+                val adsBefore = (position + 1) / (bannerInterval + 1)
+                return position - adsBefore
+            }
+
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+                return if (viewType == TYPE_AD) {
+                    val v = LayoutInflater.from(parent.context)
+                        .inflate(R.layout.item_banner, parent, false)
+                    v.isFocusable = false
+                    v.isFocusableInTouchMode = false
+                    AdVH(v)
+                } else {
+                    val v = LayoutInflater.from(parent.context)
+                        .inflate(R.layout.item_grid_pro, parent, false)
+                    v.isFocusable = true
+                    v.isFocusableInTouchMode = true
+                    v.isClickable = true
+                    ItemVH(v)
+                }
+            }
+
+            override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+                if (holder is AdVH) {
+                    val ad = holder.adView
+                    AdsHelper.loadBanner(ad)
+                    return
+                }
+
+                val itemHolder = holder as ItemVH
+                val dataIndex = dataIndexForAdapter(position)
+                if (dataIndex < 0 || dataIndex >= titles.size) return
+
+                val title = titles[dataIndex]
+                val subtitle = subtitles[dataIndex]
+
+                itemHolder.txt.text = title
+                if (subtitle.isNotEmpty()) {
+                    itemHolder.sub.visibility = View.VISIBLE
+                    itemHolder.sub.text = subtitle
+                } else {
+                    itemHolder.sub.visibility = View.GONE
+                }
+
+                itemHolder.itemView.setOnFocusChangeListener { v, hasFocus ->
                     val scale = if (hasFocus) 1.06f else 1.0f
                     v.animate().scaleX(scale).scaleY(scale).setDuration(100).start()
                 }
-
-                // Liste içi banner – panelden gelen aralığa göre
-                val interval = AdsHelper.LIST_BANNER_INTERVAL
-                if (interval > 0 && (position + 1) % interval == 0) {
-                    holder.adInline?.visibility = View.VISIBLE
-                    AdsHelper.loadBanner(holder.adInline)
-                } else {
-                    holder.adInline?.visibility = View.GONE
+                itemHolder.itemView.setOnClickListener {
+                    onClick(dataIndex)
                 }
-
-                holder.itemView.setOnClickListener { onClick(holder.bindingAdapterPosition) }
-                holder.itemView.setOnKeyListener { _, keyCode, event ->
+                itemHolder.itemView.setOnKeyListener { _, keyCode, event ->
                     if (event.action == KeyEvent.ACTION_DOWN &&
                         (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
                     ) {
-                        onClick(holder.bindingAdapterPosition)
+                        onClick(dataIndex)
                         true
                     } else {
                         false
                     }
                 }
             }
-
-            override fun getItemCount(): Int = titles.size
 
             fun update(newTitles: List<String>, newSubtitles: List<String>) {
                 titles = newTitles
@@ -829,9 +805,9 @@ jobs:
         }
         EOF
 
+        # ============ ADAPTERS: AccountsAdapter ============
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
         package $PACKAGE_NAME.adapters
-
         import android.view.KeyEvent
         import android.view.LayoutInflater
         import android.view.View
@@ -841,19 +817,16 @@ jobs:
         import androidx.recyclerview.widget.RecyclerView
         import $PACKAGE_NAME.R
         import $PACKAGE_NAME.models.AccountProfile
-
         class AccountsAdapter(
             private var items: MutableList<AccountProfile>,
             private val onOpen: (AccountProfile) -> Unit,
             private val onDelete: (AccountProfile) -> Unit
         ) : RecyclerView.Adapter<AccountsAdapter.VH>() {
-
             class VH(v: View) : RecyclerView.ViewHolder(v) {
                 val txtName: TextView = v.findViewById(R.id.tvAccountName)
                 val txtType: TextView = v.findViewById(R.id.tvAccountType)
                 val btnDelete: ImageButton = v.findViewById(R.id.btnDeleteAccount)
             }
-
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
                 val v = LayoutInflater.from(parent.context).inflate(R.layout.item_account, parent, false)
                 v.isFocusable = true
@@ -861,20 +834,16 @@ jobs:
                 v.isClickable = true
                 return VH(v)
             }
-
             override fun onBindViewHolder(holder: VH, position: Int) {
                 val item = items[position]
                 holder.txtName.text = item.name
                 holder.txtType.text = if (item.type == "M3U") "M3U" else "Xtream"
-
                 holder.itemView.setOnFocusChangeListener { v, hasFocus ->
                     val scale = if (hasFocus) 1.06f else 1.0f
                     v.animate().scaleX(scale).scaleY(scale).setDuration(100).start()
                 }
-
                 holder.itemView.setOnClickListener { onOpen(item) }
                 holder.btnDelete.setOnClickListener { onDelete(item) }
-
                 holder.itemView.setOnKeyListener { _, keyCode, event ->
                     if (event.action == KeyEvent.ACTION_DOWN &&
                         (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
@@ -884,9 +853,7 @@ jobs:
                     } else false
                 }
             }
-
             override fun getItemCount(): Int = items.size
-
             fun update(newItems: List<AccountProfile>) {
                 items.clear()
                 items.addAll(newItems)
@@ -896,10 +863,8 @@ jobs:
         EOF
 
         # ============ LoginActivity ============
-
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
-
         import android.content.Intent
         import android.os.Bundle
         import android.view.View
@@ -912,14 +877,11 @@ jobs:
         import $PACKAGE_NAME.utils.Prefs
         import $PACKAGE_NAME.utils.RemoteLogger
         import $PACKAGE_NAME.utils.LangManager
-
         class LoginActivity : AppCompatActivity() {
             private var isXtream = true
-
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_login)
-
                 val prefs = Prefs(this)
                 val activeStartup = prefs.getActive()
                 if (activeStartup != null) {
@@ -928,32 +890,26 @@ jobs:
                     finish()
                     return
                 }
-
                 val lang = "tr"
                 prefs.setLang(lang)
                 LangManager.restoreFromPrefs(this, lang)
                 LangManager.init(this, lang)
-
                 RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
                 AdsHelper.init(this)
-
                 val adTop = findViewById<AdView>(R.id.adViewTopLogin)
                 AdsHelper.loadBanner(adTop)
                 AdsHelper.loadInterstitial(this)
-
                 val tvTitle = findViewById<TextView>(R.id.tvTitle)
                 val tvLoginType = findViewById<TextView>(R.id.tvLoginType)
                 val tvAccountsTitle = findViewById<TextView>(R.id.tvAccountsTitle)
                 val tvAccountsHint = findViewById<TextView>(R.id.tvAccountsHint)
                 val btnLang = findViewById<ImageButton>(R.id.btnLangLogin)
                 btnLang.visibility = View.GONE
-
                 val etName = findViewById<EditText>(R.id.etName)
                 val etDns = findViewById<EditText>(R.id.etDns)
                 val etUser = findViewById<EditText>(R.id.etUser)
                 val etPass = findViewById<EditText>(R.id.etPass)
                 val etM3u = findViewById<EditText>(R.id.etM3u)
-
                 val layoutXtream = findViewById<View>(R.id.layoutXtream)
                 val layoutM3u = findViewById<View>(R.id.layoutM3u)
                 val cardXtream = findViewById<View>(R.id.cardXtream)
@@ -962,26 +918,21 @@ jobs:
                 val tvM3u = findViewById<TextView>(R.id.tvM3u)
                 val btnAdd = findViewById<Button>(R.id.btnAddAccount)
                 val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
-
                 fun applyLanguageTexts() {
                     tvTitle.text = LangManager.t(this, "login_title", "ErdinPlayer Pro")
                     tvLoginType.text = LangManager.t(this, "login_type", "Giriş Tipi")
                     tvXtream.text = LangManager.t(this, "login_xtream", "Xtream")
                     tvM3u.text = LangManager.t(this, "login_m3u", "M3U")
-
                     etName.hint = LangManager.t(this, "login_name_hint", "Hesap adı")
                     etDns.hint = LangManager.t(this, "login_dns_hint", "Xtream URL girin")
                     etUser.hint = LangManager.t(this, "login_user_hint", "Kullanıcı adı")
                     etPass.hint = LangManager.t(this, "login_pass_hint", "Şifre")
                     etM3u.hint = LangManager.t(this, "login_m3u_hint", "M3U URL girin")
-
                     btnAdd.text = LangManager.t(this, "login_add_button", "Hesap Ekle")
                     tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "Kayıtlı Hesaplar")
                     tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Devam etmek için alttan bir hesap seçin")
                 }
-
                 applyLanguageTexts()
-
                 fun updateTypeUI() {
                     if (isXtream) {
                         layoutXtream.visibility = View.VISIBLE
@@ -995,11 +946,9 @@ jobs:
                         cardXtream.background = getDrawable(R.drawable.bg_input_dark)
                     }
                 }
-
                 cardXtream.setOnClickListener { isXtream = true; updateTypeUI() }
                 cardM3u.setOnClickListener { isXtream = false; updateTypeUI() }
                 updateTypeUI()
-
                 fun refreshList() {
                     val accounts: MutableList<AccountProfile> = prefs.getAccounts().toMutableList()
                     val adapter = ArrayAdapter(
@@ -1011,7 +960,6 @@ jobs:
                         }
                     )
                     lvAccounts.adapter = adapter
-
                     lvAccounts.setOnItemClickListener { _, _, position, _ ->
                         val acc = accounts[position]
                         prefs.setActive(acc.id)
@@ -1019,7 +967,6 @@ jobs:
                         startActivity(i)
                         finish()
                     }
-
                     lvAccounts.setOnItemLongClickListener { _, _, position, _ ->
                         val acc = accounts[position]
                         val dialog = AlertDialog.Builder(this)
@@ -1035,34 +982,27 @@ jobs:
                         true
                     }
                 }
-
                 refreshList()
-
                 btnAdd.setOnClickListener {
                     val name = etName.text.toString().trim()
                     val finalName = if (name.isNotEmpty()) name else "Hesap"
-
                     if (isXtream) {
                         var d = etDns.text.toString().trim()
                         val u = etUser.text.toString().trim().replace("""\s+""".toRegex(), "")
                         val p = etPass.text.toString().trim()
-
                         if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
                             Toast.makeText(this, "Xtream URL / kullanıcı adı / şifre zorunlu.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
-
                         if (!d.startsWith("http://", true) && !d.startsWith("https://", true)) {
                             d = "http://" + d
                         }
                         if (d.endsWith("/")) d = d.dropLast(1)
-
                         prefs.createXtreamAccount(finalName, d, u, p)
                         RemoteLogger.sendEvent(this, "account_xtream_created", mapOf(
                             "name" to finalName, "dns" to d, "user" to u
                         ))
                         Toast.makeText(this, "Hesap eklendi.", Toast.LENGTH_SHORT).show()
-
                         val i = Intent(this, ContentActivity::class.java)
                         startActivity(i)
                         finish()
@@ -1072,13 +1012,11 @@ jobs:
                             Toast.makeText(this, "M3U URL boş olamaz.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
-
                         prefs.createM3uAccount(finalName, m)
                         RemoteLogger.sendEvent(this, "account_m3u_created", mapOf(
                             "name" to finalName, "m3u_prefix" to m.take(160)
                         ))
                         Toast.makeText(this, "Hesap eklendi.", Toast.LENGTH_SHORT).show()
-
                         val i = Intent(this, ContentActivity::class.java)
                         startActivity(i)
                         finish()
@@ -1088,11 +1026,9 @@ jobs:
         }
         EOF
 
-        # ============ ContentActivity: Yeni ana menü (Canlı TV / Filmler / Diziler) ============
-
+        # ============ ContentActivity (top/bottom banner + liste içi banner) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
-
         import android.content.Intent
         import android.os.Bundle
         import android.text.Editable
@@ -1127,7 +1063,7 @@ jobs:
         import $PACKAGE_NAME.utils.Prefs
         import $PACKAGE_NAME.utils.RemoteLogger
         import $PACKAGE_NAME.utils.LangManager
-
+        import $PACKAGE_NAME.utils.RemoteConfig
         class ContentActivity : AppCompatActivity() {
             private lateinit var prefs: Prefs
             private lateinit var drawer: DrawerLayout
@@ -1154,42 +1090,31 @@ jobs:
             private enum class Screen { CATEGORIES, ITEMS }
             private var screen: Screen = Screen.CATEGORIES
             private var selectedCategory: Category? = null
-
             private var categoriesAll: List<Category> = emptyList()
             private var streamsAll: List<StreamItem> = emptyList()
-
             private var filteredTitles: List<String> = emptyList()
             private var filteredSubtitles: List<String> = emptyList()
             private var filteredCategoryIds: List<String> = emptyList()
             private var filteredStreamIdx: List<Int> = emptyList()
-
             private var gridAdapter: GridAdapter? = null
             private lateinit var layoutManager: LinearLayoutManager
-
             private var categoriesScrollPos = 0
             private var itemsScrollPos = 0
-
             private val FAKE_USER_AGENT =
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
-
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_content)
-
                 prefs = Prefs(this)
-
                 val lang = prefs.getLang()
                 LangManager.restoreFromPrefs(this, lang)
                 LangManager.init(this, lang)
-
                 AdsHelper.init(this)
                 AdsHelper.loadInterstitial(this)
-
                 val adTop = findViewById<AdView>(R.id.adViewTopContent)
                 val adBottom = findViewById<AdView>(R.id.adViewBottomContent)
                 AdsHelper.loadBanner(adTop)
                 AdsHelper.loadBanner(adBottom)
-
                 drawer = findViewById(R.id.drawerLayout)
                 rv = findViewById(R.id.rvContent)
                 pb = findViewById(R.id.pbLoading)
@@ -1197,23 +1122,21 @@ jobs:
                 tvTitle = findViewById(R.id.tvTitleBar)
                 etSearch = findViewById(R.id.etSearch)
                 tvDrawerOpen = findViewById(R.id.tvOpenDrawer)
-
                 layoutModeSelector = findViewById(R.id.layoutModeSelector)
                 btnModeLive = findViewById(R.id.btnModeLive)
                 btnModeVod = findViewById(R.id.btnModeVod)
                 btnModeSeries = findViewById(R.id.btnModeSeries)
-
                 layoutManager = LinearLayoutManager(this)
                 rv.layoutManager = layoutManager
-                gridAdapter = GridAdapter(emptyList(), emptyList()) { pos -> onGridClick(pos) }
-                rv.adapter = gridAdapter
 
+                val listInterval = RemoteConfig.getListBannerInterval(this, 7)
+                gridAdapter = GridAdapter(emptyList(), emptyList(), listInterval) { pos -> onGridClick(pos) }
+                rv.adapter = gridAdapter
                 rvAccounts = findViewById(R.id.rvAccounts)
                 rvAccounts.layoutManager = LinearLayoutManager(this)
                 tvDrawerUser = findViewById(R.id.tvDrawerUser)
                 tvDrawerExpire = findViewById(R.id.tvDrawerExpire)
                 tvLogout = findViewById(R.id.tvLogout)
-
                 tvDrawerOpen.setOnClickListener { drawer.openDrawer(GravityCompat.START) }
                 tvLogout.setOnClickListener {
                     prefs.clearActive()
@@ -1222,7 +1145,6 @@ jobs:
                     startActivity(i)
                     finish()
                 }
-
                 tvTitle.setOnClickListener {
                     if (screen == Screen.ITEMS && rv.visibility == View.VISIBLE) {
                         showCategories()
@@ -1230,7 +1152,6 @@ jobs:
                         drawer.openDrawer(GravityCompat.START)
                     }
                 }
-
                 etSearch.addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun afterTextChanged(s: Editable?) {}
@@ -1238,7 +1159,6 @@ jobs:
                         applySearchFilter(s?.toString() ?: "")
                     }
                 })
-
                 activeAcc = prefs.getActive()
                 if (activeAcc == null) {
                     tvStatus.text = "Kayıtlı aktif hesap yok. Giriş ekranına dönün."
@@ -1247,25 +1167,18 @@ jobs:
                     rv.visibility = View.GONE
                     return
                 }
-
                 accountType = activeAcc?.type ?: "XTREAM"
-
                 setupDrawerAccounts()
-
                 currentMode = "LIVE"
-
                 btnModeLive.setOnClickListener { openMode("LIVE") }
                 btnModeVod.setOnClickListener { openMode("VOD") }
                 btnModeSeries.setOnClickListener { openMode("SERIES") }
-
                 showModeSelector()
             }
-
             private fun setupDrawerAccounts() {
                 val acc = activeAcc ?: return
                 tvDrawerUser.text = "Hesap: " + acc.name
                 tvDrawerExpire.text = "Süre: -"
-
                 val adapter = AccountsAdapter(
                     prefs.getAccounts().toMutableList(),
                     onOpen = { a ->
@@ -1302,7 +1215,6 @@ jobs:
                 )
                 rvAccounts.adapter = adapter
             }
-
             private fun setTitleForMode() {
                 tvTitle.text = when (currentMode) {
                     "VOD" -> "Filmler"
@@ -1310,22 +1222,18 @@ jobs:
                     else -> "Canlı TV"
                 }
             }
-
             private fun showModeSelector() {
                 screen = Screen.CATEGORIES
                 selectedCategory = null
                 categoriesAll = emptyList()
                 streamsAll = emptyList()
                 etSearch.setText("")
-
                 layoutModeSelector.visibility = View.VISIBLE
                 rv.visibility = View.GONE
                 pb.visibility = View.GONE
                 tvStatus.visibility = View.GONE
-
                 tvTitle.text = "Ne izlemek istersiniz?"
             }
-
             private fun openMode(mode: String) {
                 val acc = activeAcc
                 if (acc == null) {
@@ -1336,15 +1244,12 @@ jobs:
                     Toast.makeText(this, "M3U hesabında sadece Canlı TV kullanılabilir.", Toast.LENGTH_SHORT).show()
                     return
                 }
-
                 currentMode = mode
                 setTitleForMode()
-
                 layoutModeSelector.visibility = View.GONE
                 rv.visibility = View.VISIBLE
                 resetFlowAndLoad()
             }
-
             private fun resetFlowAndLoad() {
                 etSearch.setText("")
                 screen = Screen.CATEGORIES
@@ -1354,7 +1259,6 @@ jobs:
                 setTitleForMode()
                 fetchCategoriesAndStreams()
             }
-
             override fun onBackPressed() {
                 if (drawer.isDrawerOpen(GravityCompat.START)) {
                     drawer.closeDrawer(GravityCompat.START)
@@ -1370,7 +1274,6 @@ jobs:
                 }
                 super.onBackPressed()
             }
-
             private fun showCategories() {
                 if (screen == Screen.ITEMS) {
                     itemsScrollPos = layoutManager.findFirstVisibleItemPosition()
@@ -1381,7 +1284,6 @@ jobs:
                 applySearchFilter(etSearch.text?.toString() ?: "")
                 layoutManager.scrollToPositionWithOffset(categoriesScrollPos, 0)
             }
-
             private fun showItemsForCategory(cat: Category) {
                 if (screen == Screen.CATEGORIES) {
                     categoriesScrollPos = layoutManager.findFirstVisibleItemPosition()
@@ -1396,11 +1298,9 @@ jobs:
                 applySearchFilter(etSearch.text?.toString() ?: "")
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
-
             private fun applySearchFilter(qRaw: String) {
                 val q = qRaw.trim().lowercase(Locale.getDefault())
                 if (rv.visibility != View.VISIBLE) return
-
                 if (screen == Screen.CATEGORIES) {
                     val cats = if (q.isEmpty()) categoriesAll else categoriesAll.filter {
                         it.category_name.lowercase(Locale.getDefault()).contains(q)
@@ -1412,23 +1312,19 @@ jobs:
                     gridAdapter?.update(filteredTitles, filteredSubtitles)
                     return
                 }
-
                 val catId = selectedCategory?.category_id
                 val items = if (catId.isNullOrEmpty()) streamsAll else streamsAll.filter { it.category_id == catId }
                 val filtered = if (q.isEmpty()) items else items.filter {
                     it.name.lowercase(Locale.getDefault()).contains(q)
                 }
-
                 filteredTitles = filtered.map { it.name }
                 filteredSubtitles = filtered.map { "" }
                 filteredStreamIdx = filtered.map { streamsAll.indexOf(it) }
                 filteredCategoryIds = emptyList()
                 gridAdapter?.update(filteredTitles, filteredSubtitles)
             }
-
             private fun onGridClick(position: Int) {
                 val acc = activeAcc ?: return
-
                 if (screen == Screen.CATEGORIES) {
                     if (position !in filteredCategoryIds.indices) return
                     val catId = filteredCategoryIds[position]
@@ -1436,32 +1332,27 @@ jobs:
                     showItemsForCategory(cat)
                     return
                 }
-
                 if (position !in filteredStreamIdx.indices) return
                 val idx = filteredStreamIdx[position]
                 if (idx !in streamsAll.indices) return
                 val item = streamsAll[idx]
-
                 if (acc.type == "M3U") {
                     val url = item.full_url
                     if (url.isNullOrEmpty()) {
                         Toast.makeText(this, "Geçersiz M3U kanalı.", Toast.LENGTH_SHORT).show()
                         return
                     }
-
                     val itn = Intent(this, PlayerActivity::class.java)
                     itn.putExtra("URL", url)
                     itn.putExtra("REF", item.referer ?: "")
                     itn.putExtra("ORG", item.origin ?: "")
                     itn.putExtra("TYPE", "LIVE")
-
                     AdsHelper.maybeShowOnChannelClick(this) {
                         RemoteLogger.sendEvent(this, "play_m3u", mapOf("channel_name" to item.name))
                         startActivity(itn)
                     }
                     return
                 }
-
                 if (currentMode == "SERIES" && item.series_id != null) {
                     val itn = Intent(this, SeriesDetailActivity::class.java)
                     itn.putExtra("SERIES_ID", item.series_id ?: "")
@@ -1469,16 +1360,13 @@ jobs:
                     startActivity(itn)
                     return
                 }
-
                 val dnsRaw = acc.dns?.trim() ?: ""
                 val user = (acc.user ?: "").trim().replace("""\s+""".toRegex(), "")
                 val pass = acc.pass?.trim() ?: ""
-
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                     Toast.makeText(this, "DNS / kullanıcı / şifre boş.", Toast.LENGTH_SHORT).show()
                     return
                 }
-
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val path = if (currentMode == "LIVE") "live" else "movie"
                 val ext = if (currentMode == "LIVE") ".ts" else {
@@ -1486,24 +1374,20 @@ jobs:
                 }
                 val id = item.stream_id ?: ""
                 val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
-
                 val itn = Intent(this, PlayerActivity::class.java)
                 itn.putExtra("URL", playUrl)
                 itn.putExtra("REF", "")
                 itn.putExtra("ORG", "")
                 itn.putExtra("TYPE", if (currentMode == "LIVE") "LIVE" else "VOD")
-
                 AdsHelper.maybeShowOnChannelClick(this) {
                     RemoteLogger.sendEvent(this, "play_xtream", mapOf("channel_name" to item.name, "mode" to currentMode))
                     startActivity(itn)
                 }
             }
-
             private fun fetchCategoriesAndStreams() {
                 val acc = activeAcc ?: return
                 pb.visibility = View.VISIBLE
                 tvStatus.visibility = View.GONE
-
                 if (acc.type == "M3U") {
                     var m3uUrl = acc.m3u?.trim() ?: ""
                     if (m3uUrl.isEmpty()) {
@@ -1512,13 +1396,11 @@ jobs:
                         tvStatus.visibility = View.VISIBLE
                         return
                     }
-
                     Thread {
                         try {
                             val result = fetchM3u(m3uUrl)
                             val cats = result.first
                             val streamsList = result.second
-
                             runOnUiThread {
                                 pb.visibility = View.GONE
                                 categoriesAll = cats
@@ -1537,21 +1419,17 @@ jobs:
                     }.start()
                     return
                 }
-
                 var dnsRaw = (acc.dns ?: "").trim()
                 val user = (acc.user ?: "").trim().replace("""\s+""".toRegex(), "")
                 val pass = (acc.pass ?: "").trim()
-
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                     pb.visibility = View.GONE
                     tvStatus.text = "DNS / kullanıcı / şifre boş."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
-
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val base = dns + "/player_api.php?username=" + user + "&password=" + pass
-
                 val catAction = when (currentMode) {
                     "VOD" -> "get_vod_categories"
                     "SERIES" -> "get_series_categories"
@@ -1562,16 +1440,13 @@ jobs:
                     "SERIES" -> "get_series"
                     else -> "get_live_streams"
                 }
-
                 val catUrl = base + "&action=" + catAction
                 val streamsUrl = base + "&action=" + streamsAction
-
                 Thread {
                     try {
                         val accInfo = fetchAccountInfo(base)
                         val fetchedCategories = fetchCategories(catUrl)
                         val fetchedStreams = fetchStreams(streamsUrl)
-
                         runOnUiThread {
                             pb.visibility = View.GONE
                             categoriesAll = fetchedCategories
@@ -1590,52 +1465,42 @@ jobs:
                     }
                 }.start()
             }
-
             private fun fetchM3u(urlStr: String): Pair<List<Category>, List<StreamItem>> {
                 val categoriesMap = LinkedHashMap<String, Category>()
                 val streamsList = ArrayList<StreamItem>()
                 val body = httpGet(urlStr)
                 val lines = body.split("\n")
-
                 var currentName = ""
                 var currentGroup = "Genel"
                 var currentRef: String? = null
                 var currentOrg: String? = null
-
                 for (raw in lines) {
                     val line = raw.trim()
                     if (line.isEmpty()) continue
                     if (line.startsWith("#EXTM3U", ignoreCase = true)) continue
-
                     if (line.startsWith("#EXTINF", ignoreCase = true)) {
                         var name = ""
                         var group = "Genel"
-
                         val groupIndex = line.indexOf("group-title=\"")
                         if (groupIndex >= 0) {
                             val start = groupIndex + "group-title=\"".length
                             val end = line.indexOf("\"", startIndex = start)
                             if (end > start) group = line.substring(start, end)
                         }
-
                         val commaIndex = line.lastIndexOf(',')
                         if (commaIndex >= 0 && commaIndex < line.length - 1) {
                             name = line.substring(commaIndex + 1).trim()
                         }
-
                         currentName = if (name.isNotEmpty()) name else "Kanal"
                         currentGroup = if (group.isNotEmpty()) group else "Genel"
                         currentRef = null
                         currentOrg = null
-
                     } else if (line.startsWith("#EXTVLCOPT:http-referrer=", ignoreCase = true)) {
                         val idx = line.indexOf("=")
                         if (idx >= 0 && idx < line.length - 1) currentRef = line.substring(idx + 1).trim()
-
                     } else if (line.startsWith("#EXTVLCOPT:http-origin=", ignoreCase = true)) {
                         val idx = line.indexOf("=")
                         if (idx >= 0 && idx < line.length - 1) currentOrg = line.substring(idx + 1).trim()
-
                     } else if (!line.startsWith("#")) {
                         val urlPlay = line
                         val groupId = if (currentGroup.isNotEmpty()) currentGroup else "Genel"
@@ -1658,10 +1523,8 @@ jobs:
                         currentOrg = null
                     }
                 }
-
                 return Pair(categoriesMap.values.toList(), streamsList)
             }
-
             private fun fetchAccountInfo(baseUrl: String): Pair<String?, String?> {
                 return try {
                     val body = httpGet(baseUrl)
@@ -1674,7 +1537,6 @@ jobs:
                     Pair(null, null)
                 }
             }
-
             private fun formatExp(exp: String?): String {
                 if (exp.isNullOrEmpty() || exp == "0" || exp == "null") return "Sınırsız"
                 return try {
@@ -1685,7 +1547,6 @@ jobs:
                     exp
                 }
             }
-
             private fun fetchCategories(urlStr: String): List<Category> {
                 val list = ArrayList<Category>()
                 val body = httpGet(urlStr)
@@ -1703,7 +1564,6 @@ jobs:
                 }
                 return list
             }
-
             private fun fetchStreams(urlStr: String): List<StreamItem> {
                 val list = ArrayList<StreamItem>()
                 val body = httpGet(urlStr)
@@ -1721,7 +1581,6 @@ jobs:
                 }
                 return list
             }
-
             private fun httpGet(urlStr: String): String {
                 try {
                     return doHttpGet(urlStr, 5)
@@ -1744,10 +1603,8 @@ jobs:
                     throw e
                 }
             }
-
             private fun doHttpGet(urlStr: String, redirectsLeft: Int): String {
                 if (redirectsLeft <= 0) throw Exception("Çok fazla yönlendirme")
-
                 val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
                     instanceFollowRedirects = false
                     connectTimeout = 25000
@@ -1768,18 +1625,15 @@ jobs:
                             return doHttpGet(loc, redirectsLeft - 1)
                         }
                     }
-
                     val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                     val encoding = (conn.contentEncoding ?: "").lowercase(Locale.getDefault())
                     val raw = stream ?: throw Exception("HTTP " + code + " boş response")
                     val input = if (encoding.contains("gzip")) java.util.zip.GZIPInputStream(raw) else raw
                     val body = input.bufferedReader(Charsets.UTF_8).use { it.readText() }
-
                     val trimmed = body.trimStart()
                     if (trimmed.startsWith("<!DOCTYPE", true) || trimmed.startsWith("<html", true)) {
                         throw Exception("JSON yerine HTML döndü (muhtemel engel/koruma). İlk 200: " + trimmed.take(200))
                     }
-
                     if (code !in 200..299) {
                         throw Exception("HTTP " + code + ": " + body.take(300))
                     }
@@ -1791,11 +1645,9 @@ jobs:
         }
         EOF
 
-        # ============ SeriesDetailActivity ============
-
+        # ============ SeriesDetailActivity (temiz, string template YOK + liste içi banner) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
-
         import android.content.Intent
         import android.os.Bundle
         import android.view.View
@@ -1810,7 +1662,7 @@ jobs:
         import $PACKAGE_NAME.adapters.GridAdapter
         import $PACKAGE_NAME.models.EpisodeItem
         import $PACKAGE_NAME.utils.Prefs
-
+        import $PACKAGE_NAME.utils.RemoteConfig
         class SeriesDetailActivity : AppCompatActivity() {
             private lateinit var prefs: Prefs
             private lateinit var tvTitle: TextView
@@ -1819,40 +1671,31 @@ jobs:
             private lateinit var rv: RecyclerView
             private lateinit var layoutManager: LinearLayoutManager
             private lateinit var gridAdapter: GridAdapter
-
             private var seriesName = ""
             private var seriesId = ""
-
             private enum class Screen { SEASONS, EPISODES }
             private var screen = Screen.SEASONS
             private var selectedSeason = 0
-
             private val seasons = mutableListOf<Int>()
             private val allEpisodes = mutableListOf<EpisodeItem>()
             private var seasonsScrollPos = 0
-
             private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
-
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_series_detail)
-
                 prefs = Prefs(this)
                 tvTitle = findViewById(R.id.tvSeriesTitle)
                 tvStatus = findViewById(R.id.tvSeriesStatus)
                 pb = findViewById(R.id.pbSeries)
                 rv = findViewById(R.id.rvEpisodes)
-
                 layoutManager = LinearLayoutManager(this)
                 rv.layoutManager = layoutManager
-
-                gridAdapter = GridAdapter(emptyList(), emptyList()) { pos -> onItemClick(pos) }
+                val listInterval = RemoteConfig.getListBannerInterval(this, 7)
+                gridAdapter = GridAdapter(emptyList(), emptyList(), listInterval) { pos -> onItemClick(pos) }
                 rv.adapter = gridAdapter
-
                 seriesName = intent.getStringExtra("SERIES_NAME") ?: "Dizi"
                 seriesId = intent.getStringExtra("SERIES_ID") ?: ""
                 tvTitle.text = seriesName
-
                 tvTitle.setOnClickListener {
                     if (screen == Screen.EPISODES) {
                         showSeasons()
@@ -1860,16 +1703,13 @@ jobs:
                         finish()
                     }
                 }
-
                 if (seriesId.isEmpty()) {
                     tvStatus.text = "Geçersiz seri bilgisi."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
-
                 loadSeriesInfo(seriesId)
             }
-
             override fun onBackPressed() {
                 if (screen == Screen.EPISODES) {
                     showSeasons()
@@ -1877,7 +1717,6 @@ jobs:
                 }
                 super.onBackPressed()
             }
-
             private fun onItemClick(position: Int) {
                 if (screen == Screen.SEASONS) {
                     if (position < seasons.size) {
@@ -1891,34 +1730,31 @@ jobs:
                     }
                 }
             }
-
             private fun showSeasons() {
                 screen = Screen.SEASONS
                 tvTitle.text = seriesName
-                val titles = seasons.map { "Sezon $it" }
+                val titles = seasons.map { "Sezon " + it }
                 val subtitles = List(titles.size) { "" }
                 gridAdapter.update(titles, subtitles)
                 layoutManager.scrollToPositionWithOffset(seasonsScrollPos, 0)
             }
-
             private fun showEpisodes(season: Int) {
                 screen = Screen.EPISODES
                 selectedSeason = season
                 val eps = allEpisodes.filter { it.seasonNumber == season }.sortedBy { it.episodeNumber }
-                val titles = eps.map { "${it.episodeNumber.toString().padStart(2, '0')}. Bölüm - ${it.title}" }
+                val titles = eps.map { it.episodeNumber.toString().padStart(2, '0') + ". Bölüm - " + it.title }
                 val subtitles = List(titles.size) { "" }
                 gridAdapter.update(titles, subtitles)
-                tvTitle.text = "$seriesName • Sezon $season"
+                tvTitle.text = seriesName + " • Sezon " + season
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
-
             private fun playEpisode(ep: EpisodeItem) {
                 val dnsRaw = prefs.getDns().trim()
                 val user = prefs.getUser().trim().replace("""\s+""".toRegex(), "")
                 val pass = prefs.getPass().trim()
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val ext = ep.container_extension ?: "mp4"
-                val url = "$dns/series/$user/$pass/${ep.id}.$ext"
+                val url = dns + "/series/" + user + "/" + pass + "/" + ep.id + "." + ext
                 val itn = Intent(this, PlayerActivity::class.java)
                 itn.putExtra("URL", url)
                 itn.putExtra("TYPE", "VOD")
@@ -1926,24 +1762,19 @@ jobs:
                 itn.putExtra("ORG", "")
                 startActivity(itn)
             }
-
             private fun loadSeriesInfo(seriesId: String) {
                 var dnsRaw = prefs.getDns().trim()
                 val user = prefs.getUser().trim().replace("""\s+""".toRegex(), "")
                 val pass = prefs.getPass().trim()
-
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                     tvStatus.text = "DNS / kullanıcı / şifre eksik."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
-
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val urlStr = dns + "/player_api.php?username=" + user + "&password=" + pass + "&action=get_series_info&series_id=" + seriesId
-
                 pb.visibility = View.VISIBLE
                 tvStatus.visibility = View.GONE
-
                 Thread {
                     try {
                         val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
@@ -1960,32 +1791,29 @@ jobs:
                             }
                             return@Thread
                         }
-
                         val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                         val obj = JSONObject(body)
                         val episodesObj = obj.optJSONObject("episodes") ?: JSONObject()
-
                         allEpisodes.clear()
                         seasons.clear()
-
                         val keys = episodesObj.keys()
                         while (keys.hasNext()) {
                             val seasonKey = keys.next()
                             val seasonNum = seasonKey.toIntOrNull() ?: continue
                             if (!seasons.contains(seasonNum)) seasons.add(seasonNum)
                             val arr = episodesObj.optJSONArray(seasonKey) ?: continue
-                            for (i in 0 until arr.length()) {
+                            var i = 0
+                            while (i < arr.length()) {
                                 val epObj = arr.getJSONObject(i)
                                 val id = epObj.optString("id", "")
                                 val title = epObj.optString("title", "Bölüm")
                                 val epNum = epObj.optInt("episode_num", 1)
                                 val ext = epObj.optString("container_extension", "mp4")
                                 allEpisodes.add(EpisodeItem(id, title, seasonNum, epNum, ext))
+                                i++
                             }
                         }
-
                         seasons.sort()
-
                         runOnUiThread {
                             pb.visibility = View.GONE
                             if (seasons.isEmpty()) {
@@ -1995,7 +1823,6 @@ jobs:
                                 showSeasons()
                             }
                         }
-
                     } catch (e: Exception) {
                         runOnUiThread {
                             pb.visibility = View.GONE
@@ -2008,11 +1835,9 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (5sn sonra kontroller gizleniyor) ============
-
+        # ============ PlayerActivity (5 sn sonra kontroller gizleniyor, template yok) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
-
         import android.content.Context
         import android.media.AudioManager
         import android.os.Bundle
@@ -2024,6 +1849,7 @@ jobs:
         import android.widget.ImageButton
         import android.widget.TextView
         import android.widget.Toast
+        import androidx.appcompat.app.AlertDialog
         import androidx.appcompat.app.AppCompatActivity
         import androidx.media3.common.MediaItem
         import androidx.media3.common.PlaybackException
@@ -2034,11 +1860,9 @@ jobs:
         import androidx.media3.ui.AspectRatioFrameLayout
         import androidx.media3.ui.PlayerView
         import kotlin.math.abs
-
         class PlayerActivity : AppCompatActivity() {
             private var player: ExoPlayer? = null
             private var currentMode: Int = 0
-
             private lateinit var playerView: PlayerView
             private lateinit var leftOverlay: View
             private lateinit var rightOverlay: View
@@ -2047,8 +1871,7 @@ jobs:
             private lateinit var tvVolume: TextView
             private lateinit var btnPlayPause: ImageButton
             private lateinit var btnMode: ImageButton
-            private lateinit var controlsContainer: View
-
+            private lateinit var controlsBar: View
             private var audioManager: AudioManager? = null
             private var maxVolume: Int = 0
             private var gestureStartVolume: Int = 0
@@ -2061,19 +1884,15 @@ jobs:
             private var tapCountLeft: Int = 0
             private var tapCountRight: Int = 0
             private var playUrl: String = ""
-
             private val FAKE_USER_AGENT =
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
-
             private val handler = Handler(Looper.getMainLooper())
             private val hideControlsRunnable = Runnable {
-                controlsContainer.visibility = View.GONE
+                controlsBar.visibility = View.GONE
                 playerView.hideController()
             }
-
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
-
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
                 window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
@@ -2084,102 +1903,94 @@ jobs:
                     View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
                     View.SYSTEM_UI_FLAG_FULLSCREEN or
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-
                 setContentView(R.layout.activity_player_pro)
-
                 playUrl = intent.getStringExtra("URL") ?: ""
                 val ref = intent.getStringExtra("REF") ?: ""
                 val org = intent.getStringExtra("ORG") ?: ""
-
                 if (playUrl.isEmpty()) {
                     Toast.makeText(this, "Geçersiz yayın URL'si.", Toast.LENGTH_SHORT).show()
                     finish()
                     return
                 }
-
                 playerView = findViewById(R.id.pvMain)
+                btnPlayPause = findViewById(R.id.btnPlayPause)
+                btnMode = findViewById(R.id.btnMode)
                 leftOverlay = findViewById(R.id.overlayLeft)
                 rightOverlay = findViewById(R.id.overlayRight)
                 tvCenterInfo = findViewById(R.id.tvInfoCenter)
                 tvBrightness = findViewById(R.id.tvBrightness)
                 tvVolume = findViewById(R.id.tvVolume)
-                btnPlayPause = findViewById(R.id.btnPlayPause)
-                btnMode = findViewById(R.id.btnMode)
-                controlsContainer = findViewById(R.id.controlsContainer)
-
+                controlsBar = findViewById(R.id.controlsBar)
                 playerView.useController = true
                 playerView.controllerAutoShow = true
                 playerView.controllerHideOnTouch = true
-
+                playerView.controllerShowTimeoutMs = 5000
                 audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
-
                 val lp = window.attributes
                 currentBrightness = if (lp.screenBrightness in 0f..1f) lp.screenBrightness else 0.5f
-
                 applyResizeMode(playerView)
-
                 btnMode.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
                     applyResizeMode(playerView)
-                    showControlsAndScheduleHide()
+                    showControlsTemporarily()
                 }
-
                 btnPlayPause.setOnClickListener {
-                    player?.let {
-                        if (it.isPlaying) it.pause() else it.play()
+                    val p = player
+                    if (p != null) {
+                        if (p.isPlaying) {
+                            p.pause()
+                        } else {
+                            p.play()
+                        }
                     }
-                    showControlsAndScheduleHide()
+                    showControlsTemporarily()
                 }
-
                 setupGestureOverlay(leftOverlay, true)
                 setupGestureOverlay(rightOverlay, false)
-
                 try {
                     val headers = mutableMapOf<String, String>()
                     headers["User-Agent"] = FAKE_USER_AGENT
                     if (ref.isNotEmpty()) headers["Referer"] = ref
                     if (org.isNotEmpty()) headers["Origin"] = org
-
                     val httpFactory = DefaultHttpDataSource.Factory()
                         .setConnectTimeoutMs(20000)
                         .setReadTimeoutMs(40000)
                         .setDefaultRequestProperties(headers)
-
                     val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
-
-                    player = ExoPlayer.Builder(this)
-                        .setMediaSourceFactory(mediaSourceFactory)
-                        .build()
-
-                    val exo = player!!
+                    val exo = ExoPlayer.Builder(this).setMediaSourceFactory(mediaSourceFactory).build()
+                    player = exo
                     playerView.player = exo
                     exo.setMediaItem(MediaItem.fromUri(playUrl))
                     exo.prepare()
                     exo.playWhenReady = true
-
                     exo.addListener(object : Player.Listener {
                         override fun onIsPlayingChanged(isPlaying: Boolean) {
                             btnPlayPause.setImageResource(
                                 if (isPlaying) android.R.drawable.ic_media_pause
                                 else android.R.drawable.ic_media_play
                             )
-                            showControlsAndScheduleHide()
                         }
-
                         override fun onPlayerError(error: PlaybackException) {
-                            Toast.makeText(this@PlayerActivity, "Oynatma hatası: ${error.message}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                this@PlayerActivity,
+                                "Oynatma hatası: " + (error.message ?: ""),
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     })
-
-                    showControlsAndScheduleHide()
-
+                    showControlsTemporarily()
                 } catch (e: Exception) {
                     Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
                     finish()
                 }
             }
-
+            private fun showControlsTemporarily() {
+                controlsBar.visibility = View.VISIBLE
+                playerView.showController()
+                handler.removeCallbacks(hideControlsRunnable)
+                handler.postDelayed(hideControlsRunnable, 5000)
+            }
             private fun setupGestureOverlay(view: View, isLeft: Boolean) {
                 view.setOnTouchListener { v, event ->
                     val am = audioManager
@@ -2204,7 +2015,8 @@ jobs:
                         }
                         MotionEvent.ACTION_UP -> {
                             if (!isGesture) {
-                                // Tek / çift tıklama – kontrolleri de göster
+                                playerView.showController()
+                                showControlsTemporarily()
                                 val now = System.currentTimeMillis()
                                 if (isLeft) {
                                     tapCountLeft = if (now - lastTapLeft < 350) tapCountLeft + 1 else 1
@@ -2223,7 +2035,6 @@ jobs:
                                         showCenterInfo("15 saniye ►►")
                                     }
                                 }
-                                showControlsAndScheduleHide()
                             }
                             tvBrightness.visibility = View.GONE
                             tvVolume.visibility = View.GONE
@@ -2233,7 +2044,6 @@ jobs:
                     }
                 }
             }
-
             private fun adjustVolume(percentDelta: Float) {
                 val am = audioManager ?: return
                 val change = (percentDelta * maxVolume).toInt()
@@ -2242,10 +2052,9 @@ jobs:
                 if (newVol > maxVolume) newVol = maxVolume
                 am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
                 val percent = if (maxVolume > 0) (newVol * 100 / maxVolume) else 0
-                tvVolume.text = "Ses: $percent%"
+                tvVolume.text = "Ses: " + percent + "%"
                 tvVolume.visibility = View.VISIBLE
             }
-
             private fun adjustBrightness(percentDelta: Float) {
                 var newB = gestureStartBrightness + percentDelta
                 if (newB < 0f) newB = 0f
@@ -2254,10 +2063,10 @@ jobs:
                 lp.screenBrightness = newB
                 window.attributes = lp
                 currentBrightness = newB
-                tvBrightness.text = "Parlaklık: ${(currentBrightness * 100f).toInt()}%"
+                val perc = (currentBrightness * 100f).toInt()
+                tvBrightness.text = "Parlaklık: " + perc + "%"
                 tvBrightness.visibility = View.VISIBLE
             }
-
             private fun seekBy(deltaMs: Long) {
                 val p = player ?: return
                 var newPos = p.currentPosition + deltaMs
@@ -2266,7 +2075,6 @@ jobs:
                 if (duration > 0 && newPos > duration) newPos = duration
                 p.seekTo(newPos)
             }
-
             private fun applyResizeMode(pv: PlayerView) {
                 pv.resizeMode = when (currentMode) {
                     0 -> AspectRatioFrameLayout.RESIZE_MODE_FIT
@@ -2274,20 +2082,11 @@ jobs:
                     else -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 }
             }
-
             private fun showCenterInfo(text: String) {
                 tvCenterInfo.text = text
                 tvCenterInfo.visibility = View.VISIBLE
                 tvCenterInfo.postDelayed({ tvCenterInfo.visibility = View.GONE }, 1200)
             }
-
-            private fun showControlsAndScheduleHide() {
-                controlsContainer.visibility = View.VISIBLE
-                playerView.showController()
-                handler.removeCallbacks(hideControlsRunnable)
-                handler.postDelayed(hideControlsRunnable, 5000)
-            }
-
             override fun onDestroy() {
                 super.onDestroy()
                 handler.removeCallbacksAndMessages(null)
@@ -2298,7 +2097,6 @@ jobs:
         EOF
 
         # ============ LAYOUTLAR ============
-
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2308,7 +2106,6 @@ jobs:
             android:orientation="vertical"
             android:padding="16dp"
             android:background="@color/bg_dark">
-
             <com.google.android.gms.ads.AdView
                 android:id="@+id/adViewTopLogin"
                 android:layout_width="match_parent"
@@ -2318,7 +2115,6 @@ jobs:
                 android:layout_marginBottom="8dp"
                 android:focusable="false"
                 android:focusableInTouchMode="false"/>
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -2342,7 +2138,6 @@ jobs:
                     android:src="@android:drawable/ic_menu_manage"
                     android:tint="@color/white"/>
             </LinearLayout>
-
             <TextView
                 android:id="@+id/tvLoginType"
                 android:layout_width="wrap_content"
@@ -2351,7 +2146,6 @@ jobs:
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:layout_marginBottom="4dp"/>
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -2378,7 +2172,6 @@ jobs:
                         android:textColor="@color/white"
                         android:textSize="16sp"/>
                 </LinearLayout>
-
                 <LinearLayout
                     android:id="@+id/cardM3u"
                     android:layout_width="0dp"
@@ -2401,7 +2194,6 @@ jobs:
                         android:textSize="16sp"/>
                 </LinearLayout>
             </LinearLayout>
-
             <EditText
                 android:id="@+id/etName"
                 android:layout_width="match_parent"
@@ -2413,7 +2205,6 @@ jobs:
                 android:textColorHint="@color/gray_600"
                 android:inputType="textPersonName"
                 android:layout_marginBottom="10dp"/>
-
             <LinearLayout
                 android:id="@+id/layoutXtream"
                 android:layout_width="match_parent"
@@ -2453,7 +2244,6 @@ jobs:
                     android:textColorHint="@color/gray_600"
                     android:layout_marginBottom="8dp"/>
             </LinearLayout>
-
             <LinearLayout
                 android:id="@+id/layoutM3u"
                 android:layout_width="match_parent"
@@ -2472,7 +2262,6 @@ jobs:
                     android:inputType="textUri"
                     android:layout_marginBottom="10dp"/>
             </LinearLayout>
-
             <Button
                 android:id="@+id/btnAddAccount"
                 android:layout_width="match_parent"
@@ -2484,7 +2273,6 @@ jobs:
                 android:background="@color/primary_cyan"
                 android:layout_marginTop="12dp"
                 android:layout_marginBottom="16dp"/>
-
             <TextView
                 android:id="@+id/tvAccountsTitle"
                 android:layout_width="match_parent"
@@ -2494,7 +2282,6 @@ jobs:
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="2dp"/>
-
             <TextView
                 android:id="@+id/tvAccountsHint"
                 android:layout_width="match_parent"
@@ -2503,7 +2290,6 @@ jobs:
                 android:textColor="@color/hint_yellow"
                 android:textSize="13sp"
                 android:layout_marginBottom="6dp"/>
-
             <ListView
                 android:id="@+id/lvAccounts"
                 android:layout_width="match_parent"
@@ -2514,8 +2300,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # Yeni: activity_content.xml – ortada 3’lü menü, altta liste + bannerlar
-
+                # Yeni: activity_content.xml – ortada 3’lü menü, altta liste
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <?xml version="1.0" encoding="utf-8"?>
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2539,7 +2324,7 @@ jobs:
                     ads:adUnitId="@string/admob_banner_test"
                     android:layout_marginBottom="4dp"
                     android:focusable="false"
-                    android:focusableInTouchMode="false"/>
+                    android:focusableInTouchMode="false" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -2551,6 +2336,7 @@ jobs:
                     android:paddingRight="12dp"
                     android:paddingTop="10dp"
                     android:paddingBottom="10dp">
+
                     <TextView
                         android:id="@+id/tvOpenDrawer"
                         android:layout_width="wrap_content"
@@ -2558,7 +2344,8 @@ jobs:
                         android:text="☰"
                         android:textColor="@color/white"
                         android:textSize="22sp"
-                        android:paddingRight="12dp"/>
+                        android:paddingRight="12dp" />
+
                     <TextView
                         android:id="@+id/tvTitleBar"
                         android:layout_width="0dp"
@@ -2567,7 +2354,8 @@ jobs:
                         android:text="ErdinPlayer"
                         android:textColor="@color/white"
                         android:textSize="18sp"
-                        android:textStyle="bold"/>
+                        android:textStyle="bold" />
+
                     <EditText
                         android:id="@+id/etSearch"
                         android:layout_width="200dp"
@@ -2579,7 +2367,7 @@ jobs:
                         android:textColor="@color/white"
                         android:textColorHint="@color/hint_yellow"
                         android:singleLine="true"
-                        android:imeOptions="actionSearch"/>
+                        android:imeOptions="actionSearch" />
                 </LinearLayout>
 
                 <ProgressBar
@@ -2590,7 +2378,7 @@ jobs:
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="8dp"
-                    android:visibility="gone"/>
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/tvStatus"
@@ -2599,8 +2387,9 @@ jobs:
                     android:textColor="@color/error_red"
                     android:textSize="14sp"
                     android:padding="8dp"
-                    android:visibility="gone"/>
+                    android:visibility="gone" />
 
+                <!-- Ana menü: Canlı TV / Filmler / Diziler -->
                 <LinearLayout
                     android:id="@+id/layoutModeSelector"
                     android:layout_width="match_parent"
@@ -2609,6 +2398,7 @@ jobs:
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="24dp">
+
                     <TextView
                         android:id="@+id/btnModeLive"
                         android:layout_width="match_parent"
@@ -2621,7 +2411,8 @@ jobs:
                         android:background="@drawable/bg_focusable"
                         android:focusable="true"
                         android:focusableInTouchMode="true"
-                        android:layout_marginBottom="16dp"/>
+                        android:layout_marginBottom="16dp" />
+
                     <TextView
                         android:id="@+id/btnModeVod"
                         android:layout_width="match_parent"
@@ -2634,7 +2425,8 @@ jobs:
                         android:background="@drawable/bg_focusable"
                         android:focusable="true"
                         android:focusableInTouchMode="true"
-                        android:layout_marginBottom="16dp"/>
+                        android:layout_marginBottom="16dp" />
+
                     <TextView
                         android:id="@+id/btnModeSeries"
                         android:layout_width="match_parent"
@@ -2646,16 +2438,17 @@ jobs:
                         android:textStyle="bold"
                         android:background="@drawable/bg_focusable"
                         android:focusable="true"
-                        android:focusableInTouchMode="true"/>
+                        android:focusableInTouchMode="true" />
                 </LinearLayout>
 
+                <!-- Kategori / Kanal / Bölüm listesi -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvContent"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
                     android:padding="8dp"
-                    android:visibility="gone"/>
+                    android:visibility="gone" />
 
                 <com.google.android.gms.ads.AdView
                     android:id="@+id/adViewBottomContent"
@@ -2665,9 +2458,10 @@ jobs:
                     ads:adUnitId="@string/admob_banner_test"
                     android:layout_marginTop="4dp"
                     android:focusable="false"
-                    android:focusableInTouchMode="false"/>
+                    android:focusableInTouchMode="false" />
             </LinearLayout>
 
+            <!-- Sol Drawer: Hesap listesi ve çıkış -->
             <LinearLayout
                 android:layout_width="300dp"
                 android:layout_height="match_parent"
@@ -2675,12 +2469,14 @@ jobs:
                 android:orientation="vertical"
                 android:background="@color/drawer_bg"
                 android:padding="12dp">
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:background="@drawable/bg_header_card"
                     android:padding="12dp">
+
                     <TextView
                         android:id="@+id/tvDrawerUser"
                         android:layout_width="match_parent"
@@ -2688,7 +2484,8 @@ jobs:
                         android:text="Hesap: -"
                         android:textColor="@color/white"
                         android:textStyle="bold"
-                        android:textSize="16sp"/>
+                        android:textSize="16sp" />
+
                     <TextView
                         android:id="@+id/tvDrawerExpire"
                         android:layout_width="match_parent"
@@ -2696,7 +2493,7 @@ jobs:
                         android:text="Süre: -"
                         android:textColor="@color/white"
                         android:textSize="14sp"
-                        android:layout_marginTop="4dp"/>
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
 
                 <TextView
@@ -2707,13 +2504,13 @@ jobs:
                     android:textStyle="bold"
                     android:textSize="14sp"
                     android:layout_marginTop="12dp"
-                    android:layout_marginBottom="8dp"/>
+                    android:layout_marginBottom="8dp" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvAccounts"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
-                    android:layout_weight="1"/>
+                    android:layout_weight="1" />
 
                 <TextView
                     android:id="@+id/tvLogout"
@@ -2724,7 +2521,7 @@ jobs:
                     android:textColor="@color/white"
                     android:textStyle="bold"
                     android:background="@drawable/bg_focusable"
-                    android:layout_marginTop="10dp"/>
+                    android:layout_marginTop="10dp" />
             </LinearLayout>
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
@@ -2732,7 +2529,6 @@ jobs:
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:ads="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -2745,6 +2541,7 @@ jobs:
                 android:orientation="vertical"
                 android:background="@drawable/bg_focusable"
                 android:padding="12dp">
+
                 <TextView
                     android:id="@+id/txtName"
                     android:layout_width="match_parent"
@@ -2753,7 +2550,8 @@ jobs:
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:maxLines="2"
-                    android:ellipsize="end"/>
+                    android:ellipsize="end" />
+
                 <TextView
                     android:id="@+id/txtSub"
                     android:layout_width="match_parent"
@@ -2761,21 +2559,8 @@ jobs:
                     android:textColor="@color/hint_yellow"
                     android:textSize="12sp"
                     android:layout_marginTop="4dp"
-                    android:visibility="gone"/>
+                    android:visibility="gone" />
             </LinearLayout>
-
-            <!-- Liste arası inline banner (panelden gelen aralığa göre açılıp kapanacak) -->
-            <com.google.android.gms.ads.AdView
-                android:id="@+id/adInlineBanner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                ads:adSize="BANNER"
-                ads:adUnitId="@string/admob_banner_test"
-                android:layout_marginTop="4dp"
-                android:focusable="false"
-                android:focusableInTouchMode="false"
-                android:clickable="false"
-                android:visibility="gone"/>
         </LinearLayout>
         EOF
 
@@ -2803,7 +2588,7 @@ jobs:
                     android:text="Hesap Adı"
                     android:textColor="@color/white"
                     android:textStyle="bold"
-                    android:textSize="15sp"/>
+                    android:textSize="15sp" />
 
                 <TextView
                     android:id="@+id/tvAccountType"
@@ -2812,7 +2597,7 @@ jobs:
                     android:text="Xtream"
                     android:textColor="@color/primary_cyan"
                     android:textSize="12sp"
-                    android:layout_marginTop="2dp"/>
+                    android:layout_marginTop="2dp" />
             </LinearLayout>
 
             <ImageButton
@@ -2821,7 +2606,7 @@ jobs:
                 android:layout_height="36dp"
                 android:background="@android:color/transparent"
                 android:src="@android:drawable/ic_menu_delete"
-                android:tint="@color/error_red"/>
+                android:tint="@color/error_red" />
         </LinearLayout>
         EOF
 
@@ -2841,7 +2626,7 @@ jobs:
                 android:background="@color/bg_card"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                android:padding="16dp"/>
+                android:padding="16dp" />
 
             <ProgressBar
                 android:id="@+id/pbSeries"
@@ -2849,7 +2634,7 @@ jobs:
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:visibility="gone"/>
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvSeriesStatus"
@@ -2858,13 +2643,13 @@ jobs:
                 android:textColor="@color/error_red"
                 android:textSize="14sp"
                 android:padding="8dp"
-                android:visibility="gone"/>
+                android:visibility="gone" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvEpisodes"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:padding="8dp"/>
+                android:padding="8dp" />
         </LinearLayout>
         EOF
 
@@ -2878,7 +2663,7 @@ jobs:
             <androidx.media3.ui.PlayerView
                 android:id="@+id/pvMain"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
+                android:layout_height="match_parent" />
 
             <LinearLayout
                 android:id="@+id/overlayContainer"
@@ -2909,7 +2694,7 @@ jobs:
                 android:background="#80000000"
                 android:padding="8dp"
                 android:layout_gravity="center"
-                android:visibility="gone"/>
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvBrightness"
@@ -2921,7 +2706,7 @@ jobs:
                 android:padding="6dp"
                 android:layout_gravity="top|left"
                 android:layout_margin="12dp"
-                android:visibility="gone"/>
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvVolume"
@@ -2933,7 +2718,7 @@ jobs:
                 android:padding="6dp"
                 android:layout_gravity="top|right"
                 android:layout_margin="12dp"
-                android:visibility="gone"/>
+                android:visibility="gone" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -2943,6 +2728,17 @@ jobs:
                 android:layout_gravity="bottom|center_horizontal"
                 android:gravity="right">
 
+                <!-- Özel Oynat / Durdur Butonu -->
+                <ImageButton
+                    android:id="@+id/btnPlayPause"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@android:color/transparent"
+                    android:src="@android:drawable/ic_media_pause"
+                    android:padding="8dp"
+                    android:tint="@android:color/white" />
+
+                <!-- Görüntü Modu Değiştirme Butonu -->
                 <ImageButton
                     android:id="@+id/btnMode"
                     android:layout_width="56dp"
@@ -2950,12 +2746,12 @@ jobs:
                     android:background="@android:color/transparent"
                     android:src="@android:drawable/ic_menu_crop"
                     android:padding="8dp"
-                    android:tint="@android:color/white"/>
+                    android:tint="@android:color/white" />
             </LinearLayout>
         </FrameLayout>
         EOF
 
-        # ============ MANIFEST ============
+        # ============ MANIFEST ============        
         cat <<EOF > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
         <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -2982,9 +2778,9 @@ jobs:
                     android:name=".LoginActivity"
                     android:exported="true">
                     <intent-filter>
-                        <action android:name="android.intent.action.MAIN"/>
-                        <category android:name="android.intent.category.LAUNCHER"/>
-                        <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
+                        <action android:name="android.intent.action.MAIN" />
+                        <category android:name="android.intent.category.LAUNCHER" />
+                        <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
                     </intent-filter>
                 </activity>
 
@@ -3017,7 +2813,6 @@ jobs:
             </base-config>
         </network-security-config>
         EOF
-
     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
       with:
