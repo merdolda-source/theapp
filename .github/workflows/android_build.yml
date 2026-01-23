@@ -268,7 +268,7 @@ jobs:
         </selector>
         EOF
 
-        # ============ BOTTOM NAV MENÜ (dursa da olur) ============
+        # ============ BOTTOM NAV MENÜ ============
         cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
         <menu xmlns:android="http://schemas.android.com/apk/res/android">
             <item
@@ -322,7 +322,7 @@ jobs:
         )
         EOF
 
-        # ============ UTILS: RemoteConfig (list_banner_interval DAHİL) ============
+        # ============ UTILS: RemoteConfig ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
         import android.content.Context
@@ -456,7 +456,7 @@ jobs:
         }
         EOF
 
-        # ===== Prefs: Sadece hesap yönetimi, resume YOK =====
+        # ===== Prefs (resume yok) =====
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
         import android.content.Context
@@ -619,7 +619,7 @@ jobs:
         }
         EOF
 
-        # ============ UTILS: AdsHelper (CHANNEL_INTERVAL + panelden gelen) ============
+        # ============ UTILS: AdsHelper ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
         package $PACKAGE_NAME.utils
         import android.app.Activity
@@ -682,7 +682,7 @@ jobs:
         }
         EOF
 
-        # ============ ADAPTERS: GridAdapter (liste içi banner) ============
+        # ============ ADAPTERS: GridAdapter ============
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
         import android.view.KeyEvent
@@ -1026,7 +1026,7 @@ jobs:
         }
         EOF
 
-        # ============ ContentActivity (top/bottom banner + liste içi banner) ============
+        # ============ ContentActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1481,9 +1481,10 @@ jobs:
                     if (line.startsWith("#EXTINF", ignoreCase = true)) {
                         var name = ""
                         var group = "Genel"
-                        val groupIndex = line.indexOf("group-title=\"")
+                        const val GROUP_PREFIX = "group-title=\""
+                        val groupIndex = line.indexOf(GROUP_PREFIX)
                         if (groupIndex >= 0) {
-                            val start = groupIndex + "group-title=\"".length
+                            val start = groupIndex + GROUP_PREFIX.length
                             val end = line.indexOf("\"", startIndex = start)
                             if (end > start) group = line.substring(start, end)
                         }
@@ -1645,7 +1646,7 @@ jobs:
         }
         EOF
 
-        # ============ SeriesDetailActivity (temiz, string template YOK + liste içi banner) ============
+        # ============ SeriesDetailActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1835,7 +1836,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (5 sn sonra kontroller gizleniyor, template yok) ============
+        # ============ PlayerActivity (özel oynat/durdur + gesture) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
@@ -2300,7 +2301,7 @@ jobs:
         </LinearLayout>
         EOF
 
-                # Yeni: activity_content.xml – ortada 3’lü menü, altta liste
+        # activity_content.xml
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <?xml version="1.0" encoding="utf-8"?>
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2389,7 +2390,6 @@ jobs:
                     android:padding="8dp"
                     android:visibility="gone" />
 
-                <!-- Ana menü: Canlı TV / Filmler / Diziler -->
                 <LinearLayout
                     android:id="@+id/layoutModeSelector"
                     android:layout_width="match_parent"
@@ -2441,7 +2441,6 @@ jobs:
                         android:focusableInTouchMode="true" />
                 </LinearLayout>
 
-                <!-- Kategori / Kanal / Bölüm listesi -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvContent"
                     android:layout_width="match_parent"
@@ -2461,7 +2460,6 @@ jobs:
                     android:focusableInTouchMode="false" />
             </LinearLayout>
 
-            <!-- Sol Drawer: Hesap listesi ve çıkış -->
             <LinearLayout
                 android:layout_width="300dp"
                 android:layout_height="match_parent"
@@ -2512,68 +2510,33 @@ jobs:
                     android:layout_height="0dp"
                     android:layout_weight="1" />
 
-                <TextView
+                                <TextView
                     android:id="@+id/tvLogout"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:gravity="center"
                     android:text="Çıkış"
-                    android:textColor="@color/white"
-                    android:textStyle="bold"
-                    android:background="@drawable/bg_focusable"
-                    android:layout_marginTop="10dp" />
-            </LinearLayout>
-        </androidx.drawerlayout.widget.DrawerLayout>
-        EOF
-
-        cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="8dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="72dp"
-                android:orientation="vertical"
-                android:background="@drawable/bg_focusable"
-                android:padding="12dp">
-
-                <TextView
-                    android:id="@+id/txtName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/white"
+                    android:textColor="@color/error_red"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:maxLines="2"
-                    android:ellipsize="end" />
-
-                <TextView
-                    android:id="@+id/txtSub"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/hint_yellow"
-                    android:textSize="12sp"
-                    android:layout_marginTop="4dp"
-                    android:visibility="gone" />
+                    android:background="@drawable/bg_focusable"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:layout_marginTop="12dp" />
             </LinearLayout>
-        </LinearLayout>
-        EOF
 
+        </androidx.drawerlayout.widget.DrawerLayout>
+        EOF
+                        # item_account.xml
         cat <<EOF > app/src/main/res/layout/item_account.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:background="@drawable/bg_focusable"
+            android:padding="10dp"
             android:gravity="center_vertical"
-            android:minHeight="72dp"
-            android:padding="10dp">
+            android:background="@drawable/bg_account_card">
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -2595,179 +2558,257 @@ jobs:
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Xtream"
-                    android:textColor="@color/primary_cyan"
-                    android:textSize="12sp"
-                    android:layout_marginTop="2dp" />
+                    android:textColor="@color/hint_yellow"
+                    android:textSize="13sp" />
             </LinearLayout>
 
             <ImageButton
                 android:id="@+id/btnDeleteAccount"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@android:color/transparent"
                 android:src="@android:drawable/ic_menu_delete"
-                android:tint="@color/error_red" />
+                android:tint="@color/error_red"
+                android:contentDescription="Sil" />
         </LinearLayout>
         EOF
+        # item_grid_pro.xml
+        cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp"
+            android:background="@drawable/bg_focusable"
+            android:focusable="true"
+            android:focusableInTouchMode="true">
 
+            <TextView
+                android:id="@+id/txtName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Başlık"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="2" />
+
+            <TextView
+                android:id="@+id/txtSub"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Alt bilgi"
+                android:textColor="@color/hint_yellow"
+                android:textSize="13sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+        EOF
+        # item_banner.xml
+        cat <<EOF > app/src/main/res/layout/item_banner.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:ads="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="6dp">
+
+            <com.google.android.gms.ads.AdView
+                android:id="@+id/adViewList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                ads:adSize="BANNER"
+                ads:adUnitId="@string/admob_banner_test"
+                android:focusable="false"
+                android:focusableInTouchMode="false" />
+        </FrameLayout>
+        EOF
+        # activity_series_detail.xml
         cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
+            android:padding="12dp"
             android:background="@color/bg_dark">
 
             <TextView
                 android:id="@+id/tvSeriesTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:text="Dizi Adı"
                 android:textColor="@color/white"
-                android:background="@color/bg_card"
-                android:textSize="20sp"
                 android:textStyle="bold"
-                android:padding="16dp" />
+                android:textSize="20sp"
+                android:paddingBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvSeriesStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/hint_yellow"
+                android:textSize="14sp"
+                android:visibility="gone"
+                android:paddingBottom="4dp" />
 
             <ProgressBar
                 android:id="@+id/pbSeries"
                 style="?android:attr/progressBarStyleLarge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/tvSeriesStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/error_red"
-                android:textSize="14sp"
-                android:padding="8dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="6dp"
+                android:layout_gravity="center_horizontal"
                 android:visibility="gone" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvEpisodes"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:padding="8dp" />
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:paddingTop="4dp" />
         </LinearLayout>
         EOF
-
+        # activity_player_pro.xml
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@color/black">
+            android:background="@android:color/black">
 
             <androidx.media3.ui.PlayerView
                 android:id="@+id/pvMain"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-            <LinearLayout
-                android:id="@+id/overlayContainer"
-                android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:orientation="horizontal"
-                android:layout_marginBottom="72dp">
+                android:keepScreenOn="true" />
 
-                <View
-                    android:id="@+id/overlayLeft"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1" />
+            <!-- Sol tap/gesture alanı -->
+            <View
+                android:id="@+id/overlayLeft"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="start"
+                android:layout_weight="1"
+                android:background="@android:color/transparent" />
 
-                <View
-                    android:id="@+id/overlayRight"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1" />
-            </LinearLayout>
+            <!-- Sağ tap/gesture alanı -->
+            <View
+                android:id="@+id/overlayRight"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="end"
+                android:layout_weight="1"
+                android:background="@android:color/transparent" />
 
+            <!-- Ortada seek feedback -->
             <TextView
                 android:id="@+id/tvInfoCenter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:background="#80000000"
-                android:padding="8dp"
                 android:layout_gravity="center"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="@android:color/transparent"
                 android:visibility="gone" />
 
+            <!-- Parlaklık göstergesi -->
             <TextView
                 android:id="@+id/tvBrightness"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
+                android:layout_gravity="top|start"
+                android:layout_margin="16dp"
+                android:text="Parlaklık"
+                android:textColor="@color/white"
                 android:textSize="14sp"
-                android:background="#80000000"
+                android:background="#66000000"
                 android:padding="6dp"
-                android:layout_gravity="top|left"
-                android:layout_margin="12dp"
                 android:visibility="gone" />
 
+            <!-- Ses göstergesi -->
             <TextView
                 android:id="@+id/tvVolume"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
+                android:layout_gravity="top|end"
+                android:layout_margin="16dp"
+                android:text="Ses"
+                android:textColor="@color/white"
                 android:textSize="14sp"
-                android:background="#80000000"
+                android:background="#66000000"
                 android:padding="6dp"
-                android:layout_gravity="top|right"
-                android:layout_margin="12dp"
                 android:visibility="gone" />
 
+            <!-- Özel kontrol barı -->
             <LinearLayout
+                android:id="@+id/controlsBar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="56dp"
+                android:layout_gravity="bottom"
                 android:orientation="horizontal"
-                android:padding="8dp"
-                android:layout_gravity="bottom|center_horizontal"
-                android:gravity="right">
+                android:gravity="center_vertical"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:background="#66000000"
+                android:visibility="gone">
 
-                <!-- Özel Oynat / Durdur Butonu -->
                 <ImageButton
                     android:id="@+id/btnPlayPause"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:background="@android:color/transparent"
                     android:src="@android:drawable/ic_media_pause"
-                    android:padding="8dp"
-                    android:tint="@android:color/white" />
+                    android:tint="@android:color/white"
+                    android:contentDescription="Play/Pause" />
 
-                <!-- Görüntü Modu Değiştirme Butonu -->
                 <ImageButton
                     android:id="@+id/btnMode"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginLeft="20dp"
                     android:background="@android:color/transparent"
                     android:src="@android:drawable/ic_menu_crop"
-                    android:padding="8dp"
-                    android:tint="@android:color/white" />
+                    android:tint="@android:color/white"
+                    android:contentDescription="Ekran modu" />
+
             </LinearLayout>
         </FrameLayout>
         EOF
-
-        # ============ MANIFEST ============        
+        # network_security_config.xml
+        cat <<EOF > app/src/main/res/xml/network_security_config.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <network-security-config>
+            <base-config cleartextTrafficPermitted="true">
+                <trust-anchors>
+                    <certificates src="system" />
+                </trust-anchors>
+            </base-config>
+        </network-security-config>
+        EOF
+        # AndroidManifest.xml
         cat <<EOF > app/src/main/AndroidManifest.xml
         <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            package="$PACKAGE_NAME">
 
             <uses-permission android:name="android.permission.INTERNET" />
             <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+            <uses-permission android:name="android.permission.WAKE_LOCK" />
 
             <uses-feature
                 android:name="android.software.leanback"
                 android:required="false" />
 
             <application
-                android:theme="@style/Theme.ErdinPlayer"
+                android:allowBackup="true"
                 android:icon="@mipmap/ic_launcher"
                 android:label="@string/app_name"
-                android:usesCleartextTraffic="true"
+                android:roundIcon="@mipmap/ic_launcher"
+                android:supportsRtl="true"
+                android:theme="@style/Theme.ErdinPlayer"
                 android:networkSecurityConfig="@xml/network_security_config">
 
                 <meta-data
@@ -2775,8 +2816,24 @@ jobs:
                     android:value="@string/admob_app_id" />
 
                 <activity
+                    android:name=".PlayerActivity"
+                    android:screenOrientation="sensorLandscape"
+                    android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode" />
+
+                <activity
+                    android:name=".SeriesDetailActivity"
+                    android:screenOrientation="sensorLandscape"
+                    android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode" />
+
+                <activity
+                    android:name=".ContentActivity"
+                    android:screenOrientation="sensorLandscape"
+                    android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode" />
+
+                <activity
                     android:name=".LoginActivity"
-                    android:exported="true">
+                    android:screenOrientation="sensorLandscape"
+                    android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN" />
                         <category android:name="android.intent.category.LAUNCHER" />
@@ -2784,34 +2841,8 @@ jobs:
                     </intent-filter>
                 </activity>
 
-                <activity
-                    android:name=".ContentActivity"
-                    android:exported="false" />
-
-                <activity
-                    android:name=".SeriesDetailActivity"
-                    android:exported="false" />
-
-                <activity
-                    android:name=".PlayerActivity"
-                    android:screenOrientation="fullSensor"
-                    android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection|screenLayout|smallestScreenSize"
-                    android:exported="false" />
             </application>
         </manifest>
-        EOF
-
-        mkdir -p app/src/main/res/xml
-        cat <<EOF > app/src/main/res/xml/network_security_config.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <network-security-config>
-            <base-config cleartextTrafficPermitted="true">
-                <trust-anchors>
-                    <certificates src="system" />
-                    <certificates src="user" />
-                </trust-anchors>
-            </base-config>
-        </network-security-config>
         EOF
     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
