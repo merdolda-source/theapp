@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Ultra Build (Ads Fixed + Player Timeout Fix)
+name: ErdinPlayer Pro TV Edition (TV Focus + Fluid Search)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (List Ads + Player Fix)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (TV Focus + Search Fix)
       shell: bash
       run: |
         set -e
@@ -39,7 +39,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "🚀 ErdinPlayer Pro (List Ads + Player Fix) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro (TV Edition) üretiliyor..."
 
         rm -rf "$APP_NAME"
 
@@ -119,10 +119,10 @@ jobs:
 
             defaultConfig {
                 applicationId "$PACKAGE_NAME"
-                minSdk 24
-                targetSdk 35
-                versionCode 6
-                versionName "1.9.0-ads-fix"
+                minSdk 21
+                targetSdk 34
+                versionCode 7
+                versionName "2.0.0-tv-edition"
             }
 
             signingConfigs {
@@ -156,6 +156,7 @@ jobs:
             implementation 'com.google.android.material:material:1.9.0'
             implementation 'androidx.recyclerview:recyclerview:1.3.0'
             implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
+            implementation 'androidx.leanback:leanback:1.0.0' 
 
             implementation 'androidx.media3:media3-exoplayer:1.1.0'
             implementation 'androidx.media3:media3-ui:1.1.0'
@@ -186,6 +187,7 @@ jobs:
             <color name="drawer_bg">#05060C</color>
             <color name="hint_yellow">#FFD600</color>
             <color name="focus_ring">#00E5FF</color>
+            <color name="focus_bg">#2A2E45</color>
         </resources>
         EOF
 
@@ -219,18 +221,38 @@ jobs:
         </resources>
         EOF
 
-        # ============ DRAWABLE ============
+        # ============ DRAWABLE (TV Focus İçin Güncellendi) ============
         cat <<EOF > app/src/main/res/drawable/bg_input_dark.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="@color/bg_card_soft"/>
-            <corners android:radius="12dp"/>
+            <corners android:radius="8dp"/>
             <stroke android:width="1dp" android:color="@color/gray_600"/>
         </shape>
+        EOF
+        
+        # TV Focus Selector - Inputlar için
+        cat <<EOF > app/src/main/res/drawable/selector_input_focus.xml
+        <selector xmlns:android="http://schemas.android.com/apk/res/android">
+            <item android:state_focused="true">
+                <shape>
+                    <solid android:color="@color/focus_bg"/>
+                    <corners android:radius="8dp"/>
+                    <stroke android:width="2dp" android:color="@color/focus_ring"/>
+                </shape>
+            </item>
+            <item>
+                <shape>
+                    <solid android:color="@color/bg_card_soft"/>
+                    <corners android:radius="8dp"/>
+                    <stroke android:width="1dp" android:color="@color/gray_600"/>
+                </shape>
+            </item>
+        </selector>
         EOF
 
         cat <<EOF > app/src/main/res/drawable/bg_header_card.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <corners android:radius="16dp"/>
+            <corners android:radius="12dp"/>
             <gradient
                 android:startColor="@color/primary_cyan"
                 android:endColor="@color/primary_purple"
@@ -239,28 +261,26 @@ jobs:
         </shape>
         EOF
 
-        cat <<EOF > app/src/main/res/drawable/bg_account_card.xml
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <solid android:color="@color/bg_card"/>
-            <corners android:radius="18dp"/>
-            <stroke android:width="1dp" android:color="@color/gray_600"/>
-            <padding android:left="16dp" android:top="14dp" android:right="16dp" android:bottom="14dp"/>
-        </shape>
-        EOF
-
+        # TV Focus Selector - Kartlar için
         cat <<EOF > app/src/main/res/drawable/bg_focusable.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
             <item android:state_focused="true">
                 <shape>
-                    <solid android:color="@color/bg_card_soft"/>
-                    <corners android:radius="14dp"/>
+                    <solid android:color="@color/focus_bg"/>
+                    <corners android:radius="12dp"/>
                     <stroke android:width="3dp" android:color="@color/focus_ring"/>
+                </shape>
+            </item>
+            <item android:state_pressed="true">
+                 <shape>
+                    <solid android:color="@color/gray_700"/>
+                    <corners android:radius="12dp"/>
                 </shape>
             </item>
             <item>
                 <shape>
                     <solid android:color="@color/bg_card"/>
-                    <corners android:radius="14dp"/>
+                    <corners android:radius="12dp"/>
                     <stroke android:width="1dp" android:color="@color/gray_600"/>
                 </shape>
             </item>
@@ -303,7 +323,7 @@ jobs:
         )
         EOF
 
-        # ============ UTILS (Ads Config Güncellendi) ============
+        # ============ UTILS ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
         import android.content.Context
@@ -339,16 +359,10 @@ jobs:
                             val ads = obj.optJSONObject("ads") ?: obj
                             bannerId = ads.optString("admob_banner_id", null)
                             interstitialId = ads.optString("admob_interstitial_id", null)
-                            
-                            // Interstitial aralığı
                             val interval = ads.optInt("channel_interval", 0)
                             if (interval > 0) channelInterval = interval
-                            
-                            // Liste içi Banner aralığı (PHP'de 'banner_interval' veya 'list_interval' ekleyebilirsin)
-                            // Varsayılan 7
                             val listInt = ads.optInt("banner_interval", 7)
                             if (listInt > 0) bannerListInterval = listInt
-                            
                         } catch (e: Exception) {
                             Log.w(TAG, "Config load failed: " + (e.message ?: ""))
                         }
@@ -419,9 +433,6 @@ jobs:
                         }
                         conn.outputStream.use { os ->
                             os.write(bodyBuilder.toString().toByteArray(Charsets.UTF_8))
-                        }
-                        if (conn.responseCode != HttpURLConnection.HTTP_OK) {
-                            Log.w(TAG, "Event HTTP code: " + conn.responseCode)
                         }
                     } catch (e: Exception) {
                         Log.w(TAG, "sendEvent failed: " + (e.message ?: ""))
@@ -655,7 +666,7 @@ jobs:
         }
         EOF
 
-        # ============ ADAPTERS (GridAdapter güncellendi: Banner Desteği) ============
+        # ============ ADAPTERS (TV Focus & KeyListener Eklendi) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
         import android.view.KeyEvent
@@ -692,18 +703,12 @@ jobs:
                 val t = titles[position]
                 
                 if (t == "###AD###") {
-                    // Bu bir reklam slotu
                     holder.cardLayout.visibility = View.GONE
                     holder.adContainer.visibility = View.VISIBLE
-                    
-                    // Reklamı yükle
                     AdsHelper.loadBanner(holder.adView)
-                    
-                    // Reklam öğesi tıklanabilir olmamalı (reklamın kendisi tıklanır)
                     holder.itemView.isFocusable = false
                     holder.itemView.isClickable = false
                 } else {
-                    // Normal içerik
                     holder.adContainer.visibility = View.GONE
                     holder.cardLayout.visibility = View.VISIBLE
                     
@@ -712,16 +717,24 @@ jobs:
                     holder.sub.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
                     holder.sub.text = s
                     
-                    holder.itemView.isFocusable = true
-                    holder.itemView.isClickable = true
+                    // TV Focus Ayarları
+                    holder.cardLayout.isFocusable = true
+                    holder.cardLayout.isFocusableInTouchMode = true
+                    holder.cardLayout.isClickable = true
                     
                     holder.cardLayout.setOnFocusChangeListener { v, hasFocus ->
-                        val scale = if (hasFocus) 1.06f else 1.0f
-                        v.animate().scaleX(scale).scaleY(scale).setDuration(100).start()
+                        if (hasFocus) {
+                            v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(150).start()
+                            v.elevation = 10f
+                        } else {
+                            v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
+                            v.elevation = 0f
+                        }
                     }
                     
                     holder.cardLayout.setOnClickListener { onClick(position) }
                     
+                    // Kumanda OK Tuşu Desteği
                     holder.cardLayout.setOnKeyListener { _, keyCode, event ->
                         if (event.action == KeyEvent.ACTION_DOWN &&
                             (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
@@ -765,25 +778,33 @@ jobs:
                 val txtName: TextView = v.findViewById(R.id.tvAccountName)
                 val txtType: TextView = v.findViewById(R.id.tvAccountType)
                 val btnDelete: ImageButton = v.findViewById(R.id.btnDeleteAccount)
+                val container: View = v.findViewById(R.id.accountContainer)
             }
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
                 val v = LayoutInflater.from(parent.context).inflate(R.layout.item_account, parent, false)
-                v.isFocusable = true
-                v.isFocusableInTouchMode = true
-                v.isClickable = true
                 return VH(v)
             }
             override fun onBindViewHolder(holder: VH, position: Int) {
                 val item = items[position]
                 holder.txtName.text = item.name
                 holder.txtType.text = if (item.type == "M3U") "M3U" else "Xtream"
-                holder.itemView.setOnFocusChangeListener { v, hasFocus ->
-                    val scale = if (hasFocus) 1.06f else 1.0f
-                    v.animate().scaleX(scale).scaleY(scale).setDuration(100).start()
+                
+                // TV Focus
+                holder.container.isFocusable = true
+                holder.container.isFocusableInTouchMode = true
+                holder.container.setOnFocusChangeListener { v, hasFocus ->
+                    if (hasFocus) {
+                        v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(150).start()
+                        v.setBackgroundResource(R.drawable.bg_focusable) // Focus state tetiklemesi
+                    } else {
+                        v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
+                    }
                 }
-                holder.itemView.setOnClickListener { onOpen(item) }
+
+                holder.container.setOnClickListener { onOpen(item) }
                 holder.btnDelete.setOnClickListener { onDelete(item) }
-                holder.itemView.setOnKeyListener { _, keyCode, event ->
+                
+                holder.container.setOnKeyListener { _, keyCode, event ->
                     if (event.action == KeyEvent.ACTION_DOWN &&
                         (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
                     ) {
@@ -801,7 +822,7 @@ jobs:
         }
         EOF
 
-        # ============ LoginActivity ============
+        # ============ LoginActivity (TV Focus Input) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -857,6 +878,7 @@ jobs:
                 val tvM3u = findViewById<TextView>(R.id.tvM3u)
                 val btnAdd = findViewById<Button>(R.id.btnAddAccount)
                 val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
+                
                 fun applyLanguageTexts() {
                     tvTitle.text = LangManager.t(this, "login_title", "ErdinPlayer Pro")
                     tvLoginType.text = LangManager.t(this, "login_type", "Giriş Tipi")
@@ -877,12 +899,12 @@ jobs:
                         layoutXtream.visibility = View.VISIBLE
                         layoutM3u.visibility = View.GONE
                         cardXtream.background = getDrawable(R.drawable.bg_header_card)
-                        cardM3u.background = getDrawable(R.drawable.bg_input_dark)
+                        cardM3u.background = getDrawable(R.drawable.selector_input_focus)
                     } else {
                         layoutXtream.visibility = View.GONE
                         layoutM3u.visibility = View.VISIBLE
                         cardM3u.background = getDrawable(R.drawable.bg_header_card)
-                        cardXtream.background = getDrawable(R.drawable.bg_input_dark)
+                        cardXtream.background = getDrawable(R.drawable.selector_input_focus)
                     }
                 }
                 cardXtream.setOnClickListener { isXtream = true; updateTypeUI() }
@@ -965,7 +987,7 @@ jobs:
         }
         EOF
 
-        # ============ ContentActivity (Liste içi Banner Entegrasyonu) ============
+        # ============ ContentActivity (Fluid Search + TV Focus) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1033,14 +1055,10 @@ jobs:
             private var categoriesAll: List<Category> = emptyList()
             private var streamsAll: List<StreamItem> = emptyList()
             
-            // Filtrelenmiş ve REKLAM EKLENMİŞ listeler
             private var displayTitles: List<String> = emptyList()
             private var displaySubtitles: List<String> = emptyList()
-            
-            // Orijinal veriye map etmek için index listesi (-1 = reklam)
             private var displayMapIndex: List<Int> = emptyList()
-            // Hangi veri tipini gösteriyoruz? (Category ID veya Stream Index)
-            private var displayMapType: String = "CAT" // CAT veya STREAM
+            private var displayMapType: String = "CAT" 
 
             private var filteredCategoryIds: List<String> = emptyList()
             private var filteredStreamIdx: List<Int> = emptyList()
@@ -1104,13 +1122,22 @@ jobs:
                         drawer.openDrawer(GravityCompat.START)
                     }
                 }
+                
+                // Fluid Search Implementation
                 etSearch.addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun afterTextChanged(s: Editable?) {}
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                        applySearchFilter(s?.toString() ?: "")
+                        val query = s?.toString() ?: ""
+                        // Eğer arama yapılıyorsa ve kategori ekranındaysak, tüm içerikte ara
+                        if (query.length > 2) {
+                            applyGlobalSearch(query)
+                        } else {
+                            applySearchFilter(query)
+                        }
                     }
                 })
+                
                 activeAcc = prefs.getActive()
                 if (activeAcc == null) {
                     tvStatus.text = "Kayıtlı aktif hesap yok. Giriş ekranına dönün."
@@ -1187,6 +1214,8 @@ jobs:
                 pb.visibility = View.GONE
                 tvStatus.visibility = View.GONE
                 tvTitle.text = "Ne izlemek istersiniz?"
+                // TV Focus: İlk butona odaklan
+                btnModeLive.requestFocus()
             }
             private fun openMode(mode: String) {
                 val acc = activeAcc
@@ -1219,6 +1248,11 @@ jobs:
                     return
                 }
                 if (screen == Screen.ITEMS && rv.visibility == View.VISIBLE) {
+                    // Eğer arama yapıldıysa ve geri dönülüyorsa aramayı temizle
+                    if(etSearch.text.isNotEmpty()){
+                        etSearch.setText("")
+                        return
+                    }
                     showCategories()
                     return
                 }
@@ -1253,7 +1287,36 @@ jobs:
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
             
-            // REKLAM ENJEKSİYON MANTIĞI
+            // Global Arama (Tüm streamlerde arar)
+            private fun applyGlobalSearch(qRaw: String) {
+                 val q = qRaw.trim().lowercase(Locale.getDefault())
+                 if (rv.visibility != View.VISIBLE) return
+                 
+                 // Aramayı Stream moduna al
+                 screen = Screen.ITEMS 
+                 displayMapType = "STREAM"
+                 
+                 val filtered = streamsAll.filter {
+                        it.name.lowercase(Locale.getDefault()).contains(q)
+                 }
+                 filteredStreamIdx = filtered.map { streamsAll.indexOf(it) }
+                 
+                 val tempTitles = ArrayList<String>()
+                 val tempSubs = ArrayList<String>()
+                 val tempIndexMap = ArrayList<Int>()
+                 
+                 for (i in filtered.indices) {
+                     tempTitles.add(filtered[i].name)
+                     tempSubs.add("Kategori: " + (categoriesAll.find{ it.category_id == filtered[i].category_id }?.category_name ?: "-"))
+                     tempIndexMap.add(i)
+                 }
+                 
+                 displayTitles = tempTitles
+                 displaySubtitles = tempSubs
+                 displayMapIndex = tempIndexMap
+                 gridAdapter?.update(displayTitles, displaySubtitles)
+            }
+
             private fun applySearchFilter(qRaw: String) {
                 val q = qRaw.trim().lowercase(Locale.getDefault())
                 if (rv.visibility != View.VISIBLE) return
@@ -1274,13 +1337,13 @@ jobs:
                     for (i in cats.indices) {
                         tempTitles.add(cats[i].category_name)
                         tempSubs.add("")
-                        tempIndexMap.add(i) // i, filteredCategoryIds içindeki index
+                        tempIndexMap.add(i) 
                         
                         count++
                         if (adInterval > 0 && count % adInterval == 0) {
                             tempTitles.add("###AD###")
                             tempSubs.add("")
-                            tempIndexMap.add(-1) // Reklam
+                            tempIndexMap.add(-1)
                         }
                     }
                     
@@ -1297,13 +1360,13 @@ jobs:
                     for (i in filtered.indices) {
                         tempTitles.add(filtered[i].name)
                         tempSubs.add("")
-                        tempIndexMap.add(i) // i, filteredStreamIdx içindeki index
+                        tempIndexMap.add(i)
                         
                         count++
                         if (adInterval > 0 && count % adInterval == 0) {
                             tempTitles.add("###AD###")
                             tempSubs.add("")
-                            tempIndexMap.add(-1) // Reklam
+                            tempIndexMap.add(-1)
                         }
                     }
                 }
@@ -1316,16 +1379,14 @@ jobs:
             }
             
             private fun onGridClick(position: Int) {
-                // Tıklanan pozisyon geçerli mi?
                 if (position < 0 || position >= displayMapIndex.size) return
                 
                 val realIndex = displayMapIndex[position]
-                if (realIndex == -1) return // Reklama tıklandı, işlem yapma
+                if (realIndex == -1) return
                 
                 val acc = activeAcc ?: return
                 
                 if (screen == Screen.CATEGORIES) {
-                    // realIndex -> filteredCategoryIds listesindeki index
                     if (realIndex < filteredCategoryIds.size) {
                         val catId = filteredCategoryIds[realIndex]
                         val cat = categoriesAll.find { it.category_id == catId } ?: return
@@ -1335,7 +1396,6 @@ jobs:
                 }
                 
                 // STREAM Tıklaması
-                // realIndex -> filteredStreamIdx listesindeki index
                 if (realIndex < filteredStreamIdx.size) {
                     val globalIdx = filteredStreamIdx[realIndex]
                     if (globalIdx !in streamsAll.indices) return
@@ -1652,7 +1712,7 @@ jobs:
         }
         EOF
 
-        # ============ SeriesDetailActivity (Liste içi Banner Entegrasyonu) ============
+        # ============ SeriesDetailActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1688,7 +1748,6 @@ jobs:
             private val allEpisodes = mutableListOf<EpisodeItem>()
             private var seasonsScrollPos = 0
             
-            // Reklamlı gösterim listeleri
             private var displayMapIndex: List<Int> = emptyList()
             private var displayEpisodes: List<EpisodeItem> = emptyList()
             
@@ -1735,7 +1794,7 @@ jobs:
             private fun onItemClick(position: Int) {
                 if (position < 0 || position >= displayMapIndex.size) return
                 val realIndex = displayMapIndex[position]
-                if (realIndex == -1) return // Reklam
+                if (realIndex == -1) return 
                 
                 if (screen == Screen.SEASONS) {
                     if (realIndex < seasons.size) {
@@ -1885,7 +1944,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (Timeout Fix + Gesture) ============
+        # ============ PlayerActivity (TV Remote Control Support) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
@@ -1893,6 +1952,7 @@ jobs:
         import android.os.Bundle
         import android.os.Handler
         import android.os.Looper
+        import android.view.KeyEvent
         import android.view.MotionEvent
         import android.view.View
         import android.view.WindowManager
@@ -1935,7 +1995,6 @@ jobs:
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
             private val handler = Handler(Looper.getMainLooper())
             
-            // Overlay gizleme Runnable
             private val hideOverlayRunnable = Runnable {
                 tvBrightness.visibility = View.GONE
                 tvVolume.visibility = View.GONE
@@ -1972,11 +2031,10 @@ jobs:
                 tvVolume = findViewById(R.id.tvVolume)
                 val btnMode = findViewById<ImageButton>(R.id.btnMode)
                 
-                // Player Controller Ayarları - 5 Saniye Fix
                 playerView.useController = true
                 playerView.controllerAutoShow = true
                 playerView.controllerHideOnTouch = true
-                playerView.controllerShowTimeoutMs = 5000 // 5 saniye sonra gizle
+                playerView.controllerShowTimeoutMs = 5000 
                 
                 audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
@@ -1989,10 +2047,7 @@ jobs:
                     rescheduleHide()
                 }
                 btnPlayPause.setOnClickListener {
-                    player?.let {
-                        if (it.isPlaying) it.pause() else it.play()
-                        rescheduleHide()
-                    }
+                    togglePlayPause()
                 }
                 setupGestureOverlay(leftOverlay, true)
                 setupGestureOverlay(rightOverlay, false)
@@ -2019,10 +2074,8 @@ jobs:
                                 else android.R.drawable.ic_media_play
                             )
                             if (isPlaying) {
-                                // Oynatıyorsa 5sn sonra gizle
                                 playerView.controllerShowTimeoutMs = 5000
                             } else {
-                                // Duraklattıysa gizleme (isteğe bağlı, genelde durunca ekranda kalır)
                                 playerView.controllerShowTimeoutMs = -1 
                             }
                         }
@@ -2036,11 +2089,46 @@ jobs:
                 }
             }
             
+            private fun togglePlayPause() {
+                player?.let {
+                    if (it.isPlaying) it.pause() else it.play()
+                    rescheduleHide()
+                }
+            }
+
+            // TV Kumanda Tuşlarını Yakala
+            override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    when (event.keyCode) {
+                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                            // Eğer controller görünür değilse göster, görünürse play/pause yap
+                            if (!playerView.isControllerFullyVisible) {
+                                playerView.showController()
+                            } else {
+                                togglePlayPause()
+                            }
+                            return true
+                        }
+                        KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                            seekBy(-15000L)
+                            showCenterInfo("◄◄ 15 saniye")
+                            playerView.showController()
+                            return true
+                        }
+                        KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                            seekBy(15000L)
+                            showCenterInfo("15 saniye ►►")
+                            playerView.showController()
+                            return true
+                        }
+                    }
+                }
+                return super.dispatchKeyEvent(event)
+            }
+            
             private fun rescheduleHide() {
-                // Kendi overlaylerimiz için
                 handler.removeCallbacks(hideOverlayRunnable)
                 handler.postDelayed(hideOverlayRunnable, 2000)
-                // Player view için
                 playerView.showController()
             }
 
@@ -2229,7 +2317,7 @@ jobs:
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="8dp"
-                    android:background="@drawable/bg_input_dark"
+                    android:background="@drawable/selector_input_focus"
                     android:layout_marginLeft="6dp"
                     android:focusable="true"
                     android:focusableInTouchMode="true">
@@ -2248,7 +2336,7 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:hint="Hesap adı"
-                android:background="@drawable/bg_input_dark"
+                android:background="@drawable/selector_input_focus"
                 android:padding="12dp"
                 android:textColor="@color/white"
                 android:textColorHint="@color/gray_600"
@@ -2264,7 +2352,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:hint="Xtream URL girin"
-                    android:background="@drawable/bg_input_dark"
+                    android:background="@drawable/selector_input_focus"
                     android:padding="12dp"
                     android:textColor="@color/white"
                     android:textColorHint="@color/gray_600"
@@ -2275,7 +2363,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:hint="Kullanıcı adı"
-                    android:background="@drawable/bg_input_dark"
+                    android:background="@drawable/selector_input_focus"
                     android:padding="12dp"
                     android:textColor="@color/white"
                     android:textColorHint="@color/gray_600"
@@ -2287,7 +2375,7 @@ jobs:
                     android:layout_height="56dp"
                     android:hint="Şifre"
                     android:inputType="textVisiblePassword"
-                    android:background="@drawable/bg_input_dark"
+                    android:background="@drawable/selector_input_focus"
                     android:padding="12dp"
                     android:textColor="@color/white"
                     android:textColorHint="@color/gray_600"
@@ -2304,7 +2392,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:hint="M3U URL girin"
-                    android:background="@drawable/bg_input_dark"
+                    android:background="@drawable/selector_input_focus"
                     android:padding="12dp"
                     android:textColor="@color/white"
                     android:textColorHint="@color/hint_yellow"
@@ -2321,7 +2409,9 @@ jobs:
                 android:textSize="16sp"
                 android:background="@color/primary_cyan"
                 android:layout_marginTop="12dp"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="16dp"
+                android:focusable="true"
+                android:focusableInTouchMode="true"/>
             <TextView
                 android:id="@+id/tvAccountsTitle"
                 android:layout_width="match_parent"
@@ -2388,7 +2478,8 @@ jobs:
                         android:text="☰"
                         android:textColor="@color/white"
                         android:textSize="22sp"
-                        android:paddingRight="12dp"/>
+                        android:paddingRight="12dp"
+                        android:focusable="true"/>
                     <TextView
                         android:id="@+id/tvTitleBar"
                         android:layout_width="0dp"
@@ -2397,19 +2488,22 @@ jobs:
                         android:text="ErdinPlayer"
                         android:textColor="@color/white"
                         android:textSize="18sp"
-                        android:textStyle="bold"/>
+                        android:textStyle="bold"
+                        android:focusable="true"/>
                     <EditText
                         android:id="@+id/etSearch"
                         android:layout_width="200dp"
                         android:layout_height="40dp"
                         android:hint="Ara..."
-                        android:background="@drawable/bg_input_dark"
+                        android:background="@drawable/selector_input_focus"
                         android:paddingLeft="10dp"
                         android:paddingRight="10dp"
                         android:textColor="@color/white"
                         android:textColorHint="@color/hint_yellow"
                         android:singleLine="true"
-                        android:imeOptions="actionSearch"/>
+                        android:imeOptions="actionSearch"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"/>
                 </LinearLayout>
                 <ProgressBar
                     android:id="@+id/pbLoading"
@@ -2550,12 +2644,14 @@ jobs:
                     android:textColor="@color/white"
                     android:textStyle="bold"
                     android:background="@drawable/bg_focusable"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
                     android:layout_marginTop="10dp"/>
             </LinearLayout>
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
 
-        # item_grid_pro.xml GÜNCELLENDİ (Reklam Container Eklendi)
+        # item_grid_pro.xml
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2565,7 +2661,6 @@ jobs:
             android:orientation="vertical"
             android:padding="8dp">
             
-            <!-- Normal Kart -->
             <LinearLayout
                 android:id="@+id/cardLayout"
                 android:layout_width="match_parent"
@@ -2594,7 +2689,6 @@ jobs:
                     android:visibility="gone"/>
             </LinearLayout>
             
-            <!-- Reklam Alanı (Varsayılan Gizli) -->
             <LinearLayout
                 android:id="@+id/adContainer"
                 android:layout_width="match_parent"
@@ -2616,13 +2710,16 @@ jobs:
         cat <<EOF > app/src/main/res/layout/item_account.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/accountContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:background="@drawable/bg_focusable"
             android:gravity="center_vertical"
             android:minHeight="72dp"
-            android:padding="10dp">
+            android:padding="10dp"
+            android:focusable="true"
+            android:focusableInTouchMode="true">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -2651,7 +2748,8 @@ jobs:
                 android:layout_height="36dp"
                 android:background="@android:color/transparent"
                 android:src="@android:drawable/ic_menu_delete"
-                android:tint="@color/error_red"/>
+                android:tint="@color/error_red"
+                android:focusable="true"/>
         </LinearLayout>
         EOF
 
@@ -2671,7 +2769,8 @@ jobs:
                 android:background="@color/bg_card"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                android:padding="16dp"/>
+                android:padding="16dp"
+                android:focusable="true"/>
 
             <ProgressBar
                 android:id="@+id/pbSeries"
@@ -2773,7 +2872,6 @@ jobs:
         android:layout_gravity="bottom|center_horizontal"
         android:gravity="right">
 
-        <!-- Özel Oynat / Durdur Butonu -->
         <ImageButton
             android:id="@+id/btnPlayPause"
             android:layout_width="56dp"
@@ -2781,9 +2879,11 @@ jobs:
             android:background="@android:color/transparent"
             android:src="@android:drawable/ic_media_pause"
             android:padding="8dp"
-            android:tint="@android:color/white" />
+            android:tint="@android:color/white"
+            android:focusable="true"
+            android:nextFocusLeft="@id/btnPlayPause"
+            android:nextFocusRight="@id/btnMode"/>
 
-        <!-- Görüntü Modu Değiştirme Butonu -->
         <ImageButton
             android:id="@+id/btnMode"
             android:layout_width="56dp"
@@ -2791,7 +2891,10 @@ jobs:
             android:background="@android:color/transparent"
             android:src="@android:drawable/ic_menu_crop"
             android:padding="8dp"
-            android:tint="@android:color/white" />
+            android:tint="@android:color/white"
+            android:focusable="true"
+            android:nextFocusLeft="@id/btnPlayPause"
+            android:nextFocusRight="@id/btnMode"/>
          </LinearLayout>
         </FrameLayout>
         EOF
@@ -2808,11 +2911,15 @@ jobs:
             <uses-feature
                 android:name="android.software.leanback"
                 android:required="false" />
+            <uses-feature
+                android:name="android.hardware.touchscreen"
+                android:required="false" />
 
             <application
                 android:theme="@style/Theme.ErdinPlayer"
                 android:icon="@mipmap/ic_launcher"
                 android:label="@string/app_name"
+                android:banner="@mipmap/ic_launcher"
                 android:usesCleartextTraffic="true"
                 android:networkSecurityConfig="@xml/network_security_config">
 
@@ -2875,14 +2982,14 @@ jobs:
       id: upload_apk
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Ultra-APK
+        name: ErdinPlayer-Pro-TV-Edition-APK
         path: ErdinPlayer/app/build/outputs/apk/release/*.apk
 
     - name: 7. AAB'yi GitHub Artifact Olarak Yükle
       id: upload_aab
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Ultra-AAB
+        name: ErdinPlayer-Pro-TV-Edition-AAB
         path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
 
     - name: 8. Artifact URL'lerini Göster
@@ -2895,7 +3002,7 @@ jobs:
         echo "${{ steps.upload_aab.outputs.artifact-url }}"
         echo "====================================="
 
-        echo "### ErdinPlayer Pro Çıktılar" >> $GITHUB_STEP_SUMMARY
+        echo "### ErdinPlayer Pro (TV Edition) Çıktılar" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
