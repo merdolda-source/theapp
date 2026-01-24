@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Ultra Build (TV Fix - FORCE HTTP/HTTPS - Resume + Scroll Fix)
+name: ErdinPlayer Pro Ultra Build (Ads Fixed + Player Timeout Fix)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (TV Fix + FORCE HTTP/HTTPS - Yeni Menü / Resume Yok) - SIGNED
+    - name: 3. ErdinPlayer Pro Proje Üretimi (List Ads + Player Fix)
       shell: bash
       run: |
         set -e
@@ -39,7 +39,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "🚀 ErdinPlayer Pro Ultra (TV Fix + FORCE HTTP/HTTPS - Yeni Menü / Resume Yok) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro (List Ads + Player Fix) üretiliyor..."
 
         rm -rf "$APP_NAME"
 
@@ -121,8 +121,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 24
                 targetSdk 35
-                versionCode 5
-                versionName "1.8.2-tv-fix-menu"
+                versionCode 6
+                versionName "1.9.0-ads-fix"
             }
 
             signingConfigs {
@@ -204,8 +204,7 @@ jobs:
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">ErdinPlayer</string>
-            <!-- Manifest'te kullanılan AdMob App ID; panelden değiştirdiğinle uyumlu olsun -->
-            <string name="admob_app_id">ca-app-pub-2289573527937577~5012458331</string>
+            <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
         </resources>
@@ -214,7 +213,7 @@ jobs:
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">ErdinPlayer</string>
-            <string name="admob_app_id">ca-app-pub-2289573527937577~5012458331</string>
+            <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
         </resources>
@@ -268,24 +267,6 @@ jobs:
         </selector>
         EOF
 
-        # ============ BOTTOM NAV MENÜ ============
-        cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
-        <menu xmlns:android="http://schemas.android.com/apk/res/android">
-            <item
-                android:id="@+id/nav_live"
-                android:icon="@android:drawable/ic_media_play"
-                android:title="Canlı TV" />
-            <item
-                android:id="@+id/nav_vod"
-                android:icon="@android:drawable/ic_menu_slideshow"
-                android:title="Filmler" />
-            <item
-                android:id="@+id/nav_series"
-                android:icon="@android:drawable/ic_menu_agenda"
-                android:title="Diziler" />
-        </menu>
-        EOF
-
         # ============ MODELLER ============
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
@@ -322,7 +303,7 @@ jobs:
         )
         EOF
 
-        # ============ UTILS: RemoteConfig ============
+        # ============ UTILS (Ads Config Güncellendi) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
         import android.content.Context
@@ -334,13 +315,12 @@ jobs:
         object RemoteConfig {
             private const val TAG = "RemoteConfig"
             private const val CONFIG_URL = "https://creatorapp24.com/erdin/api/config.php"
-
             @Volatile private var initialized = false
             @Volatile private var bannerId: String? = null
             @Volatile private var interstitialId: String? = null
             @Volatile private var channelInterval: Int = 4
-            @Volatile private var listBannerInterval: Int = 7
-
+            @Volatile private var bannerListInterval: Int = 7
+            
             fun init(context: Context) {
                 if (initialized) return
                 synchronized(this) {
@@ -359,42 +339,41 @@ jobs:
                             val ads = obj.optJSONObject("ads") ?: obj
                             bannerId = ads.optString("admob_banner_id", null)
                             interstitialId = ads.optString("admob_interstitial_id", null)
-
+                            
+                            // Interstitial aralığı
                             val interval = ads.optInt("channel_interval", 0)
                             if (interval > 0) channelInterval = interval
-
-                            val listInterval = ads.optInt("list_banner_interval", 0)
-                            if (listInterval > 0) listBannerInterval = listInterval
+                            
+                            // Liste içi Banner aralığı (PHP'de 'banner_interval' veya 'list_interval' ekleyebilirsin)
+                            // Varsayılan 7
+                            val listInt = ads.optInt("banner_interval", 7)
+                            if (listInt > 0) bannerListInterval = listInt
+                            
                         } catch (e: Exception) {
                             Log.w(TAG, "Config load failed: " + (e.message ?: ""))
                         }
                     }.start()
                 }
             }
-
             fun getBannerId(context: Context): String {
                 init(context)
                 return bannerId ?: context.getString(R.string.admob_banner_test)
             }
-
             fun getInterstitialId(context: Context): String {
                 init(context)
                 return interstitialId ?: context.getString(R.string.admob_interstitial_test)
             }
-
             fun getChannelInterval(context: Context, defaultInterval: Int): Int {
                 init(context)
                 return if (channelInterval > 0) channelInterval else defaultInterval
             }
-
-            fun getListBannerInterval(context: Context, defaultInterval: Int): Int {
+            fun getBannerListInterval(context: Context): Int {
                 init(context)
-                return if (listBannerInterval > 0) listBannerInterval else defaultInterval
+                return bannerListInterval
             }
         }
         EOF
 
-        # ============ UTILS: RemoteLogger ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteLogger.kt
         package $PACKAGE_NAME.utils
         import android.content.Context
@@ -413,11 +392,7 @@ jobs:
                         val appContext = context.applicationContext
                         val deviceId = Settings.Secure.getString(appContext.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
                         val pkg = appContext.packageName
-                        val verName = try {
-                            appContext.packageManager.getPackageInfo(pkg, 0).versionName ?: "1.0"
-                        } catch (e: Exception) {
-                            "1.0"
-                        }
+                        val verName = try { appContext.packageManager.getPackageInfo(pkg, 0).versionName ?: "1.0" } catch (e: Exception) { "1.0" }
                         val baseData = HashMap<String, String>()
                         baseData["type"] = type
                         baseData["device_id"] = deviceId
@@ -456,7 +431,6 @@ jobs:
         }
         EOF
 
-        # ===== Prefs (resume yok) =====
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/Prefs.kt
         package $PACKAGE_NAME.utils
         import android.content.Context
@@ -619,7 +593,6 @@ jobs:
         }
         EOF
 
-        # ============ UTILS: AdsHelper ============
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/AdsHelper.kt
         package $PACKAGE_NAME.utils
         import android.app.Activity
@@ -682,121 +655,88 @@ jobs:
         }
         EOF
 
-        # ============ ADAPTERS: GridAdapter ============
+        # ============ ADAPTERS (GridAdapter güncellendi: Banner Desteği) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
         import android.view.KeyEvent
         import android.view.LayoutInflater
         import android.view.View
         import android.view.ViewGroup
+        import android.widget.LinearLayout
         import android.widget.TextView
         import androidx.recyclerview.widget.RecyclerView
         import com.google.android.gms.ads.AdView
         import $PACKAGE_NAME.R
         import $PACKAGE_NAME.utils.AdsHelper
-
+        
         class GridAdapter(
             private var titles: List<String>,
             private var subtitles: List<String>,
-            private val bannerInterval: Int,
             private val onClick: (Int) -> Unit
-        ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-            companion object {
-                private const val TYPE_ITEM = 0
-                private const val TYPE_AD = 1
-            }
-
-            class ItemVH(v: View) : RecyclerView.ViewHolder(v) {
+        ) : RecyclerView.Adapter<GridAdapter.VH>() {
+        
+            class VH(v: View) : RecyclerView.ViewHolder(v) {
+                val cardLayout: LinearLayout = v.findViewById(R.id.cardLayout)
                 val txt: TextView = v.findViewById(R.id.txtName)
                 val sub: TextView = v.findViewById(R.id.txtSub)
+                val adContainer: LinearLayout = v.findViewById(R.id.adContainer)
+                val adView: AdView = v.findViewById(R.id.adViewItem)
             }
-
-            class AdVH(v: View) : RecyclerView.ViewHolder(v) {
-                val adView: AdView? = v.findViewById(R.id.adViewList)
+            
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_grid_pro, parent, false)
+                return VH(v)
             }
-
-            override fun getItemViewType(position: Int): Int {
-                return if (bannerInterval > 0 && titles.isNotEmpty() &&
-                    ((position + 1) % (bannerInterval + 1) == 0)
-                ) {
-                    TYPE_AD
+            
+            override fun onBindViewHolder(holder: VH, position: Int) {
+                val t = titles[position]
+                
+                if (t == "###AD###") {
+                    // Bu bir reklam slotu
+                    holder.cardLayout.visibility = View.GONE
+                    holder.adContainer.visibility = View.VISIBLE
+                    
+                    // Reklamı yükle
+                    AdsHelper.loadBanner(holder.adView)
+                    
+                    // Reklam öğesi tıklanabilir olmamalı (reklamın kendisi tıklanır)
+                    holder.itemView.isFocusable = false
+                    holder.itemView.isClickable = false
                 } else {
-                    TYPE_ITEM
-                }
-            }
-
-            override fun getItemCount(): Int {
-                if (titles.isEmpty()) return 0
-                if (bannerInterval <= 0) return titles.size
-                val adsCount = titles.size / bannerInterval
-                return titles.size + adsCount
-            }
-
-            private fun dataIndexForAdapter(position: Int): Int {
-                if (bannerInterval <= 0) return position
-                val adsBefore = (position + 1) / (bannerInterval + 1)
-                return position - adsBefore
-            }
-
-            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-                return if (viewType == TYPE_AD) {
-                    val v = LayoutInflater.from(parent.context)
-                        .inflate(R.layout.item_banner, parent, false)
-                    v.isFocusable = false
-                    v.isFocusableInTouchMode = false
-                    AdVH(v)
-                } else {
-                    val v = LayoutInflater.from(parent.context)
-                        .inflate(R.layout.item_grid_pro, parent, false)
-                    v.isFocusable = true
-                    v.isFocusableInTouchMode = true
-                    v.isClickable = true
-                    ItemVH(v)
-                }
-            }
-
-            override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-                if (holder is AdVH) {
-                    val ad = holder.adView
-                    AdsHelper.loadBanner(ad)
-                    return
-                }
-
-                val itemHolder = holder as ItemVH
-                val dataIndex = dataIndexForAdapter(position)
-                if (dataIndex < 0 || dataIndex >= titles.size) return
-
-                val title = titles[dataIndex]
-                val subtitle = subtitles[dataIndex]
-
-                itemHolder.txt.text = title
-                if (subtitle.isNotEmpty()) {
-                    itemHolder.sub.visibility = View.VISIBLE
-                    itemHolder.sub.text = subtitle
-                } else {
-                    itemHolder.sub.visibility = View.GONE
-                }
-
-                itemHolder.itemView.setOnFocusChangeListener { v, hasFocus ->
-                    val scale = if (hasFocus) 1.06f else 1.0f
-                    v.animate().scaleX(scale).scaleY(scale).setDuration(100).start()
-                }
-                itemHolder.itemView.setOnClickListener {
-                    onClick(dataIndex)
-                }
-                itemHolder.itemView.setOnKeyListener { _, keyCode, event ->
-                    if (event.action == KeyEvent.ACTION_DOWN &&
-                        (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
-                    ) {
-                        onClick(dataIndex)
-                        true
-                    } else {
-                        false
+                    // Normal içerik
+                    holder.adContainer.visibility = View.GONE
+                    holder.cardLayout.visibility = View.VISIBLE
+                    
+                    holder.txt.text = t
+                    val s = subtitles[position]
+                    holder.sub.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
+                    holder.sub.text = s
+                    
+                    holder.itemView.isFocusable = true
+                    holder.itemView.isClickable = true
+                    
+                    holder.cardLayout.setOnFocusChangeListener { v, hasFocus ->
+                        val scale = if (hasFocus) 1.06f else 1.0f
+                        v.animate().scaleX(scale).scaleY(scale).setDuration(100).start()
+                    }
+                    
+                    holder.cardLayout.setOnClickListener { onClick(position) }
+                    
+                    holder.cardLayout.setOnKeyListener { _, keyCode, event ->
+                        if (event.action == KeyEvent.ACTION_DOWN &&
+                            (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
+                        ) {
+                            onClick(position)
+                            true
+                        } else {
+                            false
+                        }
                     }
                 }
             }
-
+            
+            override fun getItemCount(): Int = titles.size
+            
             fun update(newTitles: List<String>, newSubtitles: List<String>) {
                 titles = newTitles
                 subtitles = newSubtitles
@@ -805,7 +745,6 @@ jobs:
         }
         EOF
 
-        # ============ ADAPTERS: AccountsAdapter ============
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/AccountsAdapter.kt
         package $PACKAGE_NAME.adapters
         import android.view.KeyEvent
@@ -1026,7 +965,7 @@ jobs:
         }
         EOF
 
-        # ============ ContentActivity ============
+        # ============ ContentActivity (Liste içi Banner Entegrasyonu) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1061,9 +1000,10 @@ jobs:
         import $PACKAGE_NAME.models.StreamItem
         import $PACKAGE_NAME.utils.AdsHelper
         import $PACKAGE_NAME.utils.Prefs
+        import $PACKAGE_NAME.utils.RemoteConfig
         import $PACKAGE_NAME.utils.RemoteLogger
         import $PACKAGE_NAME.utils.LangManager
-        import $PACKAGE_NAME.utils.RemoteConfig
+        
         class ContentActivity : AppCompatActivity() {
             private lateinit var prefs: Prefs
             private lateinit var drawer: DrawerLayout
@@ -1092,16 +1032,26 @@ jobs:
             private var selectedCategory: Category? = null
             private var categoriesAll: List<Category> = emptyList()
             private var streamsAll: List<StreamItem> = emptyList()
-            private var filteredTitles: List<String> = emptyList()
-            private var filteredSubtitles: List<String> = emptyList()
+            
+            // Filtrelenmiş ve REKLAM EKLENMİŞ listeler
+            private var displayTitles: List<String> = emptyList()
+            private var displaySubtitles: List<String> = emptyList()
+            
+            // Orijinal veriye map etmek için index listesi (-1 = reklam)
+            private var displayMapIndex: List<Int> = emptyList()
+            // Hangi veri tipini gösteriyoruz? (Category ID veya Stream Index)
+            private var displayMapType: String = "CAT" // CAT veya STREAM
+
             private var filteredCategoryIds: List<String> = emptyList()
             private var filteredStreamIdx: List<Int> = emptyList()
+            
             private var gridAdapter: GridAdapter? = null
             private lateinit var layoutManager: LinearLayoutManager
             private var categoriesScrollPos = 0
             private var itemsScrollPos = 0
             private val FAKE_USER_AGENT =
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
+                
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_content)
@@ -1115,6 +1065,7 @@ jobs:
                 val adBottom = findViewById<AdView>(R.id.adViewBottomContent)
                 AdsHelper.loadBanner(adTop)
                 AdsHelper.loadBanner(adBottom)
+
                 drawer = findViewById(R.id.drawerLayout)
                 rv = findViewById(R.id.rvContent)
                 pb = findViewById(R.id.pbLoading)
@@ -1122,21 +1073,22 @@ jobs:
                 tvTitle = findViewById(R.id.tvTitleBar)
                 etSearch = findViewById(R.id.etSearch)
                 tvDrawerOpen = findViewById(R.id.tvOpenDrawer)
+
                 layoutModeSelector = findViewById(R.id.layoutModeSelector)
                 btnModeLive = findViewById(R.id.btnModeLive)
                 btnModeVod = findViewById(R.id.btnModeVod)
                 btnModeSeries = findViewById(R.id.btnModeSeries)
+
                 layoutManager = LinearLayoutManager(this)
                 rv.layoutManager = layoutManager
-
-                val listInterval = RemoteConfig.getListBannerInterval(this, 7)
-                gridAdapter = GridAdapter(emptyList(), emptyList(), listInterval) { pos -> onGridClick(pos) }
+                gridAdapter = GridAdapter(emptyList(), emptyList()) { pos -> onGridClick(pos) }
                 rv.adapter = gridAdapter
                 rvAccounts = findViewById(R.id.rvAccounts)
                 rvAccounts.layoutManager = LinearLayoutManager(this)
                 tvDrawerUser = findViewById(R.id.tvDrawerUser)
                 tvDrawerExpire = findViewById(R.id.tvDrawerExpire)
                 tvLogout = findViewById(R.id.tvLogout)
+
                 tvDrawerOpen.setOnClickListener { drawer.openDrawer(GravityCompat.START) }
                 tvLogout.setOnClickListener {
                     prefs.clearActive()
@@ -1170,9 +1122,11 @@ jobs:
                 accountType = activeAcc?.type ?: "XTREAM"
                 setupDrawerAccounts()
                 currentMode = "LIVE"
+
                 btnModeLive.setOnClickListener { openMode("LIVE") }
                 btnModeVod.setOnClickListener { openMode("VOD") }
                 btnModeSeries.setOnClickListener { openMode("SERIES") }
+
                 showModeSelector()
             }
             private fun setupDrawerAccounts() {
@@ -1298,92 +1252,145 @@ jobs:
                 applySearchFilter(etSearch.text?.toString() ?: "")
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
+            
+            // REKLAM ENJEKSİYON MANTIĞI
             private fun applySearchFilter(qRaw: String) {
                 val q = qRaw.trim().lowercase(Locale.getDefault())
                 if (rv.visibility != View.VISIBLE) return
+                
+                val adInterval = RemoteConfig.getBannerListInterval(this)
+                val tempTitles = ArrayList<String>()
+                val tempSubs = ArrayList<String>()
+                val tempIndexMap = ArrayList<Int>()
+                
                 if (screen == Screen.CATEGORIES) {
+                    displayMapType = "CAT"
                     val cats = if (q.isEmpty()) categoriesAll else categoriesAll.filter {
                         it.category_name.lowercase(Locale.getDefault()).contains(q)
                     }
-                    filteredTitles = cats.map { it.category_name }
-                    filteredSubtitles = cats.map { "" }
                     filteredCategoryIds = cats.map { it.category_id }
-                    filteredStreamIdx = emptyList()
-                    gridAdapter?.update(filteredTitles, filteredSubtitles)
-                    return
+                    
+                    var count = 0
+                    for (i in cats.indices) {
+                        tempTitles.add(cats[i].category_name)
+                        tempSubs.add("")
+                        tempIndexMap.add(i) // i, filteredCategoryIds içindeki index
+                        
+                        count++
+                        if (adInterval > 0 && count % adInterval == 0) {
+                            tempTitles.add("###AD###")
+                            tempSubs.add("")
+                            tempIndexMap.add(-1) // Reklam
+                        }
+                    }
+                    
+                } else {
+                    displayMapType = "STREAM"
+                    val catId = selectedCategory?.category_id
+                    val items = if (catId.isNullOrEmpty()) streamsAll else streamsAll.filter { it.category_id == catId }
+                    val filtered = if (q.isEmpty()) items else items.filter {
+                        it.name.lowercase(Locale.getDefault()).contains(q)
+                    }
+                    filteredStreamIdx = filtered.map { streamsAll.indexOf(it) }
+                    
+                    var count = 0
+                    for (i in filtered.indices) {
+                        tempTitles.add(filtered[i].name)
+                        tempSubs.add("")
+                        tempIndexMap.add(i) // i, filteredStreamIdx içindeki index
+                        
+                        count++
+                        if (adInterval > 0 && count % adInterval == 0) {
+                            tempTitles.add("###AD###")
+                            tempSubs.add("")
+                            tempIndexMap.add(-1) // Reklam
+                        }
+                    }
                 }
-                val catId = selectedCategory?.category_id
-                val items = if (catId.isNullOrEmpty()) streamsAll else streamsAll.filter { it.category_id == catId }
-                val filtered = if (q.isEmpty()) items else items.filter {
-                    it.name.lowercase(Locale.getDefault()).contains(q)
-                }
-                filteredTitles = filtered.map { it.name }
-                filteredSubtitles = filtered.map { "" }
-                filteredStreamIdx = filtered.map { streamsAll.indexOf(it) }
-                filteredCategoryIds = emptyList()
-                gridAdapter?.update(filteredTitles, filteredSubtitles)
+                
+                displayTitles = tempTitles
+                displaySubtitles = tempSubs
+                displayMapIndex = tempIndexMap
+                
+                gridAdapter?.update(displayTitles, displaySubtitles)
             }
+            
             private fun onGridClick(position: Int) {
+                // Tıklanan pozisyon geçerli mi?
+                if (position < 0 || position >= displayMapIndex.size) return
+                
+                val realIndex = displayMapIndex[position]
+                if (realIndex == -1) return // Reklama tıklandı, işlem yapma
+                
                 val acc = activeAcc ?: return
+                
                 if (screen == Screen.CATEGORIES) {
-                    if (position !in filteredCategoryIds.indices) return
-                    val catId = filteredCategoryIds[position]
-                    val cat = categoriesAll.find { it.category_id == catId } ?: return
-                    showItemsForCategory(cat)
+                    // realIndex -> filteredCategoryIds listesindeki index
+                    if (realIndex < filteredCategoryIds.size) {
+                        val catId = filteredCategoryIds[realIndex]
+                        val cat = categoriesAll.find { it.category_id == catId } ?: return
+                        showItemsForCategory(cat)
+                    }
                     return
                 }
-                if (position !in filteredStreamIdx.indices) return
-                val idx = filteredStreamIdx[position]
-                if (idx !in streamsAll.indices) return
-                val item = streamsAll[idx]
-                if (acc.type == "M3U") {
-                    val url = item.full_url
-                    if (url.isNullOrEmpty()) {
-                        Toast.makeText(this, "Geçersiz M3U kanalı.", Toast.LENGTH_SHORT).show()
+                
+                // STREAM Tıklaması
+                // realIndex -> filteredStreamIdx listesindeki index
+                if (realIndex < filteredStreamIdx.size) {
+                    val globalIdx = filteredStreamIdx[realIndex]
+                    if (globalIdx !in streamsAll.indices) return
+                    val item = streamsAll[globalIdx]
+                    
+                    if (acc.type == "M3U") {
+                        val url = item.full_url
+                        if (url.isNullOrEmpty()) {
+                            Toast.makeText(this, "Geçersiz M3U kanalı.", Toast.LENGTH_SHORT).show()
+                            return
+                        }
+                        val itn = Intent(this, PlayerActivity::class.java)
+                        itn.putExtra("URL", url)
+                        itn.putExtra("REF", item.referer ?: "")
+                        itn.putExtra("ORG", item.origin ?: "")
+                        itn.putExtra("TYPE", "LIVE")
+                        AdsHelper.maybeShowOnChannelClick(this) {
+                            RemoteLogger.sendEvent(this, "play_m3u", mapOf("channel_name" to item.name))
+                            startActivity(itn)
+                        }
                         return
                     }
+                    if (currentMode == "SERIES" && item.series_id != null) {
+                        val itn = Intent(this, SeriesDetailActivity::class.java)
+                        itn.putExtra("SERIES_ID", item.series_id ?: "")
+                        itn.putExtra("SERIES_NAME", item.name)
+                        startActivity(itn)
+                        return
+                    }
+                    val dnsRaw = acc.dns?.trim() ?: ""
+                    val user = (acc.user ?: "").trim().replace("""\s+""".toRegex(), "")
+                    val pass = acc.pass?.trim() ?: ""
+                    if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
+                        Toast.makeText(this, "DNS / kullanıcı / şifre boş.", Toast.LENGTH_SHORT).show()
+                        return
+                    }
+                    val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
+                    val path = if (currentMode == "LIVE") "live" else "movie"
+                    val ext = if (currentMode == "LIVE") ".ts" else {
+                        if (!item.container_extension.isNullOrEmpty()) "." + item.container_extension else ".mp4"
+                    }
+                    val id = item.stream_id ?: ""
+                    val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
                     val itn = Intent(this, PlayerActivity::class.java)
-                    itn.putExtra("URL", url)
-                    itn.putExtra("REF", item.referer ?: "")
-                    itn.putExtra("ORG", item.origin ?: "")
-                    itn.putExtra("TYPE", "LIVE")
+                    itn.putExtra("URL", playUrl)
+                    itn.putExtra("REF", "")
+                    itn.putExtra("ORG", "")
+                    itn.putExtra("TYPE", if (currentMode == "LIVE") "LIVE" else "VOD")
                     AdsHelper.maybeShowOnChannelClick(this) {
-                        RemoteLogger.sendEvent(this, "play_m3u", mapOf("channel_name" to item.name))
+                        RemoteLogger.sendEvent(this, "play_xtream", mapOf("channel_name" to item.name, "mode" to currentMode))
                         startActivity(itn)
                     }
-                    return
-                }
-                if (currentMode == "SERIES" && item.series_id != null) {
-                    val itn = Intent(this, SeriesDetailActivity::class.java)
-                    itn.putExtra("SERIES_ID", item.series_id ?: "")
-                    itn.putExtra("SERIES_NAME", item.name)
-                    startActivity(itn)
-                    return
-                }
-                val dnsRaw = acc.dns?.trim() ?: ""
-                val user = (acc.user ?: "").trim().replace("""\s+""".toRegex(), "")
-                val pass = acc.pass?.trim() ?: ""
-                if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                    Toast.makeText(this, "DNS / kullanıcı / şifre boş.", Toast.LENGTH_SHORT).show()
-                    return
-                }
-                val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
-                val path = if (currentMode == "LIVE") "live" else "movie"
-                val ext = if (currentMode == "LIVE") ".ts" else {
-                    if (!item.container_extension.isNullOrEmpty()) "." + item.container_extension else ".mp4"
-                }
-                val id = item.stream_id ?: ""
-                val playUrl = dns + "/" + path + "/" + user + "/" + pass + "/" + id + ext
-                val itn = Intent(this, PlayerActivity::class.java)
-                itn.putExtra("URL", playUrl)
-                itn.putExtra("REF", "")
-                itn.putExtra("ORG", "")
-                itn.putExtra("TYPE", if (currentMode == "LIVE") "LIVE" else "VOD")
-                AdsHelper.maybeShowOnChannelClick(this) {
-                    RemoteLogger.sendEvent(this, "play_xtream", mapOf("channel_name" to item.name, "mode" to currentMode))
-                    startActivity(itn)
                 }
             }
+            
             private fun fetchCategoriesAndStreams() {
                 val acc = activeAcc ?: return
                 pb.visibility = View.VISIBLE
@@ -1481,10 +1488,9 @@ jobs:
                     if (line.startsWith("#EXTINF", ignoreCase = true)) {
                         var name = ""
                         var group = "Genel"
-                        const val GROUP_PREFIX = "group-title=\""
-                        val groupIndex = line.indexOf(GROUP_PREFIX)
+                        val groupIndex = line.indexOf("group-title=\"")
                         if (groupIndex >= 0) {
-                            val start = groupIndex + GROUP_PREFIX.length
+                            val start = groupIndex + "group-title=\"".length
                             val end = line.indexOf("\"", startIndex = start)
                             if (end > start) group = line.substring(start, end)
                         }
@@ -1646,7 +1652,7 @@ jobs:
         }
         EOF
 
-        # ============ SeriesDetailActivity ============
+        # ============ SeriesDetailActivity (Liste içi Banner Entegrasyonu) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1664,6 +1670,7 @@ jobs:
         import $PACKAGE_NAME.models.EpisodeItem
         import $PACKAGE_NAME.utils.Prefs
         import $PACKAGE_NAME.utils.RemoteConfig
+        
         class SeriesDetailActivity : AppCompatActivity() {
             private lateinit var prefs: Prefs
             private lateinit var tvTitle: TextView
@@ -1680,19 +1687,26 @@ jobs:
             private val seasons = mutableListOf<Int>()
             private val allEpisodes = mutableListOf<EpisodeItem>()
             private var seasonsScrollPos = 0
+            
+            // Reklamlı gösterim listeleri
+            private var displayMapIndex: List<Int> = emptyList()
+            private var displayEpisodes: List<EpisodeItem> = emptyList()
+            
             private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
+            
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_series_detail)
                 prefs = Prefs(this)
+                RemoteConfig.init(this)
+                
                 tvTitle = findViewById(R.id.tvSeriesTitle)
                 tvStatus = findViewById(R.id.tvSeriesStatus)
                 pb = findViewById(R.id.pbSeries)
                 rv = findViewById(R.id.rvEpisodes)
                 layoutManager = LinearLayoutManager(this)
                 rv.layoutManager = layoutManager
-                val listInterval = RemoteConfig.getListBannerInterval(this, 7)
-                gridAdapter = GridAdapter(emptyList(), emptyList(), listInterval) { pos -> onItemClick(pos) }
+                gridAdapter = GridAdapter(emptyList(), emptyList()) { pos -> onItemClick(pos) }
                 rv.adapter = gridAdapter
                 seriesName = intent.getStringExtra("SERIES_NAME") ?: "Dizi"
                 seriesId = intent.getStringExtra("SERIES_ID") ?: ""
@@ -1719,34 +1733,75 @@ jobs:
                 super.onBackPressed()
             }
             private fun onItemClick(position: Int) {
+                if (position < 0 || position >= displayMapIndex.size) return
+                val realIndex = displayMapIndex[position]
+                if (realIndex == -1) return // Reklam
+                
                 if (screen == Screen.SEASONS) {
-                    if (position < seasons.size) {
+                    if (realIndex < seasons.size) {
                         seasonsScrollPos = layoutManager.findFirstVisibleItemPosition()
-                        showEpisodes(seasons[position])
+                        showEpisodes(seasons[realIndex])
                     }
                 } else {
-                    val eps = allEpisodes.filter { it.seasonNumber == selectedSeason }.sortedBy { it.episodeNumber }
-                    if (position < eps.size) {
-                        playEpisode(eps[position])
+                    if (realIndex < displayEpisodes.size) {
+                        playEpisode(displayEpisodes[realIndex])
                     }
                 }
             }
             private fun showSeasons() {
                 screen = Screen.SEASONS
                 tvTitle.text = seriesName
-                val titles = seasons.map { "Sezon " + it }
-                val subtitles = List(titles.size) { "" }
-                gridAdapter.update(titles, subtitles)
+                
+                val adInterval = RemoteConfig.getBannerListInterval(this)
+                val titles = ArrayList<String>()
+                val subs = ArrayList<String>()
+                val mapIndex = ArrayList<Int>()
+                
+                var count = 0
+                for (i in seasons.indices) {
+                    titles.add("Sezon " + seasons[i])
+                    subs.add("")
+                    mapIndex.add(i)
+                    
+                    count++
+                    if (adInterval > 0 && count % adInterval == 0) {
+                        titles.add("###AD###")
+                        subs.add("")
+                        mapIndex.add(-1)
+                    }
+                }
+                displayMapIndex = mapIndex
+                gridAdapter.update(titles, subs)
                 layoutManager.scrollToPositionWithOffset(seasonsScrollPos, 0)
             }
             private fun showEpisodes(season: Int) {
                 screen = Screen.EPISODES
                 selectedSeason = season
-                val eps = allEpisodes.filter { it.seasonNumber == season }.sortedBy { it.episodeNumber }
-                val titles = eps.map { it.episodeNumber.toString().padStart(2, '0') + ". Bölüm - " + it.title }
-                val subtitles = List(titles.size) { "" }
-                gridAdapter.update(titles, subtitles)
-                tvTitle.text = seriesName + " • Sezon " + season
+                displayEpisodes = allEpisodes.filter { it.seasonNumber == season }.sortedBy { it.episodeNumber }
+                
+                val adInterval = RemoteConfig.getBannerListInterval(this)
+                val titles = ArrayList<String>()
+                val subs = ArrayList<String>()
+                val mapIndex = ArrayList<Int>()
+                
+                var count = 0
+                for (i in displayEpisodes.indices) {
+                    val ep = displayEpisodes[i]
+                    titles.add("\${ep.episodeNumber.toString().padStart(2, '0')}. Bölüm - \${ep.title}")
+                    subs.add("")
+                    mapIndex.add(i)
+                    
+                    count++
+                    if (adInterval > 0 && count % adInterval == 0) {
+                        titles.add("###AD###")
+                        subs.add("")
+                        mapIndex.add(-1)
+                    }
+                }
+                
+                displayMapIndex = mapIndex
+                gridAdapter.update(titles, subs)
+                tvTitle.text = "\$seriesName • Sezon \$season"
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
             private fun playEpisode(ep: EpisodeItem) {
@@ -1755,7 +1810,7 @@ jobs:
                 val pass = prefs.getPass().trim()
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val ext = ep.container_extension ?: "mp4"
-                val url = dns + "/series/" + user + "/" + pass + "/" + ep.id + "." + ext
+                val url = "\$dns/series/\$user/\$pass/\${ep.id}.\$ext"
                 val itn = Intent(this, PlayerActivity::class.java)
                 itn.putExtra("URL", url)
                 itn.putExtra("TYPE", "VOD")
@@ -1785,11 +1840,7 @@ jobs:
                             setRequestProperty("User-Agent", FAKE_USER_AGENT)
                         }
                         if (conn.responseCode != HttpURLConnection.HTTP_OK) {
-                            runOnUiThread {
-                                tvStatus.text = "Sunucu yanıtı: " + conn.responseCode
-                                tvStatus.visibility = View.VISIBLE
-                                pb.visibility = View.GONE
-                            }
+                            runOnUiThread { tvStatus.text = "Sunucu yanıtı: " + conn.responseCode; tvStatus.visibility = View.VISIBLE; pb.visibility = View.GONE }
                             return@Thread
                         }
                         val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
@@ -1803,15 +1854,13 @@ jobs:
                             val seasonNum = seasonKey.toIntOrNull() ?: continue
                             if (!seasons.contains(seasonNum)) seasons.add(seasonNum)
                             val arr = episodesObj.optJSONArray(seasonKey) ?: continue
-                            var i = 0
-                            while (i < arr.length()) {
+                            for (i in 0 until arr.length()) {
                                 val epObj = arr.getJSONObject(i)
                                 val id = epObj.optString("id", "")
                                 val title = epObj.optString("title", "Bölüm")
                                 val epNum = epObj.optInt("episode_num", 1)
                                 val ext = epObj.optString("container_extension", "mp4")
                                 allEpisodes.add(EpisodeItem(id, title, seasonNum, epNum, ext))
-                                i++
                             }
                         }
                         seasons.sort()
@@ -1836,7 +1885,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (özel oynat/durdur + gesture) ============
+        # ============ PlayerActivity (Timeout Fix + Gesture) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
@@ -1850,7 +1899,6 @@ jobs:
         import android.widget.ImageButton
         import android.widget.TextView
         import android.widget.Toast
-        import androidx.appcompat.app.AlertDialog
         import androidx.appcompat.app.AppCompatActivity
         import androidx.media3.common.MediaItem
         import androidx.media3.common.PlaybackException
@@ -1871,8 +1919,6 @@ jobs:
             private lateinit var tvBrightness: TextView
             private lateinit var tvVolume: TextView
             private lateinit var btnPlayPause: ImageButton
-            private lateinit var btnMode: ImageButton
-            private lateinit var controlsBar: View
             private var audioManager: AudioManager? = null
             private var maxVolume: Int = 0
             private var gestureStartVolume: Int = 0
@@ -1888,10 +1934,14 @@ jobs:
             private val FAKE_USER_AGENT =
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
             private val handler = Handler(Looper.getMainLooper())
-            private val hideControlsRunnable = Runnable {
-                controlsBar.visibility = View.GONE
-                playerView.hideController()
+            
+            // Overlay gizleme Runnable
+            private val hideOverlayRunnable = Runnable {
+                tvBrightness.visibility = View.GONE
+                tvVolume.visibility = View.GONE
+                tvCenterInfo.visibility = View.GONE
             }
+
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -1915,17 +1965,19 @@ jobs:
                 }
                 playerView = findViewById(R.id.pvMain)
                 btnPlayPause = findViewById(R.id.btnPlayPause)
-                btnMode = findViewById(R.id.btnMode)
                 leftOverlay = findViewById(R.id.overlayLeft)
                 rightOverlay = findViewById(R.id.overlayRight)
                 tvCenterInfo = findViewById(R.id.tvInfoCenter)
                 tvBrightness = findViewById(R.id.tvBrightness)
                 tvVolume = findViewById(R.id.tvVolume)
-                controlsBar = findViewById(R.id.controlsBar)
+                val btnMode = findViewById<ImageButton>(R.id.btnMode)
+                
+                // Player Controller Ayarları - 5 Saniye Fix
                 playerView.useController = true
                 playerView.controllerAutoShow = true
                 playerView.controllerHideOnTouch = true
-                playerView.controllerShowTimeoutMs = 5000
+                playerView.controllerShowTimeoutMs = 5000 // 5 saniye sonra gizle
+                
                 audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
                 val lp = window.attributes
@@ -1934,18 +1986,13 @@ jobs:
                 btnMode.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
                     applyResizeMode(playerView)
-                    showControlsTemporarily()
+                    rescheduleHide()
                 }
                 btnPlayPause.setOnClickListener {
-                    val p = player
-                    if (p != null) {
-                        if (p.isPlaying) {
-                            p.pause()
-                        } else {
-                            p.play()
-                        }
+                    player?.let {
+                        if (it.isPlaying) it.pause() else it.play()
+                        rescheduleHide()
                     }
-                    showControlsTemporarily()
                 }
                 setupGestureOverlay(leftOverlay, true)
                 setupGestureOverlay(rightOverlay, false)
@@ -1959,8 +2006,8 @@ jobs:
                         .setReadTimeoutMs(40000)
                         .setDefaultRequestProperties(headers)
                     val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
-                    val exo = ExoPlayer.Builder(this).setMediaSourceFactory(mediaSourceFactory).build()
-                    player = exo
+                    player = ExoPlayer.Builder(this).setMediaSourceFactory(mediaSourceFactory).build()
+                    val exo = player!!
                     playerView.player = exo
                     exo.setMediaItem(MediaItem.fromUri(playUrl))
                     exo.prepare()
@@ -1971,27 +2018,32 @@ jobs:
                                 if (isPlaying) android.R.drawable.ic_media_pause
                                 else android.R.drawable.ic_media_play
                             )
+                            if (isPlaying) {
+                                // Oynatıyorsa 5sn sonra gizle
+                                playerView.controllerShowTimeoutMs = 5000
+                            } else {
+                                // Duraklattıysa gizleme (isteğe bağlı, genelde durunca ekranda kalır)
+                                playerView.controllerShowTimeoutMs = -1 
+                            }
                         }
                         override fun onPlayerError(error: PlaybackException) {
-                            Toast.makeText(
-                                this@PlayerActivity,
-                                "Oynatma hatası: " + (error.message ?: ""),
-                                Toast.LENGTH_LONG
-                            ).show()
+                            Toast.makeText(this@PlayerActivity, "Oynatma hatası: \${error.message}", Toast.LENGTH_LONG).show()
                         }
                     })
-                    showControlsTemporarily()
                 } catch (e: Exception) {
                     Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
                     finish()
                 }
             }
-            private fun showControlsTemporarily() {
-                controlsBar.visibility = View.VISIBLE
+            
+            private fun rescheduleHide() {
+                // Kendi overlaylerimiz için
+                handler.removeCallbacks(hideOverlayRunnable)
+                handler.postDelayed(hideOverlayRunnable, 2000)
+                // Player view için
                 playerView.showController()
-                handler.removeCallbacks(hideControlsRunnable)
-                handler.postDelayed(hideControlsRunnable, 5000)
             }
+
             private fun setupGestureOverlay(view: View, isLeft: Boolean) {
                 view.setOnTouchListener { v, event ->
                     val am = audioManager
@@ -2001,8 +2053,7 @@ jobs:
                             isGesture = false
                             gestureStartVolume = am?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: (maxVolume / 2)
                             gestureStartBrightness = currentBrightness
-                            tvBrightness.visibility = View.GONE
-                            tvVolume.visibility = View.GONE
+                            handler.removeCallbacks(hideOverlayRunnable)
                             true
                         }
                         MotionEvent.ACTION_MOVE -> {
@@ -2017,7 +2068,6 @@ jobs:
                         MotionEvent.ACTION_UP -> {
                             if (!isGesture) {
                                 playerView.showController()
-                                showControlsTemporarily()
                                 val now = System.currentTimeMillis()
                                 if (isLeft) {
                                     tapCountLeft = if (now - lastTapLeft < 350) tapCountLeft + 1 else 1
@@ -2037,8 +2087,7 @@ jobs:
                                     }
                                 }
                             }
-                            tvBrightness.visibility = View.GONE
-                            tvVolume.visibility = View.GONE
+                            rescheduleHide()
                             true
                         }
                         else -> false
@@ -2053,7 +2102,7 @@ jobs:
                 if (newVol > maxVolume) newVol = maxVolume
                 am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
                 val percent = if (maxVolume > 0) (newVol * 100 / maxVolume) else 0
-                tvVolume.text = "Ses: " + percent + "%"
+                tvVolume.text = "Ses: \$percent%"
                 tvVolume.visibility = View.VISIBLE
             }
             private fun adjustBrightness(percentDelta: Float) {
@@ -2064,8 +2113,7 @@ jobs:
                 lp.screenBrightness = newB
                 window.attributes = lp
                 currentBrightness = newB
-                val perc = (currentBrightness * 100f).toInt()
-                tvBrightness.text = "Parlaklık: " + perc + "%"
+                tvBrightness.text = "Parlaklık: \${(currentBrightness * 100f).toInt()}%"
                 tvBrightness.visibility = View.VISIBLE
             }
             private fun seekBy(deltaMs: Long) {
@@ -2086,7 +2134,7 @@ jobs:
             private fun showCenterInfo(text: String) {
                 tvCenterInfo.text = text
                 tvCenterInfo.visibility = View.VISIBLE
-                tvCenterInfo.postDelayed({ tvCenterInfo.visibility = View.GONE }, 1200)
+                rescheduleHide()
             }
             override fun onDestroy() {
                 super.onDestroy()
@@ -2301,7 +2349,6 @@ jobs:
         </LinearLayout>
         EOF
 
-        # activity_content.xml
         cat <<EOF > app/src/main/res/layout/activity_content.xml
         <?xml version="1.0" encoding="utf-8"?>
         <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2310,13 +2357,11 @@ jobs:
             android:id="@+id/drawerLayout"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:background="@color/bg_dark">
-
                 <com.google.android.gms.ads.AdView
                     android:id="@+id/adViewTopContent"
                     android:layout_width="match_parent"
@@ -2325,8 +2370,7 @@ jobs:
                     ads:adUnitId="@string/admob_banner_test"
                     android:layout_marginBottom="4dp"
                     android:focusable="false"
-                    android:focusableInTouchMode="false" />
-
+                    android:focusableInTouchMode="false"/>
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -2337,7 +2381,6 @@ jobs:
                     android:paddingRight="12dp"
                     android:paddingTop="10dp"
                     android:paddingBottom="10dp">
-
                     <TextView
                         android:id="@+id/tvOpenDrawer"
                         android:layout_width="wrap_content"
@@ -2345,8 +2388,7 @@ jobs:
                         android:text="☰"
                         android:textColor="@color/white"
                         android:textSize="22sp"
-                        android:paddingRight="12dp" />
-
+                        android:paddingRight="12dp"/>
                     <TextView
                         android:id="@+id/tvTitleBar"
                         android:layout_width="0dp"
@@ -2355,8 +2397,7 @@ jobs:
                         android:text="ErdinPlayer"
                         android:textColor="@color/white"
                         android:textSize="18sp"
-                        android:textStyle="bold" />
-
+                        android:textStyle="bold"/>
                     <EditText
                         android:id="@+id/etSearch"
                         android:layout_width="200dp"
@@ -2368,9 +2409,8 @@ jobs:
                         android:textColor="@color/white"
                         android:textColorHint="@color/hint_yellow"
                         android:singleLine="true"
-                        android:imeOptions="actionSearch" />
+                        android:imeOptions="actionSearch"/>
                 </LinearLayout>
-
                 <ProgressBar
                     android:id="@+id/pbLoading"
                     style="?android:attr/progressBarStyleLarge"
@@ -2379,8 +2419,7 @@ jobs:
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="8dp"
-                    android:visibility="gone" />
-
+                    android:visibility="gone"/>
                 <TextView
                     android:id="@+id/tvStatus"
                     android:layout_width="match_parent"
@@ -2388,8 +2427,9 @@ jobs:
                     android:textColor="@color/error_red"
                     android:textSize="14sp"
                     android:padding="8dp"
-                    android:visibility="gone" />
+                    android:visibility="gone"/>
 
+                <!-- Yeni ana menü -->
                 <LinearLayout
                     android:id="@+id/layoutModeSelector"
                     android:layout_width="match_parent"
@@ -2398,7 +2438,6 @@ jobs:
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="24dp">
-
                     <TextView
                         android:id="@+id/btnModeLive"
                         android:layout_width="match_parent"
@@ -2411,8 +2450,7 @@ jobs:
                         android:background="@drawable/bg_focusable"
                         android:focusable="true"
                         android:focusableInTouchMode="true"
-                        android:layout_marginBottom="16dp" />
-
+                        android:layout_marginBottom="16dp"/>
                     <TextView
                         android:id="@+id/btnModeVod"
                         android:layout_width="match_parent"
@@ -2425,8 +2463,7 @@ jobs:
                         android:background="@drawable/bg_focusable"
                         android:focusable="true"
                         android:focusableInTouchMode="true"
-                        android:layout_marginBottom="16dp" />
-
+                        android:layout_marginBottom="16dp"/>
                     <TextView
                         android:id="@+id/btnModeSeries"
                         android:layout_width="match_parent"
@@ -2438,16 +2475,17 @@ jobs:
                         android:textStyle="bold"
                         android:background="@drawable/bg_focusable"
                         android:focusable="true"
-                        android:focusableInTouchMode="true" />
+                        android:focusableInTouchMode="true"/>
                 </LinearLayout>
 
+                <!-- Liste ekranı -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvContent"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1"
                     android:padding="8dp"
-                    android:visibility="gone" />
+                    android:visibility="gone"/>
 
                 <com.google.android.gms.ads.AdView
                     android:id="@+id/adViewBottomContent"
@@ -2457,9 +2495,8 @@ jobs:
                     ads:adUnitId="@string/admob_banner_test"
                     android:layout_marginTop="4dp"
                     android:focusable="false"
-                    android:focusableInTouchMode="false" />
+                    android:focusableInTouchMode="false"/>
             </LinearLayout>
-
             <LinearLayout
                 android:layout_width="300dp"
                 android:layout_height="match_parent"
@@ -2467,14 +2504,12 @@ jobs:
                 android:orientation="vertical"
                 android:background="@color/drawer_bg"
                 android:padding="12dp">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:background="@drawable/bg_header_card"
                     android:padding="12dp">
-
                     <TextView
                         android:id="@+id/tvDrawerUser"
                         android:layout_width="match_parent"
@@ -2482,8 +2517,7 @@ jobs:
                         android:text="Hesap: -"
                         android:textColor="@color/white"
                         android:textStyle="bold"
-                        android:textSize="16sp" />
-
+                        android:textSize="16sp"/>
                     <TextView
                         android:id="@+id/tvDrawerExpire"
                         android:layout_width="match_parent"
@@ -2491,9 +2525,8 @@ jobs:
                         android:text="Süre: -"
                         android:textColor="@color/white"
                         android:textSize="14sp"
-                        android:layout_marginTop="4dp" />
+                        android:layout_marginTop="4dp"/>
                 </LinearLayout>
-
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -2502,48 +2535,99 @@ jobs:
                     android:textStyle="bold"
                     android:textSize="14sp"
                     android:layout_marginTop="12dp"
-                    android:layout_marginBottom="8dp" />
-
+                    android:layout_marginBottom="8dp"/>
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvAccounts"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
-                    android:layout_weight="1" />
-
-                                <TextView
+                    android:layout_weight="1"/>
+                <TextView
                     android:id="@+id/tvLogout"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:gravity="center"
                     android:text="Çıkış"
-                    android:textColor="@color/error_red"
-                    android:textSize="16sp"
+                    android:textColor="@color/white"
                     android:textStyle="bold"
                     android:background="@drawable/bg_focusable"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true"
-                    android:layout_marginTop="12dp" />
+                    android:layout_marginTop="10dp"/>
             </LinearLayout>
-
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
-                        # item_account.xml
+
+        # item_grid_pro.xml GÜNCELLENDİ (Reklam Container Eklendi)
+        cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:ads="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp">
+            
+            <!-- Normal Kart -->
+            <LinearLayout
+                android:id="@+id/cardLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="72dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_focusable"
+                android:padding="12dp"
+                android:visibility="visible">
+                <TextView
+                    android:id="@+id/txtName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/white"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:maxLines="2"
+                    android:ellipsize="end"/>
+                <TextView
+                    android:id="@+id/txtSub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/hint_yellow"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp"
+                    android:visibility="gone"/>
+            </LinearLayout>
+            
+            <!-- Reklam Alanı (Varsayılan Gizli) -->
+            <LinearLayout
+                android:id="@+id/adContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:background="@android:color/transparent"
+                android:visibility="gone">
+                <com.google.android.gms.ads.AdView
+                    android:id="@+id/adViewItem"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    ads:adSize="BANNER"
+                    ads:adUnitId="@string/admob_banner_test"/>
+            </LinearLayout>
+        </LinearLayout>
+        EOF
+
         cat <<EOF > app/src/main/res/layout/item_account.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="10dp"
+            android:background="@drawable/bg_focusable"
             android:gravity="center_vertical"
-            android:background="@drawable/bg_account_card">
-
+            android:minHeight="72dp"
+            android:padding="10dp">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical">
-
                 <TextView
                     android:id="@+id/tvAccountName"
                     android:layout_width="wrap_content"
@@ -2551,305 +2635,230 @@ jobs:
                     android:text="Hesap Adı"
                     android:textColor="@color/white"
                     android:textStyle="bold"
-                    android:textSize="15sp" />
-
+                    android:textSize="15sp"/>
                 <TextView
                     android:id="@+id/tvAccountType"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Xtream"
-                    android:textColor="@color/hint_yellow"
-                    android:textSize="13sp" />
+                    android:textColor="@color/primary_cyan"
+                    android:textSize="12sp"
+                    android:layout_marginTop="2dp"/>
             </LinearLayout>
-
             <ImageButton
                 android:id="@+id/btnDeleteAccount"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="@android:color/transparent"
                 android:src="@android:drawable/ic_menu_delete"
-                android:tint="@color/error_red"
-                android:contentDescription="Sil" />
+                android:tint="@color/error_red"/>
         </LinearLayout>
         EOF
-        # item_grid_pro.xml
-        cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="10dp"
-            android:background="@drawable/bg_focusable"
-            android:focusable="true"
-            android:focusableInTouchMode="true">
 
-            <TextView
-                android:id="@+id/txtName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Başlık"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:maxLines="2" />
-
-            <TextView
-                android:id="@+id/txtSub"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Alt bilgi"
-                android:textColor="@color/hint_yellow"
-                android:textSize="13sp"
-                android:layout_marginTop="2dp" />
-        </LinearLayout>
-        EOF
-        # item_banner.xml
-        cat <<EOF > app/src/main/res/layout/item_banner.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:ads="http://schemas.android.com/apk/res-auto"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="6dp">
-
-            <com.google.android.gms.ads.AdView
-                android:id="@+id/adViewList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                ads:adSize="BANNER"
-                ads:adUnitId="@string/admob_banner_test"
-                android:focusable="false"
-                android:focusableInTouchMode="false" />
-        </FrameLayout>
-        EOF
-        # activity_series_detail.xml
         cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:padding="12dp"
             android:background="@color/bg_dark">
 
             <TextView
                 android:id="@+id/tvSeriesTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Dizi Adı"
                 android:textColor="@color/white"
-                android:textStyle="bold"
+                android:background="@color/bg_card"
                 android:textSize="20sp"
-                android:paddingBottom="4dp" />
-
-            <TextView
-                android:id="@+id/tvSeriesStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/hint_yellow"
-                android:textSize="14sp"
-                android:visibility="gone"
-                android:paddingBottom="4dp" />
+                android:textStyle="bold"
+                android:padding="16dp"/>
 
             <ProgressBar
                 android:id="@+id/pbSeries"
                 style="?android:attr/progressBarStyleLarge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:layout_marginBottom="6dp"
-                android:layout_gravity="center_horizontal"
-                android:visibility="gone" />
+                android:layout_gravity="center"
+                android:visibility="gone"/>
+
+            <TextView
+                android:id="@+id/tvSeriesStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/error_red"
+                android:textSize="14sp"
+                android:padding="8dp"
+                android:visibility="gone"/>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvEpisodes"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:paddingTop="4dp" />
+                android:layout_height="match_parent"
+                android:padding="8dp"/>
         </LinearLayout>
         EOF
-        # activity_player_pro.xml
+
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/black">
+
+        <androidx.media3.ui.PlayerView
+        android:id="@+id/pvMain"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+        <LinearLayout
+        android:id="@+id/overlayContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:layout_marginBottom="72dp">
+
+        <View
+            android:id="@+id/overlayLeft"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:background="@android:color/black">
+            android:layout_weight="1" />
 
-            <androidx.media3.ui.PlayerView
-                android:id="@+id/pvMain"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:keepScreenOn="true" />
+        <View
+            android:id="@+id/overlayRight"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+         </LinearLayout>
 
-            <!-- Sol tap/gesture alanı -->
-            <View
-                android:id="@+id/overlayLeft"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="start"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
+         <TextView
+        android:id="@+id/tvInfoCenter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:background="#80000000"
+        android:padding="8dp"
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
-            <!-- Sağ tap/gesture alanı -->
-            <View
-                android:id="@+id/overlayRight"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="end"
-                android:layout_weight="1"
-                android:background="@android:color/transparent" />
+        <TextView
+        android:id="@+id/tvBrightness"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:background="#80000000"
+        android:padding="6dp"
+        android:layout_gravity="top|left"
+        android:layout_margin="12dp"
+        android:visibility="gone" />
 
-            <!-- Ortada seek feedback -->
-            <TextView
-                android:id="@+id/tvInfoCenter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:textColor="@color/white"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:background="@android:color/transparent"
-                android:visibility="gone" />
+        <TextView
+        android:id="@+id/tvVolume"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:background="#80000000"
+        android:padding="6dp"
+        android:layout_gravity="top|right"
+        android:layout_margin="12dp"
+        android:visibility="gone" />
 
-            <!-- Parlaklık göstergesi -->
-            <TextView
-                android:id="@+id/tvBrightness"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|start"
-                android:layout_margin="16dp"
-                android:text="Parlaklık"
-                android:textColor="@color/white"
-                android:textSize="14sp"
-                android:background="#66000000"
-                android:padding="6dp"
-                android:visibility="gone" />
+        <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:gravity="right">
 
-            <!-- Ses göstergesi -->
-            <TextView
-                android:id="@+id/tvVolume"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="top|end"
-                android:layout_margin="16dp"
-                android:text="Ses"
-                android:textColor="@color/white"
-                android:textSize="14sp"
-                android:background="#66000000"
-                android:padding="6dp"
-                android:visibility="gone" />
+        <!-- Özel Oynat / Durdur Butonu -->
+        <ImageButton
+            android:id="@+id/btnPlayPause"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@android:color/transparent"
+            android:src="@android:drawable/ic_media_pause"
+            android:padding="8dp"
+            android:tint="@android:color/white" />
 
-            <!-- Özel kontrol barı -->
-            <LinearLayout
-                android:id="@+id/controlsBar"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_gravity="bottom"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingLeft="16dp"
-                android:paddingRight="16dp"
-                android:background="#66000000"
-                android:visibility="gone">
-
-                <ImageButton
-                    android:id="@+id/btnPlayPause"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_media_pause"
-                    android:tint="@android:color/white"
-                    android:contentDescription="Play/Pause" />
-
-                <ImageButton
-                    android:id="@+id/btnMode"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginLeft="20dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_menu_crop"
-                    android:tint="@android:color/white"
-                    android:contentDescription="Ekran modu" />
-
-            </LinearLayout>
+        <!-- Görüntü Modu Değiştirme Butonu -->
+        <ImageButton
+            android:id="@+id/btnMode"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@android:color/transparent"
+            android:src="@android:drawable/ic_menu_crop"
+            android:padding="8dp"
+            android:tint="@android:color/white" />
+         </LinearLayout>
         </FrameLayout>
         EOF
-        # network_security_config.xml
+
+
+        # ============ MANIFEST ============
+        cat <<EOF > app/src/main/AndroidManifest.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+            <uses-feature
+                android:name="android.software.leanback"
+                android:required="false" />
+
+            <application
+                android:theme="@style/Theme.ErdinPlayer"
+                android:icon="@mipmap/ic_launcher"
+                android:label="@string/app_name"
+                android:usesCleartextTraffic="true"
+                android:networkSecurityConfig="@xml/network_security_config">
+
+                <meta-data
+                    android:name="com.google.android.gms.ads.APPLICATION_ID"
+                    android:value="@string/admob_app_id" />
+
+                <activity
+                    android:name=".LoginActivity"
+                    android:exported="true">
+                    <intent-filter>
+                        <action android:name="android.intent.action.MAIN"/>
+                        <category android:name="android.intent.category.LAUNCHER"/>
+                        <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
+                    </intent-filter>
+                </activity>
+
+                <activity
+                    android:name=".ContentActivity"
+                    android:exported="false" />
+
+                <activity
+                    android:name=".SeriesDetailActivity"
+                    android:exported="false" />
+
+                <activity
+                    android:name=".PlayerActivity"
+                    android:screenOrientation="fullSensor"
+                    android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection|screenLayout|smallestScreenSize"
+                    android:exported="false" />
+            </application>
+        </manifest>
+        EOF
+
+        mkdir -p app/src/main/res/xml
         cat <<EOF > app/src/main/res/xml/network_security_config.xml
         <?xml version="1.0" encoding="utf-8"?>
         <network-security-config>
             <base-config cleartextTrafficPermitted="true">
                 <trust-anchors>
                     <certificates src="system" />
+                    <certificates src="user" />
                 </trust-anchors>
             </base-config>
         </network-security-config>
         EOF
-        # AndroidManifest.xml
-         cat <<EOF > app/src/main/AndroidManifest.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
-        <uses-permission android:name="android.permission.INTERNET" />
-        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-        <uses-permission android:name="android.permission.WAKE_LOCK" />
-
-        <uses-feature
-        android:name="android.software.leanback"
-        android:required="false" />
-
-        <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.ErdinPlayer"
-        android:networkSecurityConfig="@xml/network_security_config">
-
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="@string/admob_app_id" />
-
-        <activity
-            android:name=".PlayerActivity"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
-            android:exported="false" />
-
-        <activity
-            android:name=".SeriesDetailActivity"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
-            android:exported="false" />
-
-        <activity
-            android:name=".ContentActivity"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
-            android:exported="false" />
-
-        <!-- 🔴 BURASI ZORUNLU: MAIN + LAUNCHER olduğu için exported = true -->
-        <activity
-            android:name=".LoginActivity"
-            android:screenOrientation="sensorLandscape"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        </application>
-        </manifest>
-        EOF
-
-
 
     - name: 4. Gradle Kurulumu
       uses: gradle/actions/setup-gradle@v3
