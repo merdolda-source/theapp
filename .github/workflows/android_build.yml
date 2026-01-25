@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro TV Edition (TV Focus + Fluid Search)
+name: ErdinPlayer Pro Hybrid (TV + Mobile Single Click)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (TV Focus + Search Fix)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Hybrid Fix)
       shell: bash
       run: |
         set -e
@@ -39,7 +39,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "🚀 ErdinPlayer Pro (TV Edition) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro (Hybrid Edition) üretiliyor..."
 
         rm -rf "$APP_NAME"
 
@@ -121,8 +121,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 21
                 targetSdk 34
-                versionCode 7
-                versionName "2.0.0-tv-edition"
+                versionCode 8
+                versionName "2.1.0-hybrid"
             }
 
             signingConfigs {
@@ -221,7 +221,7 @@ jobs:
         </resources>
         EOF
 
-        # ============ DRAWABLE (TV Focus İçin Güncellendi) ============
+        # ============ DRAWABLE ============
         cat <<EOF > app/src/main/res/drawable/bg_input_dark.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="@color/bg_card_soft"/>
@@ -230,7 +230,6 @@ jobs:
         </shape>
         EOF
         
-        # TV Focus Selector - Inputlar için
         cat <<EOF > app/src/main/res/drawable/selector_input_focus.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
             <item android:state_focused="true">
@@ -261,7 +260,6 @@ jobs:
         </shape>
         EOF
 
-        # TV Focus Selector - Kartlar için
         cat <<EOF > app/src/main/res/drawable/bg_focusable.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
             <item android:state_focused="true">
@@ -666,7 +664,7 @@ jobs:
         }
         EOF
 
-        # ============ ADAPTERS (TV Focus & KeyListener Eklendi) ============
+        # ============ ADAPTERS (Hybrid Fix: Single Click Mobile, Focus TV) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
         import android.view.KeyEvent
@@ -717,9 +715,10 @@ jobs:
                     holder.sub.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
                     holder.sub.text = s
                     
-                    // TV Focus Ayarları
+                    // HYBRID FIX:
+                    // isFocusable = true -> TV kumandası için gerekli
+                    // isFocusableInTouchMode = false -> Telefonda tek tıkla açılması için gerekli (varsayılan false)
                     holder.cardLayout.isFocusable = true
-                    holder.cardLayout.isFocusableInTouchMode = true
                     holder.cardLayout.isClickable = true
                     
                     holder.cardLayout.setOnFocusChangeListener { v, hasFocus ->
@@ -789,13 +788,14 @@ jobs:
                 holder.txtName.text = item.name
                 holder.txtType.text = if (item.type == "M3U") "M3U" else "Xtream"
                 
-                // TV Focus
+                // Hybrid Fix: Focusable true (TV), TouchMode false (Mobile Single Click)
                 holder.container.isFocusable = true
-                holder.container.isFocusableInTouchMode = true
+                holder.container.isClickable = true
+                
                 holder.container.setOnFocusChangeListener { v, hasFocus ->
                     if (hasFocus) {
                         v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(150).start()
-                        v.setBackgroundResource(R.drawable.bg_focusable) // Focus state tetiklemesi
+                        v.setBackgroundResource(R.drawable.bg_focusable)
                     } else {
                         v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(150).start()
                     }
@@ -822,7 +822,7 @@ jobs:
         }
         EOF
 
-        # ============ LoginActivity (TV Focus Input) ============
+        # ============ LoginActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -987,7 +987,7 @@ jobs:
         }
         EOF
 
-        # ============ ContentActivity (Fluid Search + TV Focus) ============
+        # ============ ContentActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1123,13 +1123,11 @@ jobs:
                     }
                 }
                 
-                // Fluid Search Implementation
                 etSearch.addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun afterTextChanged(s: Editable?) {}
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                         val query = s?.toString() ?: ""
-                        // Eğer arama yapılıyorsa ve kategori ekranındaysak, tüm içerikte ara
                         if (query.length > 2) {
                             applyGlobalSearch(query)
                         } else {
@@ -1248,7 +1246,6 @@ jobs:
                     return
                 }
                 if (screen == Screen.ITEMS && rv.visibility == View.VISIBLE) {
-                    // Eğer arama yapıldıysa ve geri dönülüyorsa aramayı temizle
                     if(etSearch.text.isNotEmpty()){
                         etSearch.setText("")
                         return
@@ -1287,12 +1284,10 @@ jobs:
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
             
-            // Global Arama (Tüm streamlerde arar)
             private fun applyGlobalSearch(qRaw: String) {
                  val q = qRaw.trim().lowercase(Locale.getDefault())
                  if (rv.visibility != View.VISIBLE) return
                  
-                 // Aramayı Stream moduna al
                  screen = Screen.ITEMS 
                  displayMapType = "STREAM"
                  
@@ -1395,7 +1390,6 @@ jobs:
                     return
                 }
                 
-                // STREAM Tıklaması
                 if (realIndex < filteredStreamIdx.size) {
                     val globalIdx = filteredStreamIdx[realIndex]
                     if (globalIdx !in streamsAll.indices) return
@@ -1944,7 +1938,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (TV Remote Control Support) ============
+        # ============ PlayerActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
@@ -2101,7 +2095,6 @@ jobs:
                 if (event.action == KeyEvent.ACTION_DOWN) {
                     when (event.keyCode) {
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                            // Eğer controller görünür değilse göster, görünürse play/pause yap
                             if (!playerView.isControllerFullyVisible) {
                                 playerView.showController()
                             } else {
@@ -2233,7 +2226,7 @@ jobs:
         }
         EOF
 
-        # ============ LAYOUTLAR ============
+        # ============ LAYOUTLAR (Hybrid Fix: Remove focusableInTouchMode) ============
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2298,8 +2291,7 @@ jobs:
                     android:padding="8dp"
                     android:background="@drawable/bg_header_card"
                     android:layout_marginRight="6dp"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true">
+                    android:focusable="true">
                     <TextView
                         android:id="@+id/tvXtream"
                         android:layout_width="wrap_content"
@@ -2319,8 +2311,7 @@ jobs:
                     android:padding="8dp"
                     android:background="@drawable/selector_input_focus"
                     android:layout_marginLeft="6dp"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true">
+                    android:focusable="true">
                     <TextView
                         android:id="@+id/tvM3u"
                         android:layout_width="wrap_content"
@@ -2410,8 +2401,7 @@ jobs:
                 android:background="@color/primary_cyan"
                 android:layout_marginTop="12dp"
                 android:layout_marginBottom="16dp"
-                android:focusable="true"
-                android:focusableInTouchMode="true"/>
+                android:focusable="true"/>
             <TextView
                 android:id="@+id/tvAccountsTitle"
                 android:layout_width="match_parent"
@@ -2543,7 +2533,6 @@ jobs:
                         android:textStyle="bold"
                         android:background="@drawable/bg_focusable"
                         android:focusable="true"
-                        android:focusableInTouchMode="true"
                         android:layout_marginBottom="16dp"/>
                     <TextView
                         android:id="@+id/btnModeVod"
@@ -2556,7 +2545,6 @@ jobs:
                         android:textStyle="bold"
                         android:background="@drawable/bg_focusable"
                         android:focusable="true"
-                        android:focusableInTouchMode="true"
                         android:layout_marginBottom="16dp"/>
                     <TextView
                         android:id="@+id/btnModeSeries"
@@ -2568,8 +2556,7 @@ jobs:
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:background="@drawable/bg_focusable"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"/>
+                        android:focusable="true"/>
                 </LinearLayout>
 
                 <!-- Liste ekranı -->
@@ -2645,7 +2632,6 @@ jobs:
                     android:textStyle="bold"
                     android:background="@drawable/bg_focusable"
                     android:focusable="true"
-                    android:focusableInTouchMode="true"
                     android:layout_marginTop="10dp"/>
             </LinearLayout>
         </androidx.drawerlayout.widget.DrawerLayout>
@@ -2718,8 +2704,7 @@ jobs:
             android:gravity="center_vertical"
             android:minHeight="72dp"
             android:padding="10dp"
-            android:focusable="true"
-            android:focusableInTouchMode="true">
+            android:focusable="true">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -2982,14 +2967,14 @@ jobs:
       id: upload_apk
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-TV-Edition-APK
+        name: ErdinPlayer-Pro-Hybrid-APK
         path: ErdinPlayer/app/build/outputs/apk/release/*.apk
 
     - name: 7. AAB'yi GitHub Artifact Olarak Yükle
       id: upload_aab
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-TV-Edition-AAB
+        name: ErdinPlayer-Pro-Hybrid-AAB
         path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
 
     - name: 8. Artifact URL'lerini Göster
@@ -3002,8 +2987,7 @@ jobs:
         echo "${{ steps.upload_aab.outputs.artifact-url }}"
         echo "====================================="
 
-        echo "### ErdinPlayer Pro (TV Edition) Çıktılar" >> $GITHUB_STEP_SUMMARY
+        echo "### ErdinPlayer Pro (Hybrid Edition) Çıktılar" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
