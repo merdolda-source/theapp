@@ -121,8 +121,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 21
                 targetSdk 34
-                versionCode 9
-                versionName "2.2.0-fixed"
+                versionCode 8
+                versionName "2.1.0-hybrid"
             }
 
             signingConfigs {
@@ -205,7 +205,7 @@ jobs:
 
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
-            <string name="app_name">ErdinPlayer</string>
+            <string name="app_name">Emin Xtream Player</string>
             <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
             <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
             <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
@@ -1938,7 +1938,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (FIXED CONTROLS) ============
+        # ============ PlayerActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
@@ -1972,14 +1972,7 @@ jobs:
             private lateinit var tvCenterInfo: TextView
             private lateinit var tvBrightness: TextView
             private lateinit var tvVolume: TextView
-            
-            // Buttons
             private lateinit var btnPlayPause: ImageButton
-            private lateinit var btnRewind: ImageButton
-            private lateinit var btnForward: ImageButton
-            private lateinit var btnPrev: ImageButton
-            private lateinit var btnNext: ImageButton
-            
             private var audioManager: AudioManager? = null
             private var maxVolume: Int = 0
             private var gestureStartVolume: Int = 0
@@ -2024,14 +2017,7 @@ jobs:
                     return
                 }
                 playerView = findViewById(R.id.pvMain)
-                
-                // Controls
                 btnPlayPause = findViewById(R.id.btnPlayPause)
-                btnRewind = findViewById(R.id.btnRewind)
-                btnForward = findViewById(R.id.btnForward)
-                btnPrev = findViewById(R.id.btnPrev)
-                btnNext = findViewById(R.id.btnNext)
-                
                 leftOverlay = findViewById(R.id.overlayLeft)
                 rightOverlay = findViewById(R.id.overlayRight)
                 tvCenterInfo = findViewById(R.id.tvInfoCenter)
@@ -2049,39 +2035,14 @@ jobs:
                 val lp = window.attributes
                 currentBrightness = if (lp.screenBrightness in 0f..1f) lp.screenBrightness else 0.5f
                 applyResizeMode(playerView)
-                
                 btnMode.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
                     applyResizeMode(playerView)
                     rescheduleHide()
                 }
-                
-                btnPlayPause.setOnClickListener { togglePlayPause() }
-                
-                btnRewind.setOnClickListener {
-                    seekBy(-10000L)
-                    showCenterInfo("◄◄ 10 sn")
+                btnPlayPause.setOnClickListener {
+                    togglePlayPause()
                 }
-                
-                btnForward.setOnClickListener {
-                    seekBy(10000L)
-                    showCenterInfo("10 sn ►►")
-                }
-                
-                btnPrev.setOnClickListener {
-                    // Canlı yayında başa dönme veya önceki kanal (playlist yoksa restart)
-                    player?.seekTo(0)
-                    showCenterInfo("Başa Dönüldü")
-                }
-                
-                btnNext.setOnClickListener {
-                    // Canlı yayında sona gitme
-                    player?.let {
-                        if (it.duration > 0) it.seekTo(it.duration)
-                        showCenterInfo("Canlı")
-                    }
-                }
-                
                 setupGestureOverlay(leftOverlay, true)
                 setupGestureOverlay(rightOverlay, false)
                 try {
@@ -2142,14 +2103,14 @@ jobs:
                             return true
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> {
-                            seekBy(-10000L)
-                            showCenterInfo("◄◄ 10 sn")
+                            seekBy(-15000L)
+                            showCenterInfo("◄◄ 15 saniye")
                             playerView.showController()
                             return true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
-                            seekBy(10000L)
-                            showCenterInfo("10 sn ►►")
+                            seekBy(15000L)
+                            showCenterInfo("15 saniye ►►")
                             playerView.showController()
                             return true
                         }
@@ -2188,7 +2149,24 @@ jobs:
                         MotionEvent.ACTION_UP -> {
                             if (!isGesture) {
                                 playerView.showController()
-                                // Çift tıklama kontrolü kaldırıldı, butonlar artık manuel var.
+                                val now = System.currentTimeMillis()
+                                if (isLeft) {
+                                    tapCountLeft = if (now - lastTapLeft < 350) tapCountLeft + 1 else 1
+                                    lastTapLeft = now
+                                    if (tapCountLeft >= 2) {
+                                        tapCountLeft = 0
+                                        seekBy(-15000L)
+                                        showCenterInfo("◄◄ 15 saniye")
+                                    }
+                                } else {
+                                    tapCountRight = if (now - lastTapRight < 350) tapCountRight + 1 else 1
+                                    lastTapRight = now
+                                    if (tapCountRight >= 2) {
+                                        tapCountRight = 0
+                                        seekBy(15000L)
+                                        showCenterInfo("15 saniye ►►")
+                                    }
+                                }
                             }
                             rescheduleHide()
                             true
@@ -2497,7 +2475,7 @@ jobs:
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="ErdinPlayer"
+                        android:text="EminPlayer"
                         android:textColor="@color/white"
                         android:textSize="18sp"
                         android:textStyle="bold"
@@ -2816,13 +2794,12 @@ jobs:
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-        <!-- OverlayContainer: Bottom Margin eklendi ki butonlara basılabilsin -->
         <LinearLayout
         android:id="@+id/overlayContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
-        android:layout_marginBottom="100dp">
+        android:layout_marginBottom="72dp">
 
         <View
             android:id="@+id/overlayLeft"
@@ -2872,38 +2849,13 @@ jobs:
         android:layout_margin="12dp"
         android:visibility="gone" />
 
-        <!-- Butonlar: Google Play için görünür ve tıklanabilir -->
         <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="8dp"
         android:layout_gravity="bottom|center_horizontal"
-        android:gravity="center"
-        android:background="#80000000">
-
-        <ImageButton
-            android:id="@+id/btnPrev"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@android:color/transparent"
-            android:src="@android:drawable/ic_media_previous"
-            android:padding="8dp"
-            android:tint="@android:color/white"
-            android:focusable="true"
-            android:nextFocusRight="@id/btnRewind"/>
-            
-        <ImageButton
-            android:id="@+id/btnRewind"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@android:color/transparent"
-            android:src="@android:drawable/ic_media_rew"
-            android:padding="8dp"
-            android:tint="@android:color/white"
-            android:focusable="true"
-            android:nextFocusLeft="@id/btnPrev"
-            android:nextFocusRight="@id/btnPlayPause"/>
+        android:gravity="right">
 
         <ImageButton
             android:id="@+id/btnPlayPause"
@@ -2914,43 +2866,20 @@ jobs:
             android:padding="8dp"
             android:tint="@android:color/white"
             android:focusable="true"
-            android:nextFocusLeft="@id/btnRewind"
-            android:nextFocusRight="@id/btnForward"/>
-
-        <ImageButton
-            android:id="@+id/btnForward"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@android:color/transparent"
-            android:src="@android:drawable/ic_media_ff"
-            android:padding="8dp"
-            android:tint="@android:color/white"
-            android:focusable="true"
             android:nextFocusLeft="@id/btnPlayPause"
-            android:nextFocusRight="@id/btnNext"/>
-
-        <ImageButton
-            android:id="@+id/btnNext"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@android:color/transparent"
-            android:src="@android:drawable/ic_media_next"
-            android:padding="8dp"
-            android:tint="@android:color/white"
-            android:focusable="true"
-            android:nextFocusLeft="@id/btnForward"
             android:nextFocusRight="@id/btnMode"/>
 
         <ImageButton
             android:id="@+id/btnMode"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:background="@android:color/transparent"
             android:src="@android:drawable/ic_menu_crop"
             android:padding="8dp"
             android:tint="@android:color/white"
             android:focusable="true"
-            android:nextFocusLeft="@id/btnNext"/>
+            android:nextFocusLeft="@id/btnPlayPause"
+            android:nextFocusRight="@id/btnMode"/>
          </LinearLayout>
         </FrameLayout>
         EOF
