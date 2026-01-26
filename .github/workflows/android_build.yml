@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Hybrid (TV + Mobile Single Click)
+name: ErdinPlayer Pro Hybrid (TV + Mobile Single Click + New Player)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Hybrid Fix)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Hybrid Fix + New Player UI)
       shell: bash
       run: |
         set -e
@@ -39,7 +39,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "🚀 ErdinPlayer Pro (Hybrid Edition) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro (Hybrid Edition v2) üretiliyor..."
 
         rm -rf "$APP_NAME"
 
@@ -121,8 +121,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 21
                 targetSdk 35
-                versionCode 9
-                versionName "2.1.0-hybrid"
+                versionCode 10
+                versionName "2.2.0-hybrid-player"
             }
 
             signingConfigs {
@@ -188,6 +188,7 @@ jobs:
             <color name="hint_yellow">#FFD600</color>
             <color name="focus_ring">#00E5FF</color>
             <color name="focus_bg">#2A2E45</color>
+            <color name="player_overlay">#99000000</color>
         </resources>
         EOF
 
@@ -280,6 +281,29 @@ jobs:
                     <solid android:color="@color/bg_card"/>
                     <corners android:radius="12dp"/>
                     <stroke android:width="1dp" android:color="@color/gray_600"/>
+                </shape>
+            </item>
+        </selector>
+        EOF
+        
+        # Player Buton Arka Planı (Yuvarlak)
+        cat <<EOF > app/src/main/res/drawable/bg_player_btn.xml
+        <selector xmlns:android="http://schemas.android.com/apk/res/android">
+             <item android:state_focused="true">
+                <shape android:shape="oval">
+                    <solid android:color="@color/primary_cyan"/>
+                    <stroke android:width="2dp" android:color="@color/white"/>
+                </shape>
+            </item>
+            <item android:state_pressed="true">
+                <shape android:shape="oval">
+                    <solid android:color="@color/gray_600"/>
+                </shape>
+            </item>
+            <item>
+                <shape android:shape="oval">
+                    <solid android:color="#40000000"/>
+                    <stroke android:width="1dp" android:color="#80FFFFFF"/>
                 </shape>
             </item>
         </selector>
@@ -717,8 +741,9 @@ jobs:
                     
                     // HYBRID FIX:
                     // isFocusable = true -> TV kumandası için gerekli
-                    // isFocusableInTouchMode = false -> Telefonda tek tıkla açılması için gerekli (varsayılan false)
+                    // isFocusableInTouchMode = false -> Telefonda tek tıkla açılması için gerekli 
                     holder.cardLayout.isFocusable = true
+                    holder.cardLayout.isFocusableInTouchMode = false
                     holder.cardLayout.isClickable = true
                     
                     holder.cardLayout.setOnFocusChangeListener { v, hasFocus ->
@@ -790,6 +815,7 @@ jobs:
                 
                 // Hybrid Fix: Focusable true (TV), TouchMode false (Mobile Single Click)
                 holder.container.isFocusable = true
+                holder.container.isFocusableInTouchMode = false
                 holder.container.isClickable = true
                 
                 holder.container.setOnFocusChangeListener { v, hasFocus ->
@@ -1938,7 +1964,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity ============
+        # ============ PlayerActivity (New Logic: 5 Buttons) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
@@ -1972,7 +1998,14 @@ jobs:
             private lateinit var tvCenterInfo: TextView
             private lateinit var tvBrightness: TextView
             private lateinit var tvVolume: TextView
+            
+            // New Buttons
+            private lateinit var btnPrev: ImageButton
+            private lateinit var btnRewind: ImageButton
             private lateinit var btnPlayPause: ImageButton
+            private lateinit var btnForward: ImageButton
+            private lateinit var btnNext: ImageButton
+            
             private var audioManager: AudioManager? = null
             private var maxVolume: Int = 0
             private var gestureStartVolume: Int = 0
@@ -1980,10 +2013,6 @@ jobs:
             private var gestureStartBrightness: Float = 0.5f
             private var gestureStartY: Float = 0f
             private var isGesture: Boolean = false
-            private var lastTapLeft: Long = 0
-            private var lastTapRight: Long = 0
-            private var tapCountLeft: Int = 0
-            private var tapCountRight: Int = 0
             private var playUrl: String = ""
             private val FAKE_USER_AGENT =
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
@@ -2017,7 +2046,14 @@ jobs:
                     return
                 }
                 playerView = findViewById(R.id.pvMain)
+                
+                // Initialize Buttons
+                btnPrev = findViewById(R.id.btnPrev)
+                btnRewind = findViewById(R.id.btnRewind)
                 btnPlayPause = findViewById(R.id.btnPlayPause)
+                btnForward = findViewById(R.id.btnForward)
+                btnNext = findViewById(R.id.btnNext)
+                
                 leftOverlay = findViewById(R.id.overlayLeft)
                 rightOverlay = findViewById(R.id.overlayRight)
                 tvCenterInfo = findViewById(R.id.tvInfoCenter)
@@ -2035,16 +2071,51 @@ jobs:
                 val lp = window.attributes
                 currentBrightness = if (lp.screenBrightness in 0f..1f) lp.screenBrightness else 0.5f
                 applyResizeMode(playerView)
+                
                 btnMode.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
                     applyResizeMode(playerView)
                     rescheduleHide()
                 }
+                
+                // --- Button Logic ---
+                
+                // 1. Prev Button (Big Jump Back or Prev Channel)
+                btnPrev.setOnClickListener {
+                    seekBy(-60000L) // 60 sec back
+                    showCenterInfo("◄◄ 60 sn")
+                    rescheduleHide()
+                }
+                
+                // 2. Rewind Button (15 sec)
+                btnRewind.setOnClickListener {
+                    seekBy(-15000L) // 15 sec back
+                    showCenterInfo("◄ 15 sn")
+                    rescheduleHide()
+                }
+                
+                // 3. Play/Pause
                 btnPlayPause.setOnClickListener {
                     togglePlayPause()
                 }
+                
+                // 4. Forward Button (15 sec)
+                btnForward.setOnClickListener {
+                    seekBy(15000L) // 15 sec forward
+                    showCenterInfo("15 sn ►")
+                    rescheduleHide()
+                }
+                
+                // 5. Next Button (Big Jump Fwd or Next Channel)
+                btnNext.setOnClickListener {
+                    seekBy(60000L) // 60 sec forward
+                    showCenterInfo("60 sn ►►")
+                    rescheduleHide()
+                }
+                
                 setupGestureOverlay(leftOverlay, true)
                 setupGestureOverlay(rightOverlay, false)
+                
                 try {
                     val headers = mutableMapOf<String, String>()
                     headers["User-Agent"] = FAKE_USER_AGENT
@@ -2090,7 +2161,7 @@ jobs:
                 }
             }
 
-            // TV Kumanda Tuşlarını Yakala
+            // TV Kumanda Tuşlarını Yakala (15 sn mantığı)
             override fun dispatchKeyEvent(event: KeyEvent): Boolean {
                 if (event.action == KeyEvent.ACTION_DOWN) {
                     when (event.keyCode) {
@@ -2104,13 +2175,13 @@ jobs:
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> {
                             seekBy(-15000L)
-                            showCenterInfo("◄◄ 15 saniye")
+                            showCenterInfo("◄ 15 sn")
                             playerView.showController()
                             return true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
                             seekBy(15000L)
-                            showCenterInfo("15 saniye ►►")
+                            showCenterInfo("15 sn ►")
                             playerView.showController()
                             return true
                         }
@@ -2149,24 +2220,6 @@ jobs:
                         MotionEvent.ACTION_UP -> {
                             if (!isGesture) {
                                 playerView.showController()
-                                val now = System.currentTimeMillis()
-                                if (isLeft) {
-                                    tapCountLeft = if (now - lastTapLeft < 350) tapCountLeft + 1 else 1
-                                    lastTapLeft = now
-                                    if (tapCountLeft >= 2) {
-                                        tapCountLeft = 0
-                                        seekBy(-15000L)
-                                        showCenterInfo("◄◄ 15 saniye")
-                                    }
-                                } else {
-                                    tapCountRight = if (now - lastTapRight < 350) tapCountRight + 1 else 1
-                                    lastTapRight = now
-                                    if (tapCountRight >= 2) {
-                                        tapCountRight = 0
-                                        seekBy(15000L)
-                                        showCenterInfo("15 saniye ►►")
-                                    }
-                                }
                             }
                             rescheduleHide()
                             true
@@ -2799,7 +2852,7 @@ jobs:
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
-        android:layout_marginBottom="72dp">
+        android:layout_marginBottom="90dp">
 
         <View
             android:id="@+id/overlayLeft"
@@ -2849,38 +2902,91 @@ jobs:
         android:layout_margin="12dp"
         android:visibility="gone" />
 
+        <!-- CONTROL BAR -->
         <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:layout_gravity="bottom|center_horizontal"
-        android:gravity="right">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_gravity="bottom|center_horizontal"
+            android:gravity="center"
+            android:paddingBottom="24dp"
+            android:background="@color/player_overlay">
 
-        <ImageButton
-            android:id="@+id/btnPlayPause"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:background="@android:color/transparent"
-            android:src="@android:drawable/ic_media_pause"
-            android:padding="8dp"
-            android:tint="@android:color/white"
-            android:focusable="true"
-            android:nextFocusLeft="@id/btnPlayPause"
-            android:nextFocusRight="@id/btnMode"/>
+            <!-- Previous / Rewind Long -->
+            <ImageButton
+                android:id="@+id/btnPrev"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/bg_player_btn"
+                android:src="@android:drawable/ic_media_previous"
+                android:padding="12dp"
+                android:tint="@android:color/white"
+                android:focusable="true"
+                android:layout_marginRight="12dp"/>
 
+            <!-- Rewind 15s -->
+            <ImageButton
+                android:id="@+id/btnRewind"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/bg_player_btn"
+                android:src="@android:drawable/ic_media_rew"
+                android:padding="12dp"
+                android:tint="@android:color/white"
+                android:focusable="true"
+                android:layout_marginRight="12dp"/>
+
+            <!-- Play / Pause -->
+            <ImageButton
+                android:id="@+id/btnPlayPause"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/bg_player_btn"
+                android:src="@android:drawable/ic_media_pause"
+                android:padding="12dp"
+                android:tint="@android:color/white"
+                android:focusable="true"/>
+
+            <!-- Forward 15s -->
+             <ImageButton
+                android:id="@+id/btnForward"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/bg_player_btn"
+                android:src="@android:drawable/ic_media_ff"
+                android:padding="12dp"
+                android:tint="@android:color/white"
+                android:focusable="true"
+                android:layout_marginLeft="12dp"/>
+
+            <!-- Next / Forward Long -->
+             <ImageButton
+                android:id="@+id/btnNext"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/bg_player_btn"
+                android:src="@android:drawable/ic_media_next"
+                android:padding="12dp"
+                android:tint="@android:color/white"
+                android:focusable="true"
+                android:layout_marginLeft="12dp"/>
+
+        </LinearLayout>
+
+        <!-- Resize Mode Button (Top Right) -->
         <ImageButton
             android:id="@+id/btnMode"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="@android:color/transparent"
             android:src="@android:drawable/ic_menu_crop"
             android:padding="8dp"
             android:tint="@android:color/white"
-            android:focusable="true"
-            android:nextFocusLeft="@id/btnPlayPause"
-            android:nextFocusRight="@id/btnMode"/>
-         </LinearLayout>
+            android:layout_gravity="top|right"
+            android:layout_marginTop="40dp"
+            android:layout_marginRight="16dp"
+            android:focusable="true"/>
+
         </FrameLayout>
         EOF
 
