@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Hybrid (Center Controls Fix)
+name: ErdinPlayer Pro Hybrid (Final Fix - Custom Seekbar)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Center UI + PHP Fix)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Custom UI + Seekbar)
       shell: bash
       run: |
         set -e
@@ -39,7 +39,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "🚀 ErdinPlayer Pro (Center Controls Edition) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro (Final Fix) üretiliyor..."
 
         rm -rf "$APP_NAME"
 
@@ -121,8 +121,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 21
                 targetSdk 35
-                versionCode 11
-                versionName "2.3.0-center-ui"
+                versionCode 12
+                versionName "2.4.0-seekbar-fix"
             }
 
             signingConfigs {
@@ -188,7 +188,7 @@ jobs:
             <color name="hint_yellow">#FFD600</color>
             <color name="focus_ring">#00E5FF</color>
             <color name="focus_bg">#2A2E45</color>
-            <color name="player_overlay">#99000000</color>
+            <color name="player_overlay">#CC000000</color>
         </resources>
         EOF
 
@@ -286,7 +286,7 @@ jobs:
         </selector>
         EOF
         
-        # Player Buton Arka Planı (Yuvarlak)
+        # Player Buton Arka Planı
         cat <<EOF > app/src/main/res/drawable/bg_player_btn.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
              <item android:state_focused="true">
@@ -346,7 +346,6 @@ jobs:
         EOF
 
         # ============ UTILS ============
-        # RemoteConfig GÜNCELLENDİ: PHP yapısına uygun hale getirildi
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
         import android.content.Context
@@ -379,8 +378,6 @@ jobs:
                             if (conn.responseCode != HttpURLConnection.HTTP_OK) return@Thread
                             val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                             val obj = JSONObject(body)
-                            
-                            // PHP'den gelen "ads" objesini oku
                             val ads = obj.optJSONObject("ads")
                             if (ads != null) {
                                 bannerId = ads.optString("admob_banner_id", null)
@@ -846,7 +843,8 @@ jobs:
         }
         EOF
 
-        # ============ LoginActivity ============
+        # ============ LoginActivity, ContentActivity, SeriesDetailActivity ============
+        # (Bu dosyalar öncekiyle aynı, sadece bütünlük için tekrar yazılıyor)
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1011,7 +1009,6 @@ jobs:
         }
         EOF
 
-        # ============ ContentActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1729,7 +1726,6 @@ jobs:
         }
         EOF
 
-        # ============ SeriesDetailActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1961,7 +1957,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (Center UI Fix) ============
+        # ============ PlayerActivity (Custom Seekbar Logic) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
@@ -1975,6 +1971,7 @@ jobs:
         import android.view.WindowManager
         import android.widget.ImageButton
         import android.widget.LinearLayout
+        import android.widget.SeekBar
         import android.widget.TextView
         import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
@@ -1986,7 +1983,10 @@ jobs:
         import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
         import androidx.media3.ui.AspectRatioFrameLayout
         import androidx.media3.ui.PlayerView
+        import java.util.Formatter
+        import java.util.Locale
         import kotlin.math.abs
+
         class PlayerActivity : AppCompatActivity() {
             private var player: ExoPlayer? = null
             private var currentMode: Int = 0
@@ -1999,6 +1999,10 @@ jobs:
             
             // Kontrol Grubu (Ortada)
             private lateinit var controlsContainer: LinearLayout
+            private lateinit var seekContainer: LinearLayout
+            private lateinit var tvCurrentTime: TextView
+            private lateinit var tvEndTime: TextView
+            private lateinit var seekBar: SeekBar
             
             // New Buttons
             private lateinit var btnPrev: ImageButton
@@ -2014,10 +2018,13 @@ jobs:
             private var gestureStartBrightness: Float = 0.5f
             private var gestureStartY: Float = 0f
             private var isGesture: Boolean = false
+            private var isSeeking: Boolean = false
             private var playUrl: String = ""
             private val FAKE_USER_AGENT =
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
             private val handler = Handler(Looper.getMainLooper())
+            private val formatBuilder = StringBuilder()
+            private val formatter = Formatter(formatBuilder, Locale.getDefault())
             
             // 5 Saniye sonra gizleme mantığı
             private val hideOverlayRunnable = Runnable {
@@ -2026,6 +2033,14 @@ jobs:
                 tvCenterInfo.visibility = View.GONE
                 // Kontrolleri de gizle
                 controlsContainer.visibility = View.GONE
+            }
+            
+            // Seekbar güncelleme
+            private val updateProgressRunnable = object : Runnable {
+                override fun run() {
+                    updateProgress()
+                    handler.postDelayed(this, 1000)
+                }
             }
 
             override fun onCreate(savedInstanceState: Bundle?) {
@@ -2053,6 +2068,11 @@ jobs:
                 
                 // Initialize Controls
                 controlsContainer = findViewById(R.id.controlsContainer)
+                seekContainer = findViewById(R.id.seekContainer)
+                tvCurrentTime = findViewById(R.id.tvCurrentTime)
+                tvEndTime = findViewById(R.id.tvEndTime)
+                seekBar = findViewById(R.id.seekBar)
+                
                 btnPrev = findViewById(R.id.btnPrev)
                 btnRewind = findViewById(R.id.btnRewind)
                 btnPlayPause = findViewById(R.id.btnPlayPause)
@@ -2066,10 +2086,8 @@ jobs:
                 tvVolume = findViewById(R.id.tvVolume)
                 val btnMode = findViewById<ImageButton>(R.id.btnMode)
                 
-                playerView.useController = true
-                playerView.controllerAutoShow = true
-                playerView.controllerHideOnTouch = true
-                playerView.controllerShowTimeoutMs = 5000 
+                // Disable default controller completely to fix overlapping
+                playerView.useController = false
                 
                 audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
@@ -2083,37 +2101,45 @@ jobs:
                     rescheduleHide()
                 }
                 
-                // --- Button Logic ---
+                // Seekbar Listener
+                seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        if (fromUser) {
+                            tvCurrentTime.text = stringForTime(progress.toLong())
+                        }
+                    }
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                        isSeeking = true
+                        handler.removeCallbacks(hideOverlayRunnable)
+                    }
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                        isSeeking = false
+                        player?.seekTo(seekBar?.progress?.toLong() ?: 0L)
+                        rescheduleHide()
+                    }
+                })
                 
-                // 1. Prev Button (Big Jump Back or Prev Channel)
+                // --- Button Logic ---
                 btnPrev.setOnClickListener {
-                    seekBy(-60000L) // 60 sec back
+                    seekBy(-60000L) 
                     showCenterInfo("◄◄ 60 sn")
                     rescheduleHide()
                 }
-                
-                // 2. Rewind Button (15 sec)
                 btnRewind.setOnClickListener {
-                    seekBy(-15000L) // 15 sec back
+                    seekBy(-15000L)
                     showCenterInfo("◄ 15 sn")
                     rescheduleHide()
                 }
-                
-                // 3. Play/Pause
                 btnPlayPause.setOnClickListener {
                     togglePlayPause()
                 }
-                
-                // 4. Forward Button (15 sec)
                 btnForward.setOnClickListener {
-                    seekBy(15000L) // 15 sec forward
+                    seekBy(15000L)
                     showCenterInfo("15 sn ►")
                     rescheduleHide()
                 }
-                
-                // 5. Next Button (Big Jump Fwd or Next Channel)
                 btnNext.setOnClickListener {
-                    seekBy(60000L) // 60 sec forward
+                    seekBy(60000L)
                     showCenterInfo("60 sn ►►")
                     rescheduleHide()
                 }
@@ -2144,7 +2170,19 @@ jobs:
                                 else android.R.drawable.ic_media_play
                             )
                             if (isPlaying) {
+                                handler.post(updateProgressRunnable)
                                 rescheduleHide()
+                            } else {
+                                handler.removeCallbacks(updateProgressRunnable)
+                            }
+                        }
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (playbackState == Player.STATE_READY) {
+                                val duration = exo.duration
+                                if (duration > 0) {
+                                    seekBar.max = duration.toInt()
+                                    tvEndTime.text = stringForTime(duration)
+                                }
                             }
                         }
                         override fun onPlayerError(error: PlaybackException) {
@@ -2157,6 +2195,34 @@ jobs:
                 }
             }
             
+            private fun updateProgress() {
+                val p = player ?: return
+                if (!isSeeking && p.isPlaying) {
+                    val pos = p.currentPosition
+                    val dur = p.duration
+                    if (dur > 0) {
+                        seekBar.max = dur.toInt()
+                        seekBar.progress = pos.toInt()
+                        tvCurrentTime.text = stringForTime(pos)
+                        tvEndTime.text = stringForTime(dur)
+                    }
+                }
+            }
+            
+            private fun stringForTime(timeMs: Long): String {
+                if (timeMs <= 0 || timeMs >= 24 * 60 * 60 * 1000) return "00:00"
+                val totalSeconds = timeMs / 1000
+                val seconds = totalSeconds % 60
+                val minutes = (totalSeconds / 60) % 60
+                val hours = totalSeconds / 3600
+                formatBuilder.setLength(0)
+                return if (hours > 0) {
+                    formatter.format("%d:%02d:%02d", hours, minutes, seconds).toString()
+                } else {
+                    formatter.format("%02d:%02d", minutes, seconds).toString()
+                }
+            }
+            
             private fun togglePlayPause() {
                 player?.let {
                     if (it.isPlaying) it.pause() else it.play()
@@ -2166,6 +2232,7 @@ jobs:
 
             override fun dispatchKeyEvent(event: KeyEvent): Boolean {
                 if (event.action == KeyEvent.ACTION_DOWN) {
+                    rescheduleHide() // Her tuşta göster
                     when (event.keyCode) {
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                             togglePlayPause()
@@ -2277,574 +2344,21 @@ jobs:
         }
         EOF
 
-        # ============ LAYOUTLAR ============
-        cat <<EOF > app/src/main/res/layout/activity_login.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:ads="http://schemas.android.com/apk/res-auto"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:background="@color/bg_dark">
-            <com.google.android.gms.ads.AdView
-                android:id="@+id/adViewTopLogin"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                ads:adSize="BANNER"
-                ads:adUnitId="@string/admob_banner_test"
-                android:layout_marginBottom="8dp"
-                android:focusable="false"
-                android:focusableInTouchMode="false"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="10dp">
-                <TextView
-                    android:id="@+id/tvTitle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="ErdinPlayer Pro"
-                    android:textColor="@color/primary_cyan"
-                    android:textStyle="bold"
-                    android:textSize="22sp"/>
-                <ImageButton
-                    android:id="@+id/btnLangLogin"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_menu_manage"
-                    android:tint="@color/white"/>
-            </LinearLayout>
-            <TextView
-                android:id="@+id/tvLoginType"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Giriş Tipi"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:layout_marginBottom="4dp"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="14dp">
-                <LinearLayout
-                    android:id="@+id/cardXtream"
-                    android:layout_width="0dp"
-                    android:layout_height="72dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="8dp"
-                    android:background="@drawable/bg_header_card"
-                    android:layout_marginRight="6dp"
-                    android:focusable="true">
-                    <TextView
-                        android:id="@+id/tvXtream"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Xtream"
-                        android:textStyle="bold"
-                        android:textColor="@color/white"
-                        android:textSize="16sp"/>
-                </LinearLayout>
-                <LinearLayout
-                    android:id="@+id/cardM3u"
-                    android:layout_width="0dp"
-                    android:layout_height="72dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="8dp"
-                    android:background="@drawable/selector_input_focus"
-                    android:layout_marginLeft="6dp"
-                    android:focusable="true">
-                    <TextView
-                        android:id="@+id/tvM3u"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="M3U"
-                        android:textStyle="bold"
-                        android:textColor="@color/white"
-                        android:textSize="16sp"/>
-                </LinearLayout>
-            </LinearLayout>
-            <EditText
-                android:id="@+id/etName"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:hint="Hesap adı"
-                android:background="@drawable/selector_input_focus"
-                android:padding="12dp"
-                android:textColor="@color/white"
-                android:textColorHint="@color/gray_600"
-                android:inputType="textPersonName"
-                android:layout_marginBottom="10dp"/>
-            <LinearLayout
-                android:id="@+id/layoutXtream"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-                <EditText
-                    android:id="@+id/etDns"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="Xtream URL girin"
-                    android:background="@drawable/selector_input_focus"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/gray_600"
-                    android:inputType="textUri"
-                    android:layout_marginBottom="8dp"/>
-                <EditText
-                    android:id="@+id/etUser"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="Kullanıcı adı"
-                    android:background="@drawable/selector_input_focus"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/gray_600"
-                    android:inputType="textEmailAddress"
-                    android:layout_marginBottom="8dp"/>
-                <EditText
-                    android:id="@+id/etPass"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="Şifre"
-                    android:inputType="textVisiblePassword"
-                    android:background="@drawable/selector_input_focus"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/gray_600"
-                    android:layout_marginBottom="8dp"/>
-            </LinearLayout>
-            <LinearLayout
-                android:id="@+id/layoutM3u"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-                <EditText
-                    android:id="@+id/etM3u"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="M3U URL girin"
-                    android:background="@drawable/selector_input_focus"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/hint_yellow"
-                    android:inputType="textUri"
-                    android:layout_marginBottom="10dp"/>
-            </LinearLayout>
-            <Button
-                android:id="@+id/btnAddAccount"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:text="Hesap Ekle"
-                android:textStyle="bold"
-                android:textColor="@color/black"
-                android:textSize="16sp"
-                android:background="@color/primary_cyan"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="16dp"
-                android:focusable="true"/>
-            <TextView
-                android:id="@+id/tvAccountsTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Kayıtlı Hesaplar"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="2dp"/>
-            <TextView
-                android:id="@+id/tvAccountsHint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Devam etmek için alttan bir hesap seçin"
-                android:textColor="@color/hint_yellow"
-                android:textSize="13sp"
-                android:layout_marginBottom="6dp"/>
-            <ListView
-                android:id="@+id/lvAccounts"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:divider="@android:color/transparent"
-                android:dividerHeight="10dp"/>
-        </LinearLayout>
-        EOF
-
-        cat <<EOF > app/src/main/res/layout/activity_content.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
-            xmlns:ads="http://schemas.android.com/apk/res-auto"
-            android:id="@+id/drawerLayout"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:background="@color/bg_dark">
-                <com.google.android.gms.ads.AdView
-                    android:id="@+id/adViewTopContent"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_banner_test"
-                    android:layout_marginBottom="4dp"
-                    android:focusable="false"
-                    android:focusableInTouchMode="false"/>
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:background="@color/bg_card"
-                    android:paddingLeft="12dp"
-                    android:paddingRight="12dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp">
-                    <TextView
-                        android:id="@+id/tvOpenDrawer"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="☰"
-                        android:textColor="@color/white"
-                        android:textSize="22sp"
-                        android:paddingRight="12dp"
-                        android:focusable="true"/>
-                    <TextView
-                        android:id="@+id/tvTitleBar"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="EminPlayer"
-                        android:textColor="@color/white"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:focusable="true"/>
-                    <EditText
-                        android:id="@+id/etSearch"
-                        android:layout_width="200dp"
-                        android:layout_height="40dp"
-                        android:hint="Ara..."
-                        android:background="@drawable/selector_input_focus"
-                        android:paddingLeft="10dp"
-                        android:paddingRight="10dp"
-                        android:textColor="@color/white"
-                        android:textColorHint="@color/hint_yellow"
-                        android:singleLine="true"
-                        android:imeOptions="actionSearch"
-                        android:focusable="true"
-                        android:focusableInTouchMode="true"/>
-                </LinearLayout>
-                <ProgressBar
-                    android:id="@+id/pbLoading"
-                    style="?android:attr/progressBarStyleLarge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="8dp"
-                    android:layout_marginBottom="8dp"
-                    android:visibility="gone"/>
-                <TextView
-                    android:id="@+id/tvStatus"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/error_red"
-                    android:textSize="14sp"
-                    android:padding="8dp"
-                    android:visibility="gone"/>
-
-                <!-- Yeni ana menü -->
-                <LinearLayout
-                    android:id="@+id/layoutModeSelector"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="24dp">
-                    <TextView
-                        android:id="@+id/btnModeLive"
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:gravity="center"
-                        android:text="Canlı TV"
-                        android:textColor="@color/white"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:background="@drawable/bg_focusable"
-                        android:focusable="true"
-                        android:layout_marginBottom="16dp"/>
-                    <TextView
-                        android:id="@+id/btnModeVod"
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:gravity="center"
-                        android:text="Filmler"
-                        android:textColor="@color/white"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:background="@drawable/bg_focusable"
-                        android:focusable="true"
-                        android:layout_marginBottom="16dp"/>
-                    <TextView
-                        android:id="@+id/btnModeSeries"
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:gravity="center"
-                        android:text="Diziler"
-                        android:textColor="@color/white"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:background="@drawable/bg_focusable"
-                        android:focusable="true"/>
-                </LinearLayout>
-
-                <!-- Liste ekranı -->
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvContent"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:padding="8dp"
-                    android:visibility="gone"/>
-
-                <com.google.android.gms.ads.AdView
-                    android:id="@+id/adViewBottomContent"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_banner_test"
-                    android:layout_marginTop="4dp"
-                    android:focusable="false"
-                    android:focusableInTouchMode="false"/>
-            </LinearLayout>
-            <LinearLayout
-                android:layout_width="300dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="start"
-                android:orientation="vertical"
-                android:background="@color/drawer_bg"
-                android:padding="12dp">
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/bg_header_card"
-                    android:padding="12dp">
-                    <TextView
-                        android:id="@+id/tvDrawerUser"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Hesap: -"
-                        android:textColor="@color/white"
-                        android:textStyle="bold"
-                        android:textSize="16sp"/>
-                    <TextView
-                        android:id="@+id/tvDrawerExpire"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Süre: -"
-                        android:textColor="@color/white"
-                        android:textSize="14sp"
-                        android:layout_marginTop="4dp"/>
-                </LinearLayout>
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Ekli Hesaplar"
-                    android:textColor="@color/hint_yellow"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:layout_marginTop="12dp"
-                    android:layout_marginBottom="8dp"/>
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvAccounts"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"/>
-                <TextView
-                    android:id="@+id/tvLogout"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:gravity="center"
-                    android:text="Çıkış"
-                    android:textColor="@color/white"
-                    android:textStyle="bold"
-                    android:background="@drawable/bg_focusable"
-                    android:focusable="true"
-                    android:layout_marginTop="10dp"/>
-            </LinearLayout>
-        </androidx.drawerlayout.widget.DrawerLayout>
-        EOF
-
-        # item_grid_pro.xml
-        cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            xmlns:ads="http://schemas.android.com/apk/res-auto"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="8dp">
-            
-            <LinearLayout
-                android:id="@+id/cardLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="72dp"
-                android:orientation="vertical"
-                android:background="@drawable/bg_focusable"
-                android:padding="12dp"
-                android:visibility="visible">
-                <TextView
-                    android:id="@+id/txtName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/white"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:maxLines="2"
-                    android:ellipsize="end"/>
-                <TextView
-                    android:id="@+id/txtSub"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/hint_yellow"
-                    android:textSize="12sp"
-                    android:layout_marginTop="4dp"
-                    android:visibility="gone"/>
-            </LinearLayout>
-            
-            <LinearLayout
-                android:id="@+id/adContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:background="@android:color/transparent"
-                android:visibility="gone">
-                <com.google.android.gms.ads.AdView
-                    android:id="@+id/adViewItem"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_banner_test"/>
-            </LinearLayout>
-        </LinearLayout>
-        EOF
-
-        cat <<EOF > app/src/main/res/layout/item_account.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:id="@+id/accountContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:background="@drawable/bg_focusable"
-            android:gravity="center_vertical"
-            android:minHeight="72dp"
-            android:padding="10dp"
-            android:focusable="true">
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-                <TextView
-                    android:id="@+id/tvAccountName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Hesap Adı"
-                    android:textColor="@color/white"
-                    android:textStyle="bold"
-                    android:textSize="15sp"/>
-                <TextView
-                    android:id="@+id/tvAccountType"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Xtream"
-                    android:textColor="@color/primary_cyan"
-                    android:textSize="12sp"
-                    android:layout_marginTop="2dp"/>
-            </LinearLayout>
-            <ImageButton
-                android:id="@+id/btnDeleteAccount"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="@android:color/transparent"
-                android:src="@android:drawable/ic_menu_delete"
-                android:tint="@color/error_red"
-                android:focusable="true"/>
-        </LinearLayout>
-        EOF
-
-        cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
-        <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:background="@color/bg_dark">
-
-            <TextView
-                android:id="@+id/tvSeriesTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/white"
-                android:background="@color/bg_card"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:padding="16dp"
-                android:focusable="true"/>
-
-            <ProgressBar
-                android:id="@+id/pbSeries"
-                style="?android:attr/progressBarStyleLarge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:visibility="gone"/>
-
-            <TextView
-                android:id="@+id/tvSeriesStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/error_red"
-                android:textSize="14sp"
-                android:padding="8dp"
-                android:visibility="gone"/>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvEpisodes"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:padding="8dp"/>
-        </LinearLayout>
-        EOF
-
-        # ============ Player Layout (CENTERED CONTROLS) ============
+        # ============ Player Layout (CUSTOM SEEKBAR ADDED) ============
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/black">
 
+        <!-- use_controller=false ile default player'ı kapattık (üst üste binmeyi önler) -->
         <androidx.media3.ui.PlayerView
         android:id="@+id/pvMain"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        app:use_controller="false" />
 
         <LinearLayout
         android:id="@+id/overlayContainer"
@@ -2900,75 +2414,120 @@ jobs:
         android:layout_margin="12dp"
         android:visibility="gone" />
 
-        <!-- CONTROL BAR (CENTERED) -->
+        <!-- CONTROL BAR (CENTERED + SEEKBAR) -->
         <LinearLayout
             android:id="@+id/controlsContainer"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:layout_gravity="center"
             android:gravity="center"
             android:padding="16dp"
-            android:background="@android:color/transparent">
+            android:background="@color/player_overlay">
 
-            <!-- Previous / Rewind Long -->
-            <ImageButton
-                android:id="@+id/btnPrev"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:background="@drawable/bg_player_btn"
-                android:src="@android:drawable/ic_media_previous"
-                android:padding="12dp"
-                android:tint="@android:color/white"
-                android:focusable="true"
-                android:layout_marginRight="12dp"/>
+            <!-- Butonlar -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="16dp">
 
-            <!-- Rewind 15s -->
-            <ImageButton
-                android:id="@+id/btnRewind"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:background="@drawable/bg_player_btn"
-                android:src="@android:drawable/ic_media_rew"
-                android:padding="12dp"
-                android:tint="@android:color/white"
-                android:focusable="true"
-                android:layout_marginRight="12dp"/>
+                <ImageButton
+                    android:id="@+id/btnPrev"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:background="@drawable/bg_player_btn"
+                    android:src="@android:drawable/ic_media_previous"
+                    android:padding="12dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"
+                    android:layout_marginRight="12dp"/>
 
-            <!-- Play / Pause -->
-            <ImageButton
-                android:id="@+id/btnPlayPause"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:background="@drawable/bg_player_btn"
-                android:src="@android:drawable/ic_media_pause"
-                android:padding="12dp"
-                android:tint="@android:color/white"
-                android:focusable="true"/>
+                <ImageButton
+                    android:id="@+id/btnRewind"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:background="@drawable/bg_player_btn"
+                    android:src="@android:drawable/ic_media_rew"
+                    android:padding="12dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"
+                    android:layout_marginRight="12dp"/>
 
-            <!-- Forward 15s -->
-             <ImageButton
-                android:id="@+id/btnForward"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:background="@drawable/bg_player_btn"
-                android:src="@android:drawable/ic_media_ff"
-                android:padding="12dp"
-                android:tint="@android:color/white"
-                android:focusable="true"
-                android:layout_marginLeft="12dp"/>
+                <ImageButton
+                    android:id="@+id/btnPlayPause"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_player_btn"
+                    android:src="@android:drawable/ic_media_pause"
+                    android:padding="12dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"/>
 
-            <!-- Next / Forward Long -->
-             <ImageButton
-                android:id="@+id/btnNext"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:background="@drawable/bg_player_btn"
-                android:src="@android:drawable/ic_media_next"
-                android:padding="12dp"
-                android:tint="@android:color/white"
-                android:focusable="true"
-                android:layout_marginLeft="12dp"/>
+                 <ImageButton
+                    android:id="@+id/btnForward"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:background="@drawable/bg_player_btn"
+                    android:src="@android:drawable/ic_media_ff"
+                    android:padding="12dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"
+                    android:layout_marginLeft="12dp"/>
+
+                 <ImageButton
+                    android:id="@+id/btnNext"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:background="@drawable/bg_player_btn"
+                    android:src="@android:drawable/ic_media_next"
+                    android:padding="12dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"
+                    android:layout_marginLeft="12dp"/>
+            </LinearLayout>
+
+            <!-- Seekbar ve Süre -->
+            <LinearLayout
+                android:id="@+id/seekContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingLeft="24dp"
+                android:paddingRight="24dp">
+                
+                <TextView
+                    android:id="@+id/tvCurrentTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="@android:color/white"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+                    
+                <SeekBar
+                    android:id="@+id/seekBar"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginLeft="12dp"
+                    android:layout_marginRight="12dp"
+                    android:max="100"
+                    android:progress="0"
+                    android:progressTint="@color/primary_cyan"
+                    android:thumbTint="@color/primary_cyan"/>
+                    
+                <TextView
+                    android:id="@+id/tvEndTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="@android:color/white"
+                    android:textSize="14sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
 
         </LinearLayout>
 
