@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Hybrid (TV + Mobile Single Click + New Player)
+name: ErdinPlayer Pro Hybrid (Center Controls Fix)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Hybrid Fix + New Player UI)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (Center UI + PHP Fix)
       shell: bash
       run: |
         set -e
@@ -39,7 +39,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "🚀 ErdinPlayer Pro (Hybrid Edition v2) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro (Center Controls Edition) üretiliyor..."
 
         rm -rf "$APP_NAME"
 
@@ -121,8 +121,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 21
                 targetSdk 35
-                versionCode 10
-                versionName "2.2.0-hybrid-player"
+                versionCode 11
+                versionName "2.3.0-center-ui"
             }
 
             signingConfigs {
@@ -346,6 +346,7 @@ jobs:
         EOF
 
         # ============ UTILS ============
+        # RemoteConfig GÜNCELLENDİ: PHP yapısına uygun hale getirildi
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
         import android.content.Context
@@ -378,13 +379,15 @@ jobs:
                             if (conn.responseCode != HttpURLConnection.HTTP_OK) return@Thread
                             val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                             val obj = JSONObject(body)
-                            val ads = obj.optJSONObject("ads") ?: obj
-                            bannerId = ads.optString("admob_banner_id", null)
-                            interstitialId = ads.optString("admob_interstitial_id", null)
-                            val interval = ads.optInt("channel_interval", 0)
-                            if (interval > 0) channelInterval = interval
-                            val listInt = ads.optInt("banner_interval", 7)
-                            if (listInt > 0) bannerListInterval = listInt
+                            
+                            // PHP'den gelen "ads" objesini oku
+                            val ads = obj.optJSONObject("ads")
+                            if (ads != null) {
+                                bannerId = ads.optString("admob_banner_id", null)
+                                interstitialId = ads.optString("admob_interstitial_id", null)
+                                channelInterval = ads.optInt("channel_interval", 4)
+                                bannerListInterval = ads.optInt("banner_interval", 7)
+                            }
                         } catch (e: Exception) {
                             Log.w(TAG, "Config load failed: " + (e.message ?: ""))
                         }
@@ -688,7 +691,7 @@ jobs:
         }
         EOF
 
-        # ============ ADAPTERS (Hybrid Fix: Single Click Mobile, Focus TV) ============
+        # ============ ADAPTERS ============
         cat <<EOF > app/src/main/java/$PATH_NAME/adapters/GridAdapter.kt
         package $PACKAGE_NAME.adapters
         import android.view.KeyEvent
@@ -739,9 +742,6 @@ jobs:
                     holder.sub.visibility = if (s.isNotEmpty()) View.VISIBLE else View.GONE
                     holder.sub.text = s
                     
-                    // HYBRID FIX:
-                    // isFocusable = true -> TV kumandası için gerekli
-                    // isFocusableInTouchMode = false -> Telefonda tek tıkla açılması için gerekli 
                     holder.cardLayout.isFocusable = true
                     holder.cardLayout.isFocusableInTouchMode = false
                     holder.cardLayout.isClickable = true
@@ -758,7 +758,6 @@ jobs:
                     
                     holder.cardLayout.setOnClickListener { onClick(position) }
                     
-                    // Kumanda OK Tuşu Desteği
                     holder.cardLayout.setOnKeyListener { _, keyCode, event ->
                         if (event.action == KeyEvent.ACTION_DOWN &&
                             (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
@@ -813,7 +812,6 @@ jobs:
                 holder.txtName.text = item.name
                 holder.txtType.text = if (item.type == "M3U") "M3U" else "Xtream"
                 
-                // Hybrid Fix: Focusable true (TV), TouchMode false (Mobile Single Click)
                 holder.container.isFocusable = true
                 holder.container.isFocusableInTouchMode = false
                 holder.container.isClickable = true
@@ -1238,7 +1236,6 @@ jobs:
                 pb.visibility = View.GONE
                 tvStatus.visibility = View.GONE
                 tvTitle.text = "Ne izlemek istersiniz?"
-                // TV Focus: İlk butona odaklan
                 btnModeLive.requestFocus()
             }
             private fun openMode(mode: String) {
@@ -1964,7 +1961,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (New Logic: 5 Buttons) ============
+        # ============ PlayerActivity (Center UI Fix) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
@@ -1977,6 +1974,7 @@ jobs:
         import android.view.View
         import android.view.WindowManager
         import android.widget.ImageButton
+        import android.widget.LinearLayout
         import android.widget.TextView
         import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
@@ -1999,6 +1997,9 @@ jobs:
             private lateinit var tvBrightness: TextView
             private lateinit var tvVolume: TextView
             
+            // Kontrol Grubu (Ortada)
+            private lateinit var controlsContainer: LinearLayout
+            
             // New Buttons
             private lateinit var btnPrev: ImageButton
             private lateinit var btnRewind: ImageButton
@@ -2018,10 +2019,13 @@ jobs:
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
             private val handler = Handler(Looper.getMainLooper())
             
+            // 5 Saniye sonra gizleme mantığı
             private val hideOverlayRunnable = Runnable {
                 tvBrightness.visibility = View.GONE
                 tvVolume.visibility = View.GONE
                 tvCenterInfo.visibility = View.GONE
+                // Kontrolleri de gizle
+                controlsContainer.visibility = View.GONE
             }
 
             override fun onCreate(savedInstanceState: Bundle?) {
@@ -2047,7 +2051,8 @@ jobs:
                 }
                 playerView = findViewById(R.id.pvMain)
                 
-                // Initialize Buttons
+                // Initialize Controls
+                controlsContainer = findViewById(R.id.controlsContainer)
                 btnPrev = findViewById(R.id.btnPrev)
                 btnRewind = findViewById(R.id.btnRewind)
                 btnPlayPause = findViewById(R.id.btnPlayPause)
@@ -2139,9 +2144,7 @@ jobs:
                                 else android.R.drawable.ic_media_play
                             )
                             if (isPlaying) {
-                                playerView.controllerShowTimeoutMs = 5000
-                            } else {
-                                playerView.controllerShowTimeoutMs = -1 
+                                rescheduleHide()
                             }
                         }
                         override fun onPlayerError(error: PlaybackException) {
@@ -2161,28 +2164,21 @@ jobs:
                 }
             }
 
-            // TV Kumanda Tuşlarını Yakala (15 sn mantığı)
             override fun dispatchKeyEvent(event: KeyEvent): Boolean {
                 if (event.action == KeyEvent.ACTION_DOWN) {
                     when (event.keyCode) {
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                            if (!playerView.isControllerFullyVisible) {
-                                playerView.showController()
-                            } else {
-                                togglePlayPause()
-                            }
+                            togglePlayPause()
                             return true
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> {
                             seekBy(-15000L)
                             showCenterInfo("◄ 15 sn")
-                            playerView.showController()
                             return true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
                             seekBy(15000L)
                             showCenterInfo("15 sn ►")
-                            playerView.showController()
                             return true
                         }
                     }
@@ -2191,9 +2187,12 @@ jobs:
             }
             
             private fun rescheduleHide() {
+                // Kontrolleri göster
+                controlsContainer.visibility = View.VISIBLE
+                
+                // Zamanlayıcıyı sıfırla
                 handler.removeCallbacks(hideOverlayRunnable)
-                handler.postDelayed(hideOverlayRunnable, 2000)
-                playerView.showController()
+                handler.postDelayed(hideOverlayRunnable, 5000) // 5 Saniye
             }
 
             private fun setupGestureOverlay(view: View, isLeft: Boolean) {
@@ -2206,6 +2205,8 @@ jobs:
                             gestureStartVolume = am?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: (maxVolume / 2)
                             gestureStartBrightness = currentBrightness
                             handler.removeCallbacks(hideOverlayRunnable)
+                            // Dokununca kontrolleri göster
+                            controlsContainer.visibility = View.VISIBLE
                             true
                         }
                         MotionEvent.ACTION_MOVE -> {
@@ -2218,9 +2219,6 @@ jobs:
                             true
                         }
                         MotionEvent.ACTION_UP -> {
-                            if (!isGesture) {
-                                playerView.showController()
-                            }
                             rescheduleHide()
                             true
                         }
@@ -2279,7 +2277,7 @@ jobs:
         }
         EOF
 
-        # ============ LAYOUTLAR (Hybrid Fix: Remove focusableInTouchMode) ============
+        # ============ LAYOUTLAR ============
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2835,6 +2833,7 @@ jobs:
         </LinearLayout>
         EOF
 
+        # ============ Player Layout (CENTERED CONTROLS) ============
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2851,8 +2850,7 @@ jobs:
         android:id="@+id/overlayContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal"
-        android:layout_marginBottom="90dp">
+        android:orientation="horizontal">
 
         <View
             android:id="@+id/overlayLeft"
@@ -2902,15 +2900,16 @@ jobs:
         android:layout_margin="12dp"
         android:visibility="gone" />
 
-        <!-- CONTROL BAR -->
+        <!-- CONTROL BAR (CENTERED) -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/controlsContainer"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_gravity="bottom|center_horizontal"
+            android:layout_gravity="center"
             android:gravity="center"
-            android:paddingBottom="24dp"
-            android:background="@color/player_overlay">
+            android:padding="16dp"
+            android:background="@android:color/transparent">
 
             <!-- Previous / Rewind Long -->
             <ImageButton
@@ -3073,14 +3072,14 @@ jobs:
       id: upload_apk
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Hybrid-APK
+        name: ErdinPlayer-Pro-CenterUI-APK
         path: ErdinPlayer/app/build/outputs/apk/release/*.apk
 
     - name: 7. AAB'yi GitHub Artifact Olarak Yükle
       id: upload_aab
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Hybrid-AAB
+        name: ErdinPlayer-Pro-CenterUI-AAB
         path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
 
     - name: 8. Artifact URL'lerini Göster
@@ -3093,7 +3092,7 @@ jobs:
         echo "${{ steps.upload_aab.outputs.artifact-url }}"
         echo "====================================="
 
-        echo "### ErdinPlayer Pro (Hybrid Edition) Çıktılar" >> $GITHUB_STEP_SUMMARY
+        echo "### ErdinPlayer Pro (Center Controls Edition) Çıktılar" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
