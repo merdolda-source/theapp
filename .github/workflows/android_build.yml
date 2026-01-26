@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Hybrid (Final Fix - Custom Seekbar)
+name: ErdinPlayer Pro Hybrid (Final PHP Config + UI Fix)
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Üretimi (Custom UI + Seekbar)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (PHP Config + New UI)
       shell: bash
       run: |
         set -e
@@ -39,7 +39,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "🚀 ErdinPlayer Pro (Final Fix) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro (PHP Config Edition) üretiliyor..."
 
         rm -rf "$APP_NAME"
 
@@ -121,8 +121,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 21
                 targetSdk 35
-                versionCode 12
-                versionName "2.4.0-seekbar-fix"
+                versionCode 14
+                versionName "2.5.0-php-ui-fix"
             }
 
             signingConfigs {
@@ -188,7 +188,7 @@ jobs:
             <color name="hint_yellow">#FFD600</color>
             <color name="focus_ring">#00E5FF</color>
             <color name="focus_bg">#2A2E45</color>
-            <color name="player_overlay">#CC000000</color>
+            <color name="player_overlay">#00000000</color> <!-- Şeffaf -->
         </resources>
         EOF
 
@@ -286,24 +286,24 @@ jobs:
         </selector>
         EOF
         
-        # Player Buton Arka Planı
+        # Player Buton Arka Planı (Daha şık ve nazik)
         cat <<EOF > app/src/main/res/drawable/bg_player_btn.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
              <item android:state_focused="true">
                 <shape android:shape="oval">
-                    <solid android:color="@color/primary_cyan"/>
+                    <solid android:color="#4000E5FF"/> <!-- Hafif Cyan -->
                     <stroke android:width="2dp" android:color="@color/white"/>
                 </shape>
             </item>
             <item android:state_pressed="true">
                 <shape android:shape="oval">
-                    <solid android:color="@color/gray_600"/>
+                    <solid android:color="#60FFFFFF"/>
                 </shape>
             </item>
             <item>
                 <shape android:shape="oval">
-                    <solid android:color="#40000000"/>
-                    <stroke android:width="1dp" android:color="#80FFFFFF"/>
+                    <solid android:color="@android:color/transparent"/> <!-- Tamamen şeffaf normalde -->
+                    <stroke android:width="1dp" android:color="#CCFFFFFF"/> <!-- İnce beyaz çerçeve -->
                 </shape>
             </item>
         </selector>
@@ -346,6 +346,7 @@ jobs:
         EOF
 
         # ============ UTILS ============
+        # RemoteConfig GÜNCELLENDİ: PHP yapısına tam uygun
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
         import android.content.Context
@@ -360,8 +361,8 @@ jobs:
             @Volatile private var initialized = false
             @Volatile private var bannerId: String? = null
             @Volatile private var interstitialId: String? = null
-            @Volatile private var channelInterval: Int = 4
-            @Volatile private var bannerListInterval: Int = 7
+            @Volatile private var channelInterval: Int = 3
+            @Volatile private var bannerListInterval: Int = 3
             
             fun init(context: Context) {
                 if (initialized) return
@@ -378,12 +379,13 @@ jobs:
                             if (conn.responseCode != HttpURLConnection.HTTP_OK) return@Thread
                             val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                             val obj = JSONObject(body)
+                            
                             val ads = obj.optJSONObject("ads")
                             if (ads != null) {
                                 bannerId = ads.optString("admob_banner_id", null)
                                 interstitialId = ads.optString("admob_interstitial_id", null)
-                                channelInterval = ads.optInt("channel_interval", 4)
-                                bannerListInterval = ads.optInt("banner_interval", 7)
+                                channelInterval = ads.optInt("channel_interval", 3)
+                                bannerListInterval = ads.optInt("banner_list_interval", 3)
                             }
                         } catch (e: Exception) {
                             Log.w(TAG, "Config load failed: " + (e.message ?: ""))
@@ -640,7 +642,7 @@ jobs:
             @Volatile private var initialized = false
             private var interstitial: InterstitialAd? = null
             private var clickCount = 0
-            var CHANNEL_INTERVAL = 4
+            var CHANNEL_INTERVAL = 3
             fun init(context: Context) {
                 if (!initialized) {
                     synchronized(this) {
@@ -843,8 +845,7 @@ jobs:
         }
         EOF
 
-        # ============ LoginActivity, ContentActivity, SeriesDetailActivity ============
-        # (Bu dosyalar öncekiyle aynı, sadece bütünlük için tekrar yazılıyor)
+        # ============ LoginActivity ============
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1009,6 +1010,7 @@ jobs:
         }
         EOF
 
+        # ============ ContentActivity (M3U Parser + 18 Filtresi) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1555,6 +1557,7 @@ jobs:
                 var currentGroup = "Genel"
                 var currentRef: String? = null
                 var currentOrg: String? = null
+                
                 for (raw in lines) {
                     val line = raw.trim()
                     if (line.isEmpty()) continue
@@ -1584,6 +1587,13 @@ jobs:
                         if (idx >= 0 && idx < line.length - 1) currentOrg = line.substring(idx + 1).trim()
                     } else if (!line.startsWith("#")) {
                         val urlPlay = line
+                        
+                        // +18 Filtresi
+                        if (currentName.contains("+18") || currentName.contains("adult", true) || currentName.contains("porn", true) ||
+                            currentGroup.contains("+18") || currentGroup.contains("adult", true) || currentGroup.contains("porn", true)) {
+                            continue
+                        }
+                        
                         val groupId = if (currentGroup.isNotEmpty()) currentGroup else "Genel"
                         val cat = categoriesMap.getOrPut(groupId) {
                             Category(groupId, groupId, false)
@@ -1637,9 +1647,12 @@ jobs:
                     val obj = arr.getJSONObject(i)
                     val id = obj.optString("category_id", "")
                     val name = obj.optString("category_name", "Kategori " + i)
-                    val isAdult = obj.optString("is_adult", "0") == "1" ||
-                            name.contains("18", ignoreCase = true) ||
-                            name.contains("adult", ignoreCase = true)
+                    // +18 Filtresi
+                    if (name.contains("+18") || name.contains("adult", true) || name.contains("porn", true)) {
+                        i++
+                        continue
+                    }
+                    val isAdult = false
                     list.add(Category(id, name, isAdult))
                     i++
                 }
@@ -1653,6 +1666,11 @@ jobs:
                 while (i < arr.length()) {
                     val obj = arr.getJSONObject(i)
                     val name = obj.optString("name", "Bilinmeyen")
+                    // +18 Filtresi
+                    if (name.contains("+18") || name.contains("adult", true) || name.contains("porn", true)) {
+                        i++
+                        continue
+                    }
                     val catId = obj.optString("category_id", "")
                     val streamId = obj.optString("stream_id", null)
                     val seriesId = obj.optString("series_id", null)
@@ -1957,7 +1975,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (Custom Seekbar Logic) ============
+        # ============ PlayerActivity (New UI Logic) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
@@ -1997,19 +2015,17 @@ jobs:
             private lateinit var tvBrightness: TextView
             private lateinit var tvVolume: TextView
             
-            // Kontrol Grubu (Ortada)
+            // Kontrol Grubu
             private lateinit var controlsContainer: LinearLayout
             private lateinit var seekContainer: LinearLayout
             private lateinit var tvCurrentTime: TextView
             private lateinit var tvEndTime: TextView
             private lateinit var seekBar: SeekBar
             
-            // New Buttons
-            private lateinit var btnPrev: ImageButton
+            // Buttons
             private lateinit var btnRewind: ImageButton
             private lateinit var btnPlayPause: ImageButton
             private lateinit var btnForward: ImageButton
-            private lateinit var btnNext: ImageButton
             
             private var audioManager: AudioManager? = null
             private var maxVolume: Int = 0
@@ -2073,11 +2089,9 @@ jobs:
                 tvEndTime = findViewById(R.id.tvEndTime)
                 seekBar = findViewById(R.id.seekBar)
                 
-                btnPrev = findViewById(R.id.btnPrev)
                 btnRewind = findViewById(R.id.btnRewind)
                 btnPlayPause = findViewById(R.id.btnPlayPause)
                 btnForward = findViewById(R.id.btnForward)
-                btnNext = findViewById(R.id.btnNext)
                 
                 leftOverlay = findViewById(R.id.overlayLeft)
                 rightOverlay = findViewById(R.id.overlayRight)
@@ -2120,11 +2134,6 @@ jobs:
                 })
                 
                 // --- Button Logic ---
-                btnPrev.setOnClickListener {
-                    seekBy(-60000L) 
-                    showCenterInfo("◄◄ 60 sn")
-                    rescheduleHide()
-                }
                 btnRewind.setOnClickListener {
                     seekBy(-15000L)
                     showCenterInfo("◄ 15 sn")
@@ -2136,11 +2145,6 @@ jobs:
                 btnForward.setOnClickListener {
                     seekBy(15000L)
                     showCenterInfo("15 sn ►")
-                    rescheduleHide()
-                }
-                btnNext.setOnClickListener {
-                    seekBy(60000L)
-                    showCenterInfo("60 sn ►►")
                     rescheduleHide()
                 }
                 
@@ -2899,7 +2903,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # ============ Player Layout (CUSTOM SEEKBAR ADDED) ============
+        # ============ Player Layout (NEW TRANSPARENT UI) ============
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -2908,7 +2912,7 @@ jobs:
         android:layout_height="match_parent"
         android:background="@color/black">
 
-        <!-- use_controller=false ile default player'ı kapattık (üst üste binmeyi önler) -->
+        <!-- use_controller=false ile default player'ı kapattık -->
         <androidx.media3.ui.PlayerView
         android:id="@+id/pvMain"
         android:layout_width="match_parent"
@@ -2939,9 +2943,9 @@ jobs:
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textColor="@android:color/white"
-        android:textSize="16sp"
-        android:background="#80000000"
-        android:padding="8dp"
+        android:textSize="18sp"
+        android:background="@drawable/bg_player_btn"
+        android:padding="12dp"
         android:layout_gravity="center"
         android:visibility="gone" />
 
@@ -2969,79 +2973,16 @@ jobs:
         android:layout_margin="12dp"
         android:visibility="gone" />
 
-        <!-- CONTROL BAR (CENTERED + SEEKBAR) -->
+        <!-- CONTROL BAR (BOTTOM + TRANSPARENT) -->
         <LinearLayout
             android:id="@+id/controlsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_gravity="center"
+            android:layout_gravity="bottom"
             android:gravity="center"
             android:padding="16dp"
-            android:background="@color/player_overlay">
-
-            <!-- Butonlar -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginBottom="16dp">
-
-                <ImageButton
-                    android:id="@+id/btnPrev"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_media_previous"
-                    android:padding="12dp"
-                    android:tint="@android:color/white"
-                    android:focusable="true"
-                    android:layout_marginRight="12dp"/>
-
-                <ImageButton
-                    android:id="@+id/btnRewind"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_media_rew"
-                    android:padding="12dp"
-                    android:tint="@android:color/white"
-                    android:focusable="true"
-                    android:layout_marginRight="12dp"/>
-
-                <ImageButton
-                    android:id="@+id/btnPlayPause"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_media_pause"
-                    android:padding="12dp"
-                    android:tint="@android:color/white"
-                    android:focusable="true"/>
-
-                 <ImageButton
-                    android:id="@+id/btnForward"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_media_ff"
-                    android:padding="12dp"
-                    android:tint="@android:color/white"
-                    android:focusable="true"
-                    android:layout_marginLeft="12dp"/>
-
-                 <ImageButton
-                    android:id="@+id/btnNext"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_media_next"
-                    android:padding="12dp"
-                    android:tint="@android:color/white"
-                    android:focusable="true"
-                    android:layout_marginLeft="12dp"/>
-            </LinearLayout>
+            android:background="@android:color/transparent">
 
             <!-- Seekbar ve Süre -->
             <LinearLayout
@@ -3050,8 +2991,9 @@ jobs:
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:paddingLeft="24dp"
-                android:paddingRight="24dp">
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:layout_marginBottom="8dp">
                 
                 <TextView
                     android:id="@+id/tvCurrentTime"
@@ -3060,7 +3002,11 @@ jobs:
                     android:text="00:00"
                     android:textColor="@android:color/white"
                     android:textSize="14sp"
-                    android:textStyle="bold"/>
+                    android:textStyle="bold"
+                    android:shadowColor="#000000"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="2"/>
                     
                 <SeekBar
                     android:id="@+id/seekBar"
@@ -3081,7 +3027,52 @@ jobs:
                     android:text="00:00"
                     android:textColor="@android:color/white"
                     android:textSize="14sp"
-                    android:textStyle="bold"/>
+                    android:textStyle="bold"
+                    android:shadowColor="#000000"
+                    android:shadowDx="1"
+                    android:shadowDy="1"
+                    android:shadowRadius="2"/>
+            </LinearLayout>
+
+            <!-- Butonlar (Daha büyük ikonlar, şeffaf arka plan) -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="16dp">
+
+                <ImageButton
+                    android:id="@+id/btnRewind"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_player_btn"
+                    android:src="@android:drawable/ic_media_rew"
+                    android:padding="16dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"
+                    android:layout_marginRight="24dp"/>
+
+                <ImageButton
+                    android:id="@+id/btnPlayPause"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:background="@drawable/bg_player_btn"
+                    android:src="@android:drawable/ic_media_pause"
+                    android:padding="20dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"/>
+
+                 <ImageButton
+                    android:id="@+id/btnForward"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/bg_player_btn"
+                    android:src="@android:drawable/ic_media_ff"
+                    android:padding="16dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"
+                    android:layout_marginLeft="24dp"/>
             </LinearLayout>
 
         </LinearLayout>
@@ -3089,11 +3080,11 @@ jobs:
         <!-- Resize Mode Button (Top Right) -->
         <ImageButton
             android:id="@+id/btnMode"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:background="@android:color/transparent"
             android:src="@android:drawable/ic_menu_crop"
-            android:padding="8dp"
+            android:padding="12dp"
             android:tint="@android:color/white"
             android:layout_gravity="top|right"
             android:layout_marginTop="40dp"
