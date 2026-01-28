@@ -3105,8 +3105,8 @@ jobs:
                 android:tint="@color/white"
                 android:layout_marginEnd="20dp"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_centerY_toCenterY="parent"
                 app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent"/>
 
             <!-- BOTTOM CONTROLS -->
