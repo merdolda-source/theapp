@@ -121,8 +121,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 21
                 targetSdk 35
-                versionCode 14
-                versionName "2.5.0-php-ui-fix"
+                versionCode 15
+                versionName "2.6.0-final-fix"
             }
 
             signingConfigs {
@@ -204,21 +204,18 @@ jobs:
         </resources>
         EOF
 
+        # Strings - Test ID'leri kaldırıldı, boş bırakıldı (Config'den gelmezse reklam yok)
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">Emin Xtream Player</string>
-            <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
-            <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
-            <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
+            <string name="admob_app_id_placeholder">ca-app-pub-3940256099942544~3347511713</string> 
         </resources>
         EOF
 
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">Emin Xtream Player</string>
-            <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
-            <string name="admob_banner_test">ca-app-pub-3940256099942544/6300978111</string>
-            <string name="admob_interstitial_test">ca-app-pub-3940256099942544/1033173712</string>
+            <string name="admob_app_id_placeholder">ca-app-pub-3940256099942544~3347511713</string>
         </resources>
         EOF
 
@@ -286,13 +283,13 @@ jobs:
         </selector>
         EOF
         
-        # Player Buton Arka Planı (Daha şık ve nazik)
+        # Player Buton Arka Planı (Daha şık ve nazik - Küçültüldü)
         cat <<EOF > app/src/main/res/drawable/bg_player_btn.xml
         <selector xmlns:android="http://schemas.android.com/apk/res/android">
              <item android:state_focused="true">
                 <shape android:shape="oval">
                     <solid android:color="#4000E5FF"/> <!-- Hafif Cyan -->
-                    <stroke android:width="2dp" android:color="@color/white"/>
+                    <stroke android:width="1dp" android:color="@color/white"/>
                 </shape>
             </item>
             <item android:state_pressed="true">
@@ -303,7 +300,7 @@ jobs:
             <item>
                 <shape android:shape="oval">
                     <solid android:color="@android:color/transparent"/> <!-- Tamamen şeffaf normalde -->
-                    <stroke android:width="1dp" android:color="#CCFFFFFF"/> <!-- İnce beyaz çerçeve -->
+                    <stroke android:width="0.5dp" android:color="#88FFFFFF"/> <!-- Çok ince beyaz çerçeve -->
                 </shape>
             </item>
         </selector>
@@ -363,6 +360,7 @@ jobs:
             @Volatile private var interstitialId: String? = null
             @Volatile private var channelInterval: Int = 3
             @Volatile private var bannerListInterval: Int = 3
+            @Volatile private var appId: String? = null
             
             fun init(context: Context) {
                 if (initialized) return
@@ -382,6 +380,7 @@ jobs:
                             
                             val ads = obj.optJSONObject("ads")
                             if (ads != null) {
+                                appId = ads.optString("admob_app_id", null)
                                 bannerId = ads.optString("admob_banner_id", null)
                                 interstitialId = ads.optString("admob_interstitial_id", null)
                                 channelInterval = ads.optInt("channel_interval", 3)
@@ -393,13 +392,17 @@ jobs:
                     }.start()
                 }
             }
-            fun getBannerId(context: Context): String {
+            fun getAppId(context: Context): String? {
                 init(context)
-                return bannerId ?: context.getString(R.string.admob_banner_test)
+                return appId
             }
-            fun getInterstitialId(context: Context): String {
+            fun getBannerId(context: Context): String? {
                 init(context)
-                return interstitialId ?: context.getString(R.string.admob_interstitial_test)
+                return if (bannerId.isNullOrEmpty()) null else bannerId
+            }
+            fun getInterstitialId(context: Context): String? {
+                init(context)
+                return if (interstitialId.isNullOrEmpty()) null else interstitialId
             }
             fun getChannelInterval(context: Context, defaultInterval: Int): Int {
                 init(context)
@@ -632,6 +635,7 @@ jobs:
         package $PACKAGE_NAME.utils
         import android.app.Activity
         import android.content.Context
+        import android.view.View
         import com.google.android.gms.ads.AdRequest
         import com.google.android.gms.ads.AdView
         import com.google.android.gms.ads.MobileAds
@@ -658,6 +662,10 @@ jobs:
             fun loadBanner(adView: AdView?) {
                 if (adView == null) return
                 val id = RemoteConfig.getBannerId(adView.context)
+                if (id == null) {
+                    adView.visibility = View.GONE
+                    return
+                }
                 try { adView.adUnitId = id } catch (_: Exception) {}
                 adView.isFocusable = false
                 adView.isFocusableInTouchMode = false
@@ -665,6 +673,7 @@ jobs:
             }
             fun loadInterstitial(context: Context) {
                 val adUnitId = RemoteConfig.getInterstitialId(context)
+                if (adUnitId == null) return
                 InterstitialAd.load(
                     context,
                     adUnitId,
@@ -1010,7 +1019,7 @@ jobs:
         }
         EOF
 
-        # ============ ContentActivity (M3U Parser + 18 Filtresi) ============
+        # ============ ContentActivity (Advanced M3U Parser + No Filter) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1588,11 +1597,7 @@ jobs:
                     } else if (!line.startsWith("#")) {
                         val urlPlay = line
                         
-                        // +18 Filtresi
-                        if (currentName.contains("+18") || currentName.contains("adult", true) || currentName.contains("porn", true) ||
-                            currentGroup.contains("+18") || currentGroup.contains("adult", true) || currentGroup.contains("porn", true)) {
-                            continue
-                        }
+                        // +18 Filtresi KALDIRILDI
                         
                         val groupId = if (currentGroup.isNotEmpty()) currentGroup else "Genel"
                         val cat = categoriesMap.getOrPut(groupId) {
@@ -1647,11 +1652,7 @@ jobs:
                     val obj = arr.getJSONObject(i)
                     val id = obj.optString("category_id", "")
                     val name = obj.optString("category_name", "Kategori " + i)
-                    // +18 Filtresi
-                    if (name.contains("+18") || name.contains("adult", true) || name.contains("porn", true)) {
-                        i++
-                        continue
-                    }
+                    // +18 Filtresi KALDIRILDI
                     val isAdult = false
                     list.add(Category(id, name, isAdult))
                     i++
@@ -1666,11 +1667,7 @@ jobs:
                 while (i < arr.length()) {
                     val obj = arr.getJSONObject(i)
                     val name = obj.optString("name", "Bilinmeyen")
-                    // +18 Filtresi
-                    if (name.contains("+18") || name.contains("adult", true) || name.contains("porn", true)) {
-                        i++
-                        continue
-                    }
+                    // +18 Filtresi KALDIRILDI
                     val catId = obj.optString("category_id", "")
                     val streamId = obj.optString("stream_id", null)
                     val seriesId = obj.optString("series_id", null)
@@ -1975,7 +1972,7 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (New UI Logic) ============
+        # ============ PlayerActivity (New UI Logic + Audio/Sub Support) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
         import android.content.Context
@@ -1993,14 +1990,17 @@ jobs:
         import android.widget.TextView
         import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
+        import androidx.media3.common.C
         import androidx.media3.common.MediaItem
         import androidx.media3.common.PlaybackException
         import androidx.media3.common.Player
+        import androidx.media3.common.TrackSelectionOverride
         import androidx.media3.datasource.DefaultHttpDataSource
         import androidx.media3.exoplayer.ExoPlayer
         import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
         import androidx.media3.ui.AspectRatioFrameLayout
         import androidx.media3.ui.PlayerView
+        import com.google.android.material.dialog.MaterialAlertDialogBuilder
         import java.util.Formatter
         import java.util.Locale
         import kotlin.math.abs
@@ -2026,6 +2026,8 @@ jobs:
             private lateinit var btnRewind: ImageButton
             private lateinit var btnPlayPause: ImageButton
             private lateinit var btnForward: ImageButton
+            private lateinit var btnAudio: ImageButton
+            private lateinit var btnSubtitle: ImageButton
             
             private var audioManager: AudioManager? = null
             private var maxVolume: Int = 0
@@ -2092,6 +2094,8 @@ jobs:
                 btnRewind = findViewById(R.id.btnRewind)
                 btnPlayPause = findViewById(R.id.btnPlayPause)
                 btnForward = findViewById(R.id.btnForward)
+                btnAudio = findViewById(R.id.btnAudio)
+                btnSubtitle = findViewById(R.id.btnSubtitle)
                 
                 leftOverlay = findViewById(R.id.overlayLeft)
                 rightOverlay = findViewById(R.id.overlayRight)
@@ -2147,6 +2151,8 @@ jobs:
                     showCenterInfo("15 sn ►")
                     rescheduleHide()
                 }
+                btnAudio.setOnClickListener { showTrackSelectionDialog(C.TRACK_TYPE_AUDIO) }
+                btnSubtitle.setOnClickListener { showTrackSelectionDialog(C.TRACK_TYPE_TEXT) }
                 
                 setupGestureOverlay(leftOverlay, true)
                 setupGestureOverlay(rightOverlay, false)
@@ -2197,6 +2203,55 @@ jobs:
                     Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
                     finish()
                 }
+            }
+            
+            private fun showTrackSelectionDialog(trackType: Int) {
+                val player = this.player ?: return
+                val tracks = player.currentTracks
+                val trackGroups = tracks.groups.filter { it.type == trackType }
+                
+                if (trackGroups.isEmpty()) {
+                    Toast.makeText(this, if (trackType == C.TRACK_TYPE_AUDIO) "Ses seçeneği yok" else "Altyazı seçeneği yok", Toast.LENGTH_SHORT).show()
+                    return
+                }
+
+                val options = mutableListOf<String>()
+                val trackIndices = mutableListOf<Pair<Int, Int>>() // groupIndex, trackIndex
+                
+                // "Kapat" seçeneği (sadece altyazı için mantıklı olabilir ama genel yapıya uygun)
+                options.add("Kapat / Varsayılan")
+                trackIndices.add(Pair(-1, -1))
+
+                for (i in trackGroups.indices) {
+                    val group = trackGroups[i]
+                    for (j in 0 until group.length) {
+                        val format = group.getTrackFormat(j)
+                        val label = format.label ?: format.language ?: "Bilinmeyen"
+                        options.add(label)
+                        trackIndices.add(Pair(i, j))
+                    }
+                }
+
+                MaterialAlertDialogBuilder(this)
+                    .setTitle(if (trackType == C.TRACK_TYPE_AUDIO) "Ses Seçimi" else "Altyazı Seçimi")
+                    .setItems(options.toTypedArray()) { _, which ->
+                        val (groupIndex, trackIndex) = trackIndices[which]
+                        if (groupIndex == -1) {
+                             player.trackSelectionParameters = player.trackSelectionParameters
+                                .buildUpon()
+                                .clearOverridesOfType(trackType)
+                                .build()
+                        } else {
+                            val group = trackGroups[groupIndex]
+                            player.trackSelectionParameters = player.trackSelectionParameters
+                                .buildUpon()
+                                .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, trackIndex))
+                                .build()
+                        }
+                        rescheduleHide()
+                    }
+                    .show()
+                rescheduleHide()
             }
             
             private fun updateProgress() {
@@ -2362,7 +2417,7 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 ads:adSize="BANNER"
-                ads:adUnitId="@string/admob_banner_test"
+                ads:adUnitId="@string/admob_app_id_placeholder"
                 android:layout_marginBottom="8dp"
                 android:focusable="false"
                 android:focusableInTouchMode="false"/>
@@ -2568,7 +2623,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_banner_test"
+                    ads:adUnitId="@string/admob_app_id_placeholder"
                     android:layout_marginBottom="4dp"
                     android:focusable="false"
                     android:focusableInTouchMode="false"/>
@@ -2694,7 +2749,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_banner_test"
+                    ads:adUnitId="@string/admob_app_id_placeholder"
                     android:layout_marginTop="4dp"
                     android:focusable="false"
                     android:focusableInTouchMode="false"/>
@@ -2809,7 +2864,7 @@ jobs:
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_banner_test"/>
+                    ads:adUnitId="@string/admob_app_id_placeholder"/>
             </LinearLayout>
         </LinearLayout>
         EOF
@@ -2903,7 +2958,7 @@ jobs:
         </LinearLayout>
         EOF
 
-        # ============ Player Layout (NEW TRANSPARENT UI) ============
+        # ============ Player Layout (NEW TRANSPARENT UI + SMALLER CONTROLS) ============
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -3034,7 +3089,7 @@ jobs:
                     android:shadowRadius="2"/>
             </LinearLayout>
 
-            <!-- Butonlar (Daha büyük ikonlar, şeffaf arka plan) -->
+            <!-- Butonlar (Daha nazik ikonlar, şeffaf arka plan, Audio/Sub eklendi) -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -3043,36 +3098,58 @@ jobs:
                 android:layout_marginBottom="16dp">
 
                 <ImageButton
-                    android:id="@+id/btnRewind"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
+                    android:id="@+id/btnAudio"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_media_rew"
-                    android:padding="16dp"
+                    android:src="@android:drawable/ic_lock_silent_mode_off"
+                    android:padding="12dp"
                     android:tint="@android:color/white"
                     android:focusable="true"
-                    android:layout_marginRight="24dp"/>
+                    android:layout_marginRight="16dp"/>
+
+                <ImageButton
+                    android:id="@+id/btnRewind"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_player_btn"
+                    android:src="@android:drawable/ic_media_rew"
+                    android:padding="14dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"
+                    android:layout_marginRight="16dp"/>
 
                 <ImageButton
                     android:id="@+id/btnPlayPause"
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
                     android:background="@drawable/bg_player_btn"
                     android:src="@android:drawable/ic_media_pause"
-                    android:padding="20dp"
+                    android:padding="18dp"
                     android:tint="@android:color/white"
                     android:focusable="true"/>
 
                  <ImageButton
                     android:id="@+id/btnForward"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
                     android:background="@drawable/bg_player_btn"
                     android:src="@android:drawable/ic_media_ff"
-                    android:padding="16dp"
+                    android:padding="14dp"
                     android:tint="@android:color/white"
                     android:focusable="true"
-                    android:layout_marginLeft="24dp"/>
+                    android:layout_marginLeft="16dp"/>
+
+                <ImageButton
+                    android:id="@+id/btnSubtitle"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bg_player_btn"
+                    android:src="@android:drawable/ic_menu_sort_by_size"
+                    android:padding="12dp"
+                    android:tint="@android:color/white"
+                    android:focusable="true"
+                    android:layout_marginLeft="16dp"/>
             </LinearLayout>
 
         </LinearLayout>
@@ -3080,11 +3157,11 @@ jobs:
         <!-- Resize Mode Button (Top Right) -->
         <ImageButton
             android:id="@+id/btnMode"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="@android:color/transparent"
             android:src="@android:drawable/ic_menu_crop"
-            android:padding="12dp"
+            android:padding="10dp"
             android:tint="@android:color/white"
             android:layout_gravity="top|right"
             android:layout_marginTop="40dp"
@@ -3120,7 +3197,7 @@ jobs:
 
                 <meta-data
                     android:name="com.google.android.gms.ads.APPLICATION_ID"
-                    android:value="@string/admob_app_id" />
+                    android:value="@string/admob_app_id_placeholder" />
 
                 <activity
                     android:name=".LoginActivity"
@@ -3177,14 +3254,14 @@ jobs:
       id: upload_apk
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-CenterUI-APK
+        name: ErdinPlayer-Pro-Final-APK
         path: ErdinPlayer/app/build/outputs/apk/release/*.apk
 
     - name: 7. AAB'yi GitHub Artifact Olarak Yükle
       id: upload_aab
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-CenterUI-AAB
+        name: ErdinPlayer-Pro-Final-AAB
         path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
 
     - name: 8. Artifact URL'lerini Göster
@@ -3197,7 +3274,7 @@ jobs:
         echo "${{ steps.upload_aab.outputs.artifact-url }}"
         echo "====================================="
 
-        echo "### ErdinPlayer Pro (Center Controls Edition) Çıktılar" >> $GITHUB_STEP_SUMMARY
+        echo "### ErdinPlayer Pro (Final Config + Audio/Sub) Çıktılar" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
