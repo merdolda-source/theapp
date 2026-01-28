@@ -121,8 +121,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 21
                 targetSdk 35
-                versionCode 15
-                versionName "2.6.0-final-fix"
+                versionCode 16
+                versionName "2.7.0-exo-fix"
             }
 
             signingConfigs {
@@ -158,13 +158,13 @@ jobs:
             implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
             implementation 'androidx.leanback:leanback:1.0.0' 
 
-            implementation 'androidx.media3:media3-exoplayer:1.1.0'
-            implementation 'androidx.media3:media3-ui:1.1.0'
-            implementation 'androidx.media3:media3-exoplayer-hls:1.1.0'
-            implementation 'androidx.media3:media3-exoplayer-dash:1.1.0'
+            // ExoPlayer Güncel Sürüm
+            implementation 'androidx.media3:media3-exoplayer:1.2.0'
+            implementation 'androidx.media3:media3-ui:1.2.0'
+            implementation 'androidx.media3:media3-exoplayer-hls:1.2.0'
+            implementation 'androidx.media3:media3-exoplayer-dash:1.2.0'
 
             implementation 'com.github.bumptech.glide:glide:4.15.1'
-
             implementation 'com.google.android.gms:play-services-ads:23.4.0'
         }
         EOF
@@ -188,7 +188,7 @@ jobs:
             <color name="hint_yellow">#FFD600</color>
             <color name="focus_ring">#00E5FF</color>
             <color name="focus_bg">#2A2E45</color>
-            <color name="player_overlay">#00000000</color> <!-- Şeffaf -->
+            <color name="player_overlay">#00000000</color>
         </resources>
         EOF
 
@@ -200,11 +200,19 @@ jobs:
                 <item name="colorAccent">@color/primary_cyan</item>
                 <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
                 <item name="android:windowFullscreen">true</item>
+                <!-- Dialog Teması Eklendi -->
+                <item name="android:alertDialogTheme">@style/Theme.ErdinPlayer.Dialog</item>
+            </style>
+
+            <style name="Theme.ErdinPlayer.Dialog" parent="Theme.AppCompat.Dialog.Alert">
+                <item name="android:background">@color/bg_card</item>
+                <item name="android:textColor">@color/white</item>
+                <item name="colorAccent">@color/primary_cyan</item>
+                <item name="android:textColorPrimary">@color/white</item>
             </style>
         </resources>
         EOF
 
-        # Strings - Test ID'leri kaldırıldı, boş bırakıldı (Config'den gelmezse reklam yok)
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">Emin Xtream Player</string>
@@ -282,29 +290,6 @@ jobs:
             </item>
         </selector>
         EOF
-        
-        # Player Buton Arka Planı (Daha şık ve nazik - Küçültüldü)
-        cat <<EOF > app/src/main/res/drawable/bg_player_btn.xml
-        <selector xmlns:android="http://schemas.android.com/apk/res/android">
-             <item android:state_focused="true">
-                <shape android:shape="oval">
-                    <solid android:color="#4000E5FF"/> <!-- Hafif Cyan -->
-                    <stroke android:width="1dp" android:color="@color/white"/>
-                </shape>
-            </item>
-            <item android:state_pressed="true">
-                <shape android:shape="oval">
-                    <solid android:color="#60FFFFFF"/>
-                </shape>
-            </item>
-            <item>
-                <shape android:shape="oval">
-                    <solid android:color="@android:color/transparent"/> <!-- Tamamen şeffaf normalde -->
-                    <stroke android:width="0.5dp" android:color="#88FFFFFF"/> <!-- Çok ince beyaz çerçeve -->
-                </shape>
-            </item>
-        </selector>
-        EOF
 
         # ============ MODELLER ============
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
@@ -343,7 +328,6 @@ jobs:
         EOF
 
         # ============ UTILS ============
-        # RemoteConfig GÜNCELLENDİ: PHP yapısına tam uygun
         cat <<EOF > app/src/main/java/$PATH_NAME/utils/RemoteConfig.kt
         package $PACKAGE_NAME.utils
         import android.content.Context
@@ -962,7 +946,7 @@ jobs:
                     }
                     lvAccounts.setOnItemLongClickListener { _, _, position, _ ->
                         val acc = accounts[position]
-                        val dialog = AlertDialog.Builder(this)
+                        val dialog = AlertDialog.Builder(this, R.style.Theme_ErdinPlayer_Dialog)
                             .setTitle("Hesabı Sil")
                             .setMessage("Hesap silinsin mi? " + acc.name)
                             .setPositiveButton("Evet") { _, _ ->
@@ -1019,7 +1003,7 @@ jobs:
         }
         EOF
 
-        # ============ ContentActivity (Advanced M3U Parser + No Filter) ============
+        # ============ ContentActivity (M3U Kısıtlaması Kaldırıldı) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/ContentActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
@@ -1203,7 +1187,7 @@ jobs:
                         showModeSelector()
                     },
                     onDelete = { a ->
-                        AlertDialog.Builder(this)
+                        AlertDialog.Builder(this, R.style.Theme_ErdinPlayer_Dialog)
                             .setTitle("Hesabı Sil")
                             .setMessage("Hesap silinsin mi? " + a.name)
                             .setPositiveButton("Evet") { _, _ ->
@@ -1252,10 +1236,7 @@ jobs:
                     Toast.makeText(this, "Önce bir hesap ekleyin.", Toast.LENGTH_SHORT).show()
                     return
                 }
-                if (acc.type == "M3U" && mode != "LIVE") {
-                    Toast.makeText(this, "M3U hesabında sadece Canlı TV kullanılabilir.", Toast.LENGTH_SHORT).show()
-                    return
-                }
+                // M3U Kısıtlaması Kaldırıldı
                 currentMode = mode
                 setTitleForMode()
                 layoutModeSelector.visibility = View.GONE
@@ -1972,431 +1953,101 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (New UI Logic + Audio/Sub Support) ============
+        # ============ PlayerActivity (Reverted to Original ExoPlayer Controls) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
-        import android.content.Context
-        import android.media.AudioManager
         import android.os.Bundle
-        import android.os.Handler
-        import android.os.Looper
-        import android.view.KeyEvent
-        import android.view.MotionEvent
         import android.view.View
         import android.view.WindowManager
-        import android.widget.ImageButton
-        import android.widget.LinearLayout
-        import android.widget.SeekBar
-        import android.widget.TextView
         import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
-        import androidx.media3.common.C
         import androidx.media3.common.MediaItem
         import androidx.media3.common.PlaybackException
         import androidx.media3.common.Player
-        import androidx.media3.common.TrackSelectionOverride
         import androidx.media3.datasource.DefaultHttpDataSource
         import androidx.media3.exoplayer.ExoPlayer
         import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-        import androidx.media3.ui.AspectRatioFrameLayout
         import androidx.media3.ui.PlayerView
-        import com.google.android.material.dialog.MaterialAlertDialogBuilder
-        import java.util.Formatter
-        import java.util.Locale
-        import kotlin.math.abs
 
         class PlayerActivity : AppCompatActivity() {
             private var player: ExoPlayer? = null
-            private var currentMode: Int = 0
             private lateinit var playerView: PlayerView
-            private lateinit var leftOverlay: View
-            private lateinit var rightOverlay: View
-            private lateinit var tvCenterInfo: TextView
-            private lateinit var tvBrightness: TextView
-            private lateinit var tvVolume: TextView
-            
-            // Kontrol Grubu
-            private lateinit var controlsContainer: LinearLayout
-            private lateinit var seekContainer: LinearLayout
-            private lateinit var tvCurrentTime: TextView
-            private lateinit var tvEndTime: TextView
-            private lateinit var seekBar: SeekBar
-            
-            // Buttons
-            private lateinit var btnRewind: ImageButton
-            private lateinit var btnPlayPause: ImageButton
-            private lateinit var btnForward: ImageButton
-            private lateinit var btnAudio: ImageButton
-            private lateinit var btnSubtitle: ImageButton
-            
-            private var audioManager: AudioManager? = null
-            private var maxVolume: Int = 0
-            private var gestureStartVolume: Int = 0
-            private var currentBrightness: Float = 0.5f
-            private var gestureStartBrightness: Float = 0.5f
-            private var gestureStartY: Float = 0f
-            private var isGesture: Boolean = false
-            private var isSeeking: Boolean = false
-            private var playUrl: String = ""
             private val FAKE_USER_AGENT =
                 "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
-            private val handler = Handler(Looper.getMainLooper())
-            private val formatBuilder = StringBuilder()
-            private val formatter = Formatter(formatBuilder, Locale.getDefault())
-            
-            // 5 Saniye sonra gizleme mantığı
-            private val hideOverlayRunnable = Runnable {
-                tvBrightness.visibility = View.GONE
-                tvVolume.visibility = View.GONE
-                tvCenterInfo.visibility = View.GONE
-                // Kontrolleri de gizle
-                controlsContainer.visibility = View.GONE
-            }
-            
-            // Seekbar güncelleme
-            private val updateProgressRunnable = object : Runnable {
-                override fun run() {
-                    updateProgress()
-                    handler.postDelayed(this, 1000)
-                }
-            }
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
-                window.decorView.systemUiVisibility =
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
+                
                 setContentView(R.layout.activity_player_pro)
-                playUrl = intent.getStringExtra("URL") ?: ""
+                
+                val playUrl = intent.getStringExtra("URL") ?: ""
                 val ref = intent.getStringExtra("REF") ?: ""
                 val org = intent.getStringExtra("ORG") ?: ""
+                
                 if (playUrl.isEmpty()) {
                     Toast.makeText(this, "Geçersiz yayın URL'si.", Toast.LENGTH_SHORT).show()
                     finish()
                     return
                 }
+                
                 playerView = findViewById(R.id.pvMain)
-                
-                // Initialize Controls
-                controlsContainer = findViewById(R.id.controlsContainer)
-                seekContainer = findViewById(R.id.seekContainer)
-                tvCurrentTime = findViewById(R.id.tvCurrentTime)
-                tvEndTime = findViewById(R.id.tvEndTime)
-                seekBar = findViewById(R.id.seekBar)
-                
-                btnRewind = findViewById(R.id.btnRewind)
-                btnPlayPause = findViewById(R.id.btnPlayPause)
-                btnForward = findViewById(R.id.btnForward)
-                btnAudio = findViewById(R.id.btnAudio)
-                btnSubtitle = findViewById(R.id.btnSubtitle)
-                
-                leftOverlay = findViewById(R.id.overlayLeft)
-                rightOverlay = findViewById(R.id.overlayRight)
-                tvCenterInfo = findViewById(R.id.tvInfoCenter)
-                tvBrightness = findViewById(R.id.tvBrightness)
-                tvVolume = findViewById(R.id.tvVolume)
-                val btnMode = findViewById<ImageButton>(R.id.btnMode)
-                
-                // Disable default controller completely to fix overlapping
-                playerView.useController = false
-                
-                audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
-                val lp = window.attributes
-                currentBrightness = if (lp.screenBrightness in 0f..1f) lp.screenBrightness else 0.5f
-                applyResizeMode(playerView)
-                
-                btnMode.setOnClickListener {
-                    currentMode = (currentMode + 1) % 3
-                    applyResizeMode(playerView)
-                    rescheduleHide()
-                }
-                
-                // Seekbar Listener
-                seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        if (fromUser) {
-                            tvCurrentTime.text = stringForTime(progress.toLong())
-                        }
-                    }
-                    override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                        isSeeking = true
-                        handler.removeCallbacks(hideOverlayRunnable)
-                    }
-                    override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                        isSeeking = false
-                        player?.seekTo(seekBar?.progress?.toLong() ?: 0L)
-                        rescheduleHide()
-                    }
-                })
-                
-                // --- Button Logic ---
-                btnRewind.setOnClickListener {
-                    seekBy(-15000L)
-                    showCenterInfo("◄ 15 sn")
-                    rescheduleHide()
-                }
-                btnPlayPause.setOnClickListener {
-                    togglePlayPause()
-                }
-                btnForward.setOnClickListener {
-                    seekBy(15000L)
-                    showCenterInfo("15 sn ►")
-                    rescheduleHide()
-                }
-                btnAudio.setOnClickListener { showTrackSelectionDialog(C.TRACK_TYPE_AUDIO) }
-                btnSubtitle.setOnClickListener { showTrackSelectionDialog(C.TRACK_TYPE_TEXT) }
-                
-                setupGestureOverlay(leftOverlay, true)
-                setupGestureOverlay(rightOverlay, false)
                 
                 try {
                     val headers = mutableMapOf<String, String>()
                     headers["User-Agent"] = FAKE_USER_AGENT
                     if (ref.isNotEmpty()) headers["Referer"] = ref
                     if (org.isNotEmpty()) headers["Origin"] = org
+                    
                     val httpFactory = DefaultHttpDataSource.Factory()
                         .setConnectTimeoutMs(20000)
                         .setReadTimeoutMs(40000)
                         .setDefaultRequestProperties(headers)
+                        
                     val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
-                    player = ExoPlayer.Builder(this).setMediaSourceFactory(mediaSourceFactory).build()
-                    val exo = player!!
-                    playerView.player = exo
-                    exo.setMediaItem(MediaItem.fromUri(playUrl))
-                    exo.prepare()
-                    exo.playWhenReady = true
-                    exo.addListener(object : Player.Listener {
-                        override fun onIsPlayingChanged(isPlaying: Boolean) {
-                            btnPlayPause.setImageResource(
-                                if (isPlaying) android.R.drawable.ic_media_pause
-                                else android.R.drawable.ic_media_play
-                            )
-                            if (isPlaying) {
-                                handler.post(updateProgressRunnable)
-                                rescheduleHide()
-                            } else {
-                                handler.removeCallbacks(updateProgressRunnable)
-                            }
-                        }
-                        override fun onPlaybackStateChanged(playbackState: Int) {
-                            if (playbackState == Player.STATE_READY) {
-                                val duration = exo.duration
-                                if (duration > 0) {
-                                    seekBar.max = duration.toInt()
-                                    tvEndTime.text = stringForTime(duration)
-                                }
-                            }
-                        }
+                    
+                    player = ExoPlayer.Builder(this)
+                        .setMediaSourceFactory(mediaSourceFactory)
+                        .build()
+                        
+                    playerView.player = player
+                    
+                    val mediaItem = MediaItem.fromUri(playUrl)
+                    player?.setMediaItem(mediaItem)
+                    player?.prepare()
+                    player?.playWhenReady = true
+                    
+                    player?.addListener(object : Player.Listener {
                         override fun onPlayerError(error: PlaybackException) {
-                            Toast.makeText(this@PlayerActivity, "Oynatma hatası: \${error.message}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@PlayerActivity, "Hata: \${error.message}", Toast.LENGTH_LONG).show()
                         }
                     })
+                    
                 } catch (e: Exception) {
-                    Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Oynatıcı hatası: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
                     finish()
                 }
             }
-            
-            private fun showTrackSelectionDialog(trackType: Int) {
-                val player = this.player ?: return
-                val tracks = player.currentTracks
-                val trackGroups = tracks.groups.filter { it.type == trackType }
-                
-                if (trackGroups.isEmpty()) {
-                    Toast.makeText(this, if (trackType == C.TRACK_TYPE_AUDIO) "Ses seçeneği yok" else "Altyazı seçeneği yok", Toast.LENGTH_SHORT).show()
-                    return
-                }
 
-                val options = mutableListOf<String>()
-                val trackIndices = mutableListOf<Pair<Int, Int>>() // groupIndex, trackIndex
-                
-                // "Kapat" seçeneği (sadece altyazı için mantıklı olabilir ama genel yapıya uygun)
-                options.add("Kapat / Varsayılan")
-                trackIndices.add(Pair(-1, -1))
-
-                for (i in trackGroups.indices) {
-                    val group = trackGroups[i]
-                    for (j in 0 until group.length) {
-                        val format = group.getTrackFormat(j)
-                        val label = format.label ?: format.language ?: "Bilinmeyen"
-                        options.add(label)
-                        trackIndices.add(Pair(i, j))
-                    }
-                }
-
-                MaterialAlertDialogBuilder(this)
-                    .setTitle(if (trackType == C.TRACK_TYPE_AUDIO) "Ses Seçimi" else "Altyazı Seçimi")
-                    .setItems(options.toTypedArray()) { _, which ->
-                        val (groupIndex, trackIndex) = trackIndices[which]
-                        if (groupIndex == -1) {
-                             player.trackSelectionParameters = player.trackSelectionParameters
-                                .buildUpon()
-                                .clearOverridesOfType(trackType)
-                                .build()
-                        } else {
-                            val group = trackGroups[groupIndex]
-                            player.trackSelectionParameters = player.trackSelectionParameters
-                                .buildUpon()
-                                .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, trackIndex))
-                                .build()
-                        }
-                        rescheduleHide()
-                    }
-                    .show()
-                rescheduleHide()
-            }
-            
-            private fun updateProgress() {
-                val p = player ?: return
-                if (!isSeeking && p.isPlaying) {
-                    val pos = p.currentPosition
-                    val dur = p.duration
-                    if (dur > 0) {
-                        seekBar.max = dur.toInt()
-                        seekBar.progress = pos.toInt()
-                        tvCurrentTime.text = stringForTime(pos)
-                        tvEndTime.text = stringForTime(dur)
-                    }
-                }
-            }
-            
-            private fun stringForTime(timeMs: Long): String {
-                if (timeMs <= 0 || timeMs >= 24 * 60 * 60 * 1000) return "00:00"
-                val totalSeconds = timeMs / 1000
-                val seconds = totalSeconds % 60
-                val minutes = (totalSeconds / 60) % 60
-                val hours = totalSeconds / 3600
-                formatBuilder.setLength(0)
-                return if (hours > 0) {
-                    formatter.format("%d:%02d:%02d", hours, minutes, seconds).toString()
-                } else {
-                    formatter.format("%02d:%02d", minutes, seconds).toString()
-                }
-            }
-            
-            private fun togglePlayPause() {
-                player?.let {
-                    if (it.isPlaying) it.pause() else it.play()
-                    rescheduleHide()
-                }
+            override fun onPause() {
+                super.onPause()
+                player?.pause()
             }
 
-            override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-                if (event.action == KeyEvent.ACTION_DOWN) {
-                    rescheduleHide() // Her tuşta göster
-                    when (event.keyCode) {
-                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                            togglePlayPause()
-                            return true
-                        }
-                        KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> {
-                            seekBy(-15000L)
-                            showCenterInfo("◄ 15 sn")
-                            return true
-                        }
-                        KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
-                            seekBy(15000L)
-                            showCenterInfo("15 sn ►")
-                            return true
-                        }
-                    }
-                }
-                return super.dispatchKeyEvent(event)
-            }
-            
-            private fun rescheduleHide() {
-                // Kontrolleri göster
-                controlsContainer.visibility = View.VISIBLE
-                
-                // Zamanlayıcıyı sıfırla
-                handler.removeCallbacks(hideOverlayRunnable)
-                handler.postDelayed(hideOverlayRunnable, 5000) // 5 Saniye
+            override fun onResume() {
+                super.onResume()
+                player?.play()
             }
 
-            private fun setupGestureOverlay(view: View, isLeft: Boolean) {
-                view.setOnTouchListener { v, event ->
-                    val am = audioManager
-                    when (event.action) {
-                        MotionEvent.ACTION_DOWN -> {
-                            gestureStartY = event.y
-                            isGesture = false
-                            gestureStartVolume = am?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: (maxVolume / 2)
-                            gestureStartBrightness = currentBrightness
-                            handler.removeCallbacks(hideOverlayRunnable)
-                            // Dokununca kontrolleri göster
-                            controlsContainer.visibility = View.VISIBLE
-                            true
-                        }
-                        MotionEvent.ACTION_MOVE -> {
-                            val dy = event.y - gestureStartY
-                            if (abs(dy) > 50) {
-                                isGesture = true
-                                val percent = -dy / v.height.toFloat()
-                                if (isLeft) adjustBrightness(percent) else adjustVolume(percent)
-                            }
-                            true
-                        }
-                        MotionEvent.ACTION_UP -> {
-                            rescheduleHide()
-                            true
-                        }
-                        else -> false
-                    }
-                }
-            }
-            private fun adjustVolume(percentDelta: Float) {
-                val am = audioManager ?: return
-                val change = (percentDelta * maxVolume).toInt()
-                var newVol = gestureStartVolume + change
-                if (newVol < 0) newVol = 0
-                if (newVol > maxVolume) newVol = maxVolume
-                am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                val percent = if (maxVolume > 0) (newVol * 100 / maxVolume) else 0
-                tvVolume.text = "Ses: \$percent%"
-                tvVolume.visibility = View.VISIBLE
-            }
-            private fun adjustBrightness(percentDelta: Float) {
-                var newB = gestureStartBrightness + percentDelta
-                if (newB < 0f) newB = 0f
-                if (newB > 1f) newB = 1f
-                val lp = window.attributes
-                lp.screenBrightness = newB
-                window.attributes = lp
-                currentBrightness = newB
-                tvBrightness.text = "Parlaklık: \${(currentBrightness * 100f).toInt()}%"
-                tvBrightness.visibility = View.VISIBLE
-            }
-            private fun seekBy(deltaMs: Long) {
-                val p = player ?: return
-                var newPos = p.currentPosition + deltaMs
-                if (newPos < 0L) newPos = 0L
-                val duration = p.duration
-                if (duration > 0 && newPos > duration) newPos = duration
-                p.seekTo(newPos)
-            }
-            private fun applyResizeMode(pv: PlayerView) {
-                pv.resizeMode = when (currentMode) {
-                    0 -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    1 -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-                    else -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                }
-            }
-            private fun showCenterInfo(text: String) {
-                tvCenterInfo.text = text
-                tvCenterInfo.visibility = View.VISIBLE
-                rescheduleHide()
-            }
             override fun onDestroy() {
                 super.onDestroy()
-                handler.removeCallbacksAndMessages(null)
                 player?.release()
                 player = null
             }
@@ -2958,219 +2609,26 @@ jobs:
         </LinearLayout>
         EOF
 
-        # ============ Player Layout (NEW TRANSPARENT UI + SMALLER CONTROLS) ============
+
+        # ============ Player Layout (Reverted to Standard PlayerView) ============
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/black">
-
-        <!-- use_controller=false ile default player'ı kapattık -->
-        <androidx.media3.ui.PlayerView
-        android:id="@+id/pvMain"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:use_controller="false" />
-
-        <LinearLayout
-        android:id="@+id/overlayContainer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="horizontal">
-
-        <View
-            android:id="@+id/overlayLeft"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1" />
-
-        <View
-            android:id="@+id/overlayRight"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1" />
-         </LinearLayout>
-
-         <TextView
-        android:id="@+id/tvInfoCenter"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@android:color/white"
-        android:textSize="18sp"
-        android:background="@drawable/bg_player_btn"
-        android:padding="12dp"
-        android:layout_gravity="center"
-        android:visibility="gone" />
-
-        <TextView
-        android:id="@+id/tvBrightness"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@android:color/white"
-        android:textSize="14sp"
-        android:background="#80000000"
-        android:padding="6dp"
-        android:layout_gravity="top|left"
-        android:layout_margin="12dp"
-        android:visibility="gone" />
-
-        <TextView
-        android:id="@+id/tvVolume"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@android:color/white"
-        android:textSize="14sp"
-        android:background="#80000000"
-        android:padding="6dp"
-        android:layout_gravity="top|right"
-        android:layout_margin="12dp"
-        android:visibility="gone" />
-
-        <!-- CONTROL BAR (BOTTOM + TRANSPARENT) -->
-        <LinearLayout
-            android:id="@+id/controlsContainer"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_gravity="bottom"
-            android:gravity="center"
-            android:padding="16dp"
-            android:background="@android:color/transparent">
+            android:layout_height="match_parent"
+            android:background="@color/black">
 
-            <!-- Seekbar ve Süre -->
-            <LinearLayout
-                android:id="@+id/seekContainer"
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/pvMain"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:layout_marginBottom="8dp">
-                
-                <TextView
-                    android:id="@+id/tvCurrentTime"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="00:00"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:shadowColor="#000000"
-                    android:shadowDx="1"
-                    android:shadowDy="1"
-                    android:shadowRadius="2"/>
-                    
-                <SeekBar
-                    android:id="@+id/seekBar"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginLeft="12dp"
-                    android:layout_marginRight="12dp"
-                    android:max="100"
-                    android:progress="0"
-                    android:progressTint="@color/primary_cyan"
-                    android:thumbTint="@color/primary_cyan"/>
-                    
-                <TextView
-                    android:id="@+id/tvEndTime"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="00:00"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:shadowColor="#000000"
-                    android:shadowDx="1"
-                    android:shadowDy="1"
-                    android:shadowRadius="2"/>
-            </LinearLayout>
-
-            <!-- Butonlar (Daha nazik ikonlar, şeffaf arka plan, Audio/Sub eklendi) -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginBottom="16dp">
-
-                <ImageButton
-                    android:id="@+id/btnAudio"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_lock_silent_mode_off"
-                    android:padding="12dp"
-                    android:tint="@android:color/white"
-                    android:focusable="true"
-                    android:layout_marginRight="16dp"/>
-
-                <ImageButton
-                    android:id="@+id/btnRewind"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_media_rew"
-                    android:padding="14dp"
-                    android:tint="@android:color/white"
-                    android:focusable="true"
-                    android:layout_marginRight="16dp"/>
-
-                <ImageButton
-                    android:id="@+id/btnPlayPause"
-                    android:layout_width="72dp"
-                    android:layout_height="72dp"
-                    android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_media_pause"
-                    android:padding="18dp"
-                    android:tint="@android:color/white"
-                    android:focusable="true"/>
-
-                 <ImageButton
-                    android:id="@+id/btnForward"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_media_ff"
-                    android:padding="14dp"
-                    android:tint="@android:color/white"
-                    android:focusable="true"
-                    android:layout_marginLeft="16dp"/>
-
-                <ImageButton
-                    android:id="@+id/btnSubtitle"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@drawable/bg_player_btn"
-                    android:src="@android:drawable/ic_menu_sort_by_size"
-                    android:padding="12dp"
-                    android:tint="@android:color/white"
-                    android:focusable="true"
-                    android:layout_marginLeft="16dp"/>
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Resize Mode Button (Top Right) -->
-        <ImageButton
-            android:id="@+id/btnMode"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="@android:color/transparent"
-            android:src="@android:drawable/ic_menu_crop"
-            android:padding="10dp"
-            android:tint="@android:color/white"
-            android:layout_gravity="top|right"
-            android:layout_marginTop="40dp"
-            android:layout_marginRight="16dp"
-            android:focusable="true"/>
+                android:layout_height="match_parent"
+                app:show_buffering="when_playing"
+                app:show_shuffle_button="false" 
+                app:resize_mode="fit"/>
 
         </FrameLayout>
         EOF
-
 
         # ============ MANIFEST ============
         cat <<EOF > app/src/main/AndroidManifest.xml
@@ -3254,14 +2712,14 @@ jobs:
       id: upload_apk
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Final-APK
+        name: ErdinPlayer-Pro-ExoFix-APK
         path: ErdinPlayer/app/build/outputs/apk/release/*.apk
 
     - name: 7. AAB'yi GitHub Artifact Olarak Yükle
       id: upload_aab
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Pro-Final-AAB
+        name: ErdinPlayer-Pro-ExoFix-AAB
         path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
 
     - name: 8. Artifact URL'lerini Göster
@@ -3274,7 +2732,7 @@ jobs:
         echo "${{ steps.upload_aab.outputs.artifact-url }}"
         echo "====================================="
 
-        echo "### ErdinPlayer Pro (Final Config + Audio/Sub) Çıktılar" >> $GITHUB_STEP_SUMMARY
+        echo "### ErdinPlayer Pro (ExoFix + UI Updates) Çıktılar" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
