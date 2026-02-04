@@ -1,4 +1,5 @@
-name: ErdinPlayer Pro Ultimate (Modern UI + Gestures)
+# .github/workflows/build.yml
+name: ErdinPlayer Pro Hybrid (Final PHP Config + UI Fix + Dynamic Ads + Gestures)
 
 on:
   push:
@@ -25,7 +26,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Ultimate Proje Üretimi
+    - name: 3. ErdinPlayer Pro Proje Üretimi (PHP Config + New UI + Dynamic Ads + Gestures)
       shell: bash
       run: |
         set -e
@@ -39,7 +40,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "🚀 ErdinPlayer Pro (Ultimate Edition) üretiliyor..."
+        echo "🚀 ErdinPlayer Pro (PHP Config Edition) üretiliyor..."
 
         rm -rf "$APP_NAME"
 
@@ -55,7 +56,6 @@ jobs:
         mkdir -p "$APP_NAME/app/src/main/res/menu"
         mkdir -p "$APP_NAME/app/src/main/res/color"
         mkdir -p "$APP_NAME/app/src/main/res/xml"
-        mkdir -p "$APP_NAME/app/src/main/res/anim"
 
         cd "$APP_NAME"
 
@@ -122,8 +122,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 21
                 targetSdk 35
-                versionCode 18
-                versionName "3.0.0-ultimate"
+                versionCode 17
+                versionName "2.7.1-exo-fix-dynads"
             }
 
             signingConfigs {
@@ -157,9 +157,9 @@ jobs:
             implementation 'com.google.android.material:material:1.9.0'
             implementation 'androidx.recyclerview:recyclerview:1.3.0'
             implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
-            implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+            implementation 'androidx.leanback:leanback:1.0.0' 
 
-            // Media3 (ExoPlayer)
+            // ExoPlayer Güncel Sürüm
             implementation 'androidx.media3:media3-exoplayer:1.2.0'
             implementation 'androidx.media3:media3-ui:1.2.0'
             implementation 'androidx.media3:media3-exoplayer-hls:1.2.0'
@@ -189,8 +189,7 @@ jobs:
             <color name="hint_yellow">#FFD600</color>
             <color name="focus_ring">#00E5FF</color>
             <color name="focus_bg">#2A2E45</color>
-            <color name="transparent_black_50">#80000000</color>
-            <color name="transparent_black_80">#CC000000</color>
+            <color name="player_overlay">#00000000</color>
         </resources>
         EOF
 
@@ -204,10 +203,12 @@ jobs:
                 <item name="android:windowFullscreen">true</item>
                 <item name="android:alertDialogTheme">@style/Theme.ErdinPlayer.Dialog</item>
             </style>
+
             <style name="Theme.ErdinPlayer.Dialog" parent="Theme.AppCompat.Dialog.Alert">
                 <item name="android:background">@color/bg_card</item>
                 <item name="android:textColor">@color/white</item>
                 <item name="colorAccent">@color/primary_cyan</item>
+                <item name="android:textColorPrimary">@color/white</item>
             </style>
         </resources>
         EOF
@@ -215,72 +216,22 @@ jobs:
         cat <<EOF > app/src/main/res/values/strings.xml
         <resources>
             <string name="app_name">Emin Xtream Player</string>
-            <string name="admob_app_id_placeholder">ca-app-pub-3940256099942544~3347511713</string> 
+            <!-- Production AdMob App ID (no test) -->
+            <string name="admob_app_id_placeholder">ca-app-pub-2289573527937577~5012458331</string>
+            <!-- Default banner ID fallback (will be overridden by RemoteConfig) -->
+            <string name="admob_banner_id_placeholder">ca-app-pub-2289573527937577/2861787772</string>
         </resources>
         EOF
 
         cat <<EOF > app/src/main/res/values-tr/strings.xml
         <resources>
             <string name="app_name">Emin Xtream Player</string>
-            <string name="admob_app_id_placeholder">ca-app-pub-3940256099942544~3347511713</string>
+            <string name="admob_app_id_placeholder">ca-app-pub-2289573527937577~5012458331</string>
+            <string name="admob_banner_id_placeholder">ca-app-pub-2289573527937577/2861787772</string>
         </resources>
         EOF
 
-        # ============ DRAWABLES (MODERN UI) ============
-        
-        # Gradyan Arkaplan (Kontrollerin okunabilirliği için)
-        cat <<EOF > app/src/main/res/drawable/player_gradient_bottom.xml
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <gradient
-                android:startColor="#CC000000"
-                android:endColor="#00000000"
-                android:angle="90" />
-        </shape>
-        EOF
-        
-        cat <<EOF > app/src/main/res/drawable/player_gradient_top.xml
-        <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <gradient
-                android:startColor="#CC000000"
-                android:endColor="#00000000"
-                android:angle="270" />
-        </shape>
-        EOF
-
-        # Yuvarlak Buton Arkaplanı
-        cat <<EOF > app/src/main/res/drawable/bg_circle_button.xml
-        <selector xmlns:android="http://schemas.android.com/apk/res/android">
-            <item android:state_pressed="true">
-                <shape android:shape="oval">
-                    <solid android:color="#80FFFFFF"/>
-                </shape>
-            </item>
-            <item>
-                <shape android:shape="oval">
-                    <solid android:color="#40000000"/>
-                    <stroke android:width="1dp" android:color="#40FFFFFF"/>
-                </shape>
-            </item>
-        </selector>
-        EOF
-
-        # Kilit İkonu
-        cat <<EOF > app/src/main/res/drawable/ic_lock_outline.xml
-        <vector xmlns:android="http://schemas.android.com/apk/res/android"
-            android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-            <path android:fillColor="#FFFFFF" android:pathData="M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10c0,-1.1 -0.9,-2 -2,-2zM9,6c0,-1.66 1.34,-3 3,-3s3,1.34 3,3v2H9V6zM18,20H6V10h12v10zM12,17c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2z"/>
-        </vector>
-        EOF
-
-        # Kilit Açık İkonu
-        cat <<EOF > app/src/main/res/drawable/ic_lock_open.xml
-        <vector xmlns:android="http://schemas.android.com/apk/res/android"
-            android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-            <path android:fillColor="#FFFFFF" android:pathData="M12,17c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2 -2,0.9 -2,2 0.9,2 2,2zM18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6h2c0,-1.66 1.34,-3 3,-3s3,1.34 3,3v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10c0,-1.1 -0.9,-2 -2,-2zM18,20H6V10h12v10z"/>
-        </vector>
-        EOF
-
-        # Diğer standart drawables
+        # ============ DRAWABLE ============
         cat <<EOF > app/src/main/res/drawable/bg_input_dark.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="@color/bg_card_soft"/>
@@ -388,65 +339,67 @@ jobs:
         import org.json.JSONObject
         import java.net.HttpURLConnection
         import java.net.URL
-        import $PACKAGE_NAME.R
+
         object RemoteConfig {
             private const val TAG = "RemoteConfig"
             private const val CONFIG_URL = "https://creatorapp24.com/erdin/api/config.php"
-            @Volatile private var initialized = false
+
             @Volatile private var bannerId: String? = null
             @Volatile private var interstitialId: String? = null
             @Volatile private var channelInterval: Int = 3
             @Volatile private var bannerListInterval: Int = 3
             @Volatile private var appId: String? = null
-            
-            fun init(context: Context) {
-                if (initialized) return
-                synchronized(this) {
-                    if (initialized) return
-                    initialized = true
-                    Thread {
-                        try {
-                            val url = URL(CONFIG_URL)
-                            val conn = url.openConnection() as HttpURLConnection
-                            conn.connectTimeout = 8000
-                            conn.readTimeout = 8000
-                            conn.requestMethod = "GET"
-                            if (conn.responseCode != HttpURLConnection.HTTP_OK) return@Thread
-                            val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                            val obj = JSONObject(body)
-                            
-                            val ads = obj.optJSONObject("ads")
-                            if (ads != null) {
-                                appId = ads.optString("admob_app_id", null)
-                                bannerId = ads.optString("admob_banner_id", null)
-                                interstitialId = ads.optString("admob_interstitial_id", null)
-                                channelInterval = ads.optInt("channel_interval", 3)
-                                bannerListInterval = ads.optInt("banner_list_interval", 3)
-                            }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Config load failed: " + (e.message ?: ""))
+
+            @Volatile private var lastFetchMs: Long = 0L
+            private const val TTL_MS = 60_000L  // 1 dk içinde yeniden çeker
+
+            fun fetchLatest(context: Context, force: Boolean = false) {
+                val now = System.currentTimeMillis()
+                if (!force && (now - lastFetchMs) < TTL_MS && bannerId != null && interstitialId != null) return
+
+                Thread {
+                    try {
+                        val url = URL(CONFIG_URL)
+                        val conn = url.openConnection() as HttpURLConnection
+                        conn.connectTimeout = 8000
+                        conn.readTimeout = 8000
+                        conn.requestMethod = "GET"
+                        if (conn.responseCode != HttpURLConnection.HTTP_OK) return@Thread
+                        val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                        val obj = JSONObject(body)
+                        val ads = obj.optJSONObject("ads")
+                        if (ads != null) {
+                            appId = ads.optString("admob_app_id", appId)
+                            bannerId = ads.optString("admob_banner_id", bannerId)
+                            interstitialId = ads.optString("admob_interstitial_id", interstitialId)
+                            channelInterval = ads.optInt("channel_interval", channelInterval)
+                            bannerListInterval = ads.optInt("banner_list_interval", bannerListInterval)
                         }
-                    }.start()
-                }
+                        lastFetchMs = System.currentTimeMillis()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Config load failed: " + (e.message ?: ""))
+                    }
+                }.start()
             }
+
             fun getAppId(context: Context): String? {
-                init(context)
+                fetchLatest(context)
                 return appId
             }
             fun getBannerId(context: Context): String? {
-                init(context)
-                return if (bannerId.isNullOrEmpty()) null else bannerId
+                fetchLatest(context)
+                return bannerId
             }
             fun getInterstitialId(context: Context): String? {
-                init(context)
-                return if (interstitialId.isNullOrEmpty()) null else interstitialId
+                fetchLatest(context)
+                return interstitialId
             }
             fun getChannelInterval(context: Context, defaultInterval: Int): Int {
-                init(context)
+                fetchLatest(context)
                 return if (channelInterval > 0) channelInterval else defaultInterval
             }
             fun getBannerListInterval(context: Context): Int {
-                init(context)
+                fetchLatest(context)
                 return bannerListInterval
             }
         }
@@ -679,11 +632,13 @@ jobs:
         import com.google.android.gms.ads.interstitial.InterstitialAd
         import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
         import com.google.android.gms.ads.LoadAdError
+
         object AdsHelper {
             @Volatile private var initialized = false
             private var interstitial: InterstitialAd? = null
             private var clickCount = 0
             var CHANNEL_INTERVAL = 3
+
             fun init(context: Context) {
                 if (!initialized) {
                     synchronized(this) {
@@ -693,13 +648,19 @@ jobs:
                         }
                     }
                 }
-                RemoteConfig.init(context)
+                RemoteConfig.fetchLatest(context)
                 CHANNEL_INTERVAL = RemoteConfig.getChannelInterval(context, CHANNEL_INTERVAL)
             }
+
+            fun refreshConfig(context: Context) {
+                RemoteConfig.fetchLatest(context, force = true)
+            }
+
             fun loadBanner(adView: AdView?) {
                 if (adView == null) return
+                RemoteConfig.fetchLatest(adView.context)
                 val id = RemoteConfig.getBannerId(adView.context)
-                if (id == null) {
+                if (id.isNullOrEmpty()) {
                     adView.visibility = View.GONE
                     return
                 }
@@ -707,8 +668,11 @@ jobs:
                 adView.isFocusable = false
                 adView.isFocusableInTouchMode = false
                 adView.loadAd(AdRequest.Builder().build())
+                adView.visibility = View.VISIBLE
             }
+
             fun loadInterstitial(context: Context) {
+                RemoteConfig.fetchLatest(context)
                 val adUnitId = RemoteConfig.getInterstitialId(context)
                 if (adUnitId == null) return
                 InterstitialAd.load(
@@ -721,6 +685,7 @@ jobs:
                     }
                 )
             }
+
             fun maybeShowOnChannelClick(activity: Activity, onContinue: () -> Unit) {
                 clickCount++
                 val ad = interstitial
@@ -926,7 +891,9 @@ jobs:
                 RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
                 AdsHelper.init(this)
                 val adTop = findViewById<AdView>(R.id.adViewTopLogin)
+                val adBottom = findViewById<AdView>(R.id.adViewBottomLogin)
                 AdsHelper.loadBanner(adTop)
+                AdsHelper.loadBanner(adBottom)
                 AdsHelper.loadInterstitial(this)
                 val tvTitle = findViewById<TextView>(R.id.tvTitle)
                 val tvLoginType = findViewById<TextView>(R.id.tvLoginType)
@@ -1780,6 +1747,7 @@ jobs:
         import androidx.appcompat.app.AppCompatActivity
         import androidx.recyclerview.widget.LinearLayoutManager
         import androidx.recyclerview.widget.RecyclerView
+        import com.google.android.gms.ads.AdView
         import org.json.JSONObject
         import java.net.HttpURLConnection
         import java.net.URL
@@ -1787,6 +1755,7 @@ jobs:
         import $PACKAGE_NAME.models.EpisodeItem
         import $PACKAGE_NAME.utils.Prefs
         import $PACKAGE_NAME.utils.RemoteConfig
+        import $PACKAGE_NAME.utils.AdsHelper
         
         class SeriesDetailActivity : AppCompatActivity() {
             private lateinit var prefs: Prefs
@@ -1814,7 +1783,11 @@ jobs:
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_series_detail)
                 prefs = Prefs(this)
-                RemoteConfig.init(this)
+                RemoteConfig.fetchLatest(this)
+                val adTop = findViewById<AdView>(R.id.adViewTopSeries)
+                val adBottom = findViewById<AdView>(R.id.adViewBottomSeries)
+                AdsHelper.loadBanner(adTop)
+                AdsHelper.loadBanner(adBottom)
                 
                 tvTitle = findViewById(R.id.tvSeriesTitle)
                 tvStatus = findViewById(R.id.tvSeriesStatus)
@@ -1903,7 +1876,7 @@ jobs:
                 var count = 0
                 for (i in displayEpisodes.indices) {
                     val ep = displayEpisodes[i]
-                    titles.add("\${ep.episodeNumber.toString().padStart(2, '0')}. Bölüm - \${ep.title}")
+                    titles.add("${ep.episodeNumber.toString().padStart(2, '0')}. Bölüm - ${ep.title}")
                     subs.add("")
                     mapIndex.add(i)
                     
@@ -1917,7 +1890,7 @@ jobs:
                 
                 displayMapIndex = mapIndex
                 gridAdapter.update(titles, subs)
-                tvTitle.text = "\$seriesName • Sezon \$season"
+                tvTitle.text = "$seriesName • Sezon $season"
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
             private fun playEpisode(ep: EpisodeItem) {
@@ -1926,7 +1899,7 @@ jobs:
                 val pass = prefs.getPass().trim()
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val ext = ep.container_extension ?: "mp4"
-                val url = "\$dns/series/\$user/\$pass/\${ep.id}.\$ext"
+                val url = "$dns/series/$user/$pass/${ep.id}.$ext"
                 val itn = Intent(this, PlayerActivity::class.java)
                 itn.putExtra("URL", url)
                 itn.putExtra("TYPE", "VOD")
@@ -2001,88 +1974,40 @@ jobs:
         }
         EOF
 
-        # ============ PlayerActivity (ULTIMATE MODERN EDITION) ============
+        # ============ PlayerActivity (with volume/brightness gestures) ============
         cat <<EOF > app/src/main/java/$PATH_NAME/PlayerActivity.kt
         package $PACKAGE_NAME
-        import android.content.Context
         import android.media.AudioManager
         import android.os.Bundle
-        import android.os.Handler
-        import android.os.Looper
-        import android.view.GestureDetector
         import android.view.MotionEvent
         import android.view.View
         import android.view.WindowManager
-        import android.widget.ImageButton
-        import android.widget.SeekBar
-        import android.widget.TextView
         import android.widget.Toast
-        import androidx.appcompat.app.AlertDialog
         import androidx.appcompat.app.AppCompatActivity
-        import androidx.constraintlayout.widget.ConstraintLayout
-        import androidx.media3.common.C
         import androidx.media3.common.MediaItem
         import androidx.media3.common.PlaybackException
         import androidx.media3.common.Player
-        import androidx.media3.common.TrackSelectionOverride
         import androidx.media3.datasource.DefaultHttpDataSource
         import androidx.media3.exoplayer.ExoPlayer
         import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-        import androidx.media3.ui.AspectRatioFrameLayout
         import androidx.media3.ui.PlayerView
-        import java.util.Formatter
-        import java.util.Locale
-        import kotlin.math.abs
 
         class PlayerActivity : AppCompatActivity() {
             private var player: ExoPlayer? = null
             private lateinit var playerView: PlayerView
-            
-            // UI Components
-            private lateinit var controlsRoot: ConstraintLayout
-            private lateinit var topControls: View
-            private lateinit var bottomControls: View
-            private lateinit var centerControls: View
-            private lateinit var btnPlayPause: ImageButton
-            private lateinit var btnLock: ImageButton
-            private lateinit var btnResize: ImageButton
-            private lateinit var btnAudio: ImageButton
-            private lateinit var btnSubs: ImageButton
-            private lateinit var seekBar: SeekBar
-            private lateinit var tvCurrent: TextView
-            private lateinit var tvEnd: TextView
-            private lateinit var tvInfo: TextView
-            private lateinit var pbLoading: View
-            
-            // Logic Variables
-            private var isLocked = false
-            private var isControlsVisible = true
-            private var resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-            private val handler = Handler(Looper.getMainLooper())
-            private val hideRunnable = Runnable { hideControls() }
-            private val updateProgressRunnable = object : Runnable {
-                override fun run() {
-                    updateProgress()
-                    handler.postDelayed(this, 1000)
-                }
-            }
-            
-            // Gesture Variables
-            private lateinit var gestureDetector: GestureDetector
-            private var audioManager: AudioManager? = null
-            private var maxVolume = 15
+            private val FAKE_USER_AGENT =
+                "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
+
+            private var startX = 0f
+            private var startY = 0f
             private var startVolume = 0
             private var startBrightness = 0.5f
-            private var screenWidth = 0
-            private var isScrollGesture = false
-            
-            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
+            private var audioManager: AudioManager? = null
 
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
-                // Fullscreen flags
-                window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
                 window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN
                         or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                         or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -2092,338 +2017,119 @@ jobs:
                 
                 setContentView(R.layout.activity_player_pro)
                 
-                // Init Audio & Screen
-                audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
-                screenWidth = resources.displayMetrics.widthPixels
+                val playUrl = intent.getStringExtra("URL") ?: ""
+                val ref = intent.getStringExtra("REF") ?: ""
+                val org = intent.getStringExtra("ORG") ?: ""
                 
-                initViews()
-                setupGestures()
-                setupPlayer()
-            }
-            
-            private fun initViews() {
+                if (playUrl.isEmpty()) {
+                    Toast.makeText(this, "Geçersiz yayın URL'si.", Toast.LENGTH_SHORT).show()
+                    finish()
+                    return
+                }
+                
                 playerView = findViewById(R.id.pvMain)
-                controlsRoot = findViewById(R.id.controlsRoot)
-                topControls = findViewById(R.id.topControls)
-                bottomControls = findViewById(R.id.bottomControls)
-                centerControls = findViewById(R.id.centerControls)
-                
-                btnPlayPause = findViewById(R.id.btnPlayPause)
-                btnLock = findViewById(R.id.btnLock)
-                btnResize = findViewById(R.id.btnResize)
-                btnAudio = findViewById(R.id.btnAudio)
-                btnSubs = findViewById(R.id.btnSubs)
-                seekBar = findViewById(R.id.seekBar)
-                tvCurrent = findViewById(R.id.tvCurrent)
-                tvEnd = findViewById(R.id.tvEnd)
-                tvInfo = findViewById(R.id.tvInfo)
-                pbLoading = findViewById(R.id.pbLoading)
-                
-                btnPlayPause.setOnClickListener { togglePlay() }
-                
-                btnLock.setOnClickListener {
-                    isLocked = !isLocked
-                    updateLockState()
-                    showControls()
-                }
-                
-                btnResize.setOnClickListener {
-                    resizeMode = when (resizeMode) {
-                        AspectRatioFrameLayout.RESIZE_MODE_FIT -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-                        AspectRatioFrameLayout.RESIZE_MODE_FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                        else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    }
-                    playerView.resizeMode = resizeMode
-                    val modeName = when(resizeMode) {
-                        AspectRatioFrameLayout.RESIZE_MODE_FILL -> "Tam Ekran"
-                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> "Yakınlaştır"
-                        else -> "Sığdır"
-                    }
-                    showInfo(modeName)
-                    showControls()
-                }
-                
-                btnAudio.setOnClickListener { showTrackDialog(C.TRACK_TYPE_AUDIO) }
-                btnSubs.setOnClickListener { showTrackDialog(C.TRACK_TYPE_TEXT) }
-                
-                findViewById<View>(R.id.btnBack).setOnClickListener { finish() }
-                
-                seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        if (fromUser) tvCurrent.text = formatTime(progress.toLong())
-                    }
-                    override fun onStartTrackingTouch(seekBar: SeekBar?) { handler.removeCallbacks(hideRunnable) }
-                    override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                        player?.seekTo(seekBar?.progress?.toLong() ?: 0)
-                        showControls()
-                    }
-                })
-                
-                // Initial State
-                updateLockState()
-            }
-            
-            private fun setupGestures() {
-                gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-                    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                        if (isControlsVisible) hideControls() else showControls()
-                        return true
-                    }
-                    
-                    override fun onDoubleTap(e: MotionEvent): Boolean {
-                        if (isLocked) return true
-                        val x = e.x
-                        if (x > screenWidth / 2) {
-                            seekBy(10000)
-                            showInfo(">> 10 sn")
-                        } else {
-                            seekBy(-10000)
-                            showInfo("<< 10 sn")
-                        }
-                        return true
-                    }
-                    
-                    override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
-                        if (isLocked || e1 == null) return false
-                        
-                        // Vertical Scroll Only
-                        if (abs(distanceY) > abs(distanceX)) {
-                            isScrollGesture = true
-                            val delta = distanceY / resources.displayMetrics.heightPixels
-                            
-                            if (e1.x < screenWidth / 2) {
-                                // Left: Brightness
-                                changeBrightness(delta)
-                            } else {
-                                // Right: Volume
-                                changeVolume(delta)
-                            }
-                            return true
-                        }
-                        return false
-                    }
-                    
-                    override fun onDown(e: MotionEvent): Boolean {
-                        startVolume = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
-                        startBrightness = window.attributes.screenBrightness
-                        if (startBrightness < 0) startBrightness = 0.5f
-                        isScrollGesture = false
-                        return true
-                    }
-                })
-                
-                controlsRoot.setOnTouchListener { _, event ->
-                    gestureDetector.onTouchEvent(event)
-                    if (event.action == MotionEvent.ACTION_UP && isScrollGesture) {
-                        isScrollGesture = false
-                        // Optional: Hide info after gesture ends
-                    }
-                    true
-                }
-            }
-            
-            private fun changeBrightness(delta: Float) {
-                var new = startBrightness + delta
-                if (new < 0.01f) new = 0.01f
-                if (new > 1f) new = 1f
-                val lp = window.attributes
-                lp.screenBrightness = new
-                window.attributes = lp
-                startBrightness = new
-                showInfo("Parlaklık: %" + (new * 100).toInt())
-            }
-            
-            private fun changeVolume(delta: Float) {
-                val am = audioManager ?: return
-                val change = (delta * maxVolume).toInt()
-                var newVol = startVolume + change
-                if (newVol < 0) newVol = 0
-                if (newVol > maxVolume) newVol = maxVolume
-                am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                startVolume = newVol
-                val perc = (newVol.toFloat() / maxVolume * 100).toInt()
-                showInfo("Ses: %$perc")
-            }
-            
-            private fun setupPlayer() {
-                val url = intent.getStringExtra("URL") ?: ""
-                if (url.isEmpty()) { finish(); return }
-                
+                audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+
+                setupGestures()
+
                 try {
-                    val headers = mutableMapOf("User-Agent" to FAKE_USER_AGENT)
-                    val factory = DefaultHttpDataSource.Factory().setDefaultRequestProperties(headers)
-                    val mediaSource = DefaultMediaSourceFactory(factory)
+                    val headers = mutableMapOf<String, String>()
+                    headers["User-Agent"] = FAKE_USER_AGENT
+                    if (ref.isNotEmpty()) headers["Referer"] = ref
+                    if (org.isNotEmpty()) headers["Origin"] = org
                     
-                    player = ExoPlayer.Builder(this).setMediaSourceFactory(mediaSource).build()
+                    val httpFactory = DefaultHttpDataSource.Factory()
+                        .setConnectTimeoutMs(20000)
+                        .setReadTimeoutMs(40000)
+                        .setDefaultRequestProperties(headers)
+                        
+                    val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
+                    
+                    player = ExoPlayer.Builder(this)
+                        .setMediaSourceFactory(mediaSourceFactory)
+                        .build()
+                        
                     playerView.player = player
-                    playerView.useController = false // We use our own
                     
-                    val item = MediaItem.fromUri(url)
-                    player?.setMediaItem(item)
+                    val mediaItem = MediaItem.fromUri(playUrl)
+                    player?.setMediaItem(mediaItem)
                     player?.prepare()
                     player?.playWhenReady = true
                     
                     player?.addListener(object : Player.Listener {
-                        override fun onIsPlayingChanged(isPlaying: Boolean) {
-                            btnPlayPause.setImageResource(if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)
-                            if (isPlaying) {
-                                pbLoading.visibility = View.GONE
-                                handler.post(updateProgressRunnable)
-                                showControls() // Auto hide timer starts
-                            } else {
-                                handler.removeCallbacks(updateProgressRunnable)
-                            }
-                        }
-                        override fun onPlaybackStateChanged(state: Int) {
-                            if (state == Player.STATE_BUFFERING) pbLoading.visibility = View.VISIBLE
-                            else if (state == Player.STATE_READY) {
-                                pbLoading.visibility = View.GONE
-                                val dur = player?.duration ?: 0
-                                if (dur > 0) {
-                                    seekBar.max = dur.toInt()
-                                    tvEnd.text = formatTime(dur)
-                                }
-                            }
-                        }
                         override fun onPlayerError(error: PlaybackException) {
-                            Toast.makeText(this@PlayerActivity, "Hata: " + error.message, Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@PlayerActivity, "Hata: ${error.message}", Toast.LENGTH_LONG).show()
                         }
                     })
                     
                 } catch (e: Exception) {
-                    Toast.makeText(this, "Player Error", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Oynatıcı hatası: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
+                    finish()
                 }
             }
-            
-            private fun togglePlay() {
-                if (player?.isPlaying == true) player?.pause() else player?.play()
-                showControls()
-            }
-            
-            private fun seekBy(ms: Long) {
-                val p = player ?: return
-                var pos = p.currentPosition + ms
-                if (pos < 0) pos = 0
-                if (pos > p.duration) pos = p.duration
-                p.seekTo(pos)
-                showControls()
-            }
-            
-            private fun showControls() {
-                handler.removeCallbacks(hideRunnable)
-                isControlsVisible = true
-                
-                if (isLocked) {
-                    // Locked mode: Only show lock button
-                    topControls.visibility = View.GONE
-                    bottomControls.visibility = View.GONE
-                    centerControls.visibility = View.GONE
-                    btnLock.visibility = View.VISIBLE
-                } else {
-                    topControls.visibility = View.VISIBLE
-                    bottomControls.visibility = View.VISIBLE
-                    centerControls.visibility = View.VISIBLE
-                    btnLock.visibility = View.VISIBLE
-                }
-                
-                if (player?.isPlaying == true) {
-                    handler.postDelayed(hideRunnable, 4000)
-                }
-            }
-            
-            private fun hideControls() {
-                isControlsVisible = false
-                topControls.visibility = View.GONE
-                bottomControls.visibility = View.GONE
-                centerControls.visibility = View.GONE
-                btnLock.visibility = View.GONE
-            }
-            
-            private fun updateLockState() {
-                if (isLocked) {
-                    btnLock.setImageResource(R.drawable.ic_lock_outline)
-                    btnLock.setColorFilter(getColor(R.color.error_red))
-                    showInfo("Ekran Kilitlendi")
-                } else {
-                    btnLock.setImageResource(R.drawable.ic_lock_open)
-                    btnLock.setColorFilter(getColor(R.color.white))
-                    showInfo("Kilit Açıldı")
-                }
-            }
-            
-            private fun updateProgress() {
-                val p = player ?: return
-                val pos = p.currentPosition
-                val dur = p.duration
-                if (dur > 0) {
-                    seekBar.max = dur.toInt()
-                    seekBar.progress = pos.toInt()
-                    tvCurrent.text = formatTime(pos)
-                    tvEnd.text = formatTime(dur)
-                }
-            }
-            
-            private fun formatTime(ms: Long): String {
-                val totalSec = ms / 1000
-                val h = totalSec / 3600
-                val m = (totalSec % 3600) / 60
-                val s = totalSec % 60
-                return if (h > 0) String.format("%d:%02d:%02d", h, m, s) else String.format("%02d:%02d", m, s)
-            }
-            
-            private fun showInfo(text: String) {
-                tvInfo.text = text
-                tvInfo.visibility = View.VISIBLE
-                tvInfo.alpha = 1f
-                tvInfo.animate().alpha(0f).setDuration(1000).setStartDelay(1000).start()
-            }
-            
-            private fun showTrackDialog(type: Int) {
-                if (isLocked) return
-                val p = player ?: return
-                val tracks = p.currentTracks
-                val groups = tracks.groups.filter { it.type == type }
-                if (groups.isEmpty()) {
-                    Toast.makeText(this, "Seçenek bulunamadı", Toast.LENGTH_SHORT).show()
-                    return
-                }
-                
-                val options = mutableListOf("Kapat / Varsayılan")
-                val indices = mutableListOf<Pair<Int, Int>?>(null)
-                
-                groups.forEachIndexed { gi, group ->
-                    for (ti in 0 until group.length) {
-                        val fmt = group.getTrackFormat(ti)
-                        options.add(fmt.label ?: fmt.language ?: "Track \${ti+1}")
-                        indices.add(Pair(gi, ti))
-                    }
-                }
-                
-                AlertDialog.Builder(this, R.style.Theme_ErdinPlayer_Dialog)
-                    .setTitle(if (type == C.TRACK_TYPE_AUDIO) "Ses Dili" else "Altyazı")
-                    .setItems(options.toTypedArray()) { _, which ->
-                        val idx = indices[which]
-                        val params = p.trackSelectionParameters.buildUpon()
-                        if (idx == null) {
-                            params.clearOverridesOfType(type)
-                        } else {
-                            val group = groups[idx.first]
-                            params.setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, idx.second))
+
+            private fun setupGestures() {
+                playerView.setOnTouchListener { v, event ->
+                    val width = v.width.toFloat()
+                    val height = v.height.toFloat()
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            startX = event.x
+                            startY = event.y
+                            startVolume = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 0
+                            val lp = window.attributes
+                            startBrightness = if (lp.screenBrightness >= 0f) lp.screenBrightness else 0.5f
                         }
-                        p.trackSelectionParameters = params.build()
-                        showControls()
+                        MotionEvent.ACTION_MOVE -> {
+                            val dx = event.x - startX
+                            val dy = startY - event.y
+                            // Eğer yatay hareket baskınsa PlayerView kontrolüne bırak
+                            if (kotlin.math.abs(dx) > kotlin.math.abs(dy)) return@setOnTouchListener false
+
+                            val percent = dy / height // -1..1 arası
+                            if (startX > width / 2f) {
+                                // Sağ taraf: Ses
+                                val am = audioManager ?: return@setOnTouchListener true
+                                val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                                val delta = (percent * maxVol * 1.5f).toInt()
+                                val newVol = (startVolume + delta).coerceIn(0, maxVol)
+                                am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+                            } else {
+                                // Sol taraf: Parlaklık
+                                val lp = window.attributes
+                                val delta = percent * 1.5f
+                                val newB = (startBrightness + delta).coerceIn(0.05f, 1f)
+                                lp.screenBrightness = newB
+                                window.attributes = lp
+                            }
+                            return@setOnTouchListener true
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            // no-op
+                        }
                     }
-                    .show()
+                    false
+                }
+            }
+
+            override fun onPause() {
+                super.onPause()
+                player?.pause()
+            }
+
+            override fun onResume() {
+                super.onResume()
+                player?.play()
             }
 
             override fun onDestroy() {
                 super.onDestroy()
                 player?.release()
-                handler.removeCallbacksAndMessages(null)
+                player = null
             }
         }
         EOF
+
         # ============ LAYOUTLAR ============
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <?xml version="1.0" encoding="utf-8"?>
@@ -2439,7 +2145,7 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 ads:adSize="BANNER"
-                ads:adUnitId="@string/admob_app_id_placeholder"
+                ads:adUnitId="@string/admob_banner_id_placeholder"
                 android:layout_marginBottom="8dp"
                 android:focusable="false"
                 android:focusableInTouchMode="false"/>
@@ -2624,6 +2330,15 @@ jobs:
                 android:layout_weight="1"
                 android:divider="@android:color/transparent"
                 android:dividerHeight="10dp"/>
+            <com.google.android.gms.ads.AdView
+                android:id="@+id/adViewBottomLogin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                ads:adSize="BANNER"
+                ads:adUnitId="@string/admob_banner_id_placeholder"
+                android:layout_marginTop="8dp"
+                android:focusable="false"
+                android:focusableInTouchMode="false"/>
         </LinearLayout>
         EOF
 
@@ -2645,7 +2360,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_app_id_placeholder"
+                    ads:adUnitId="@string/admob_banner_id_placeholder"
                     android:layout_marginBottom="4dp"
                     android:focusable="false"
                     android:focusableInTouchMode="false"/>
@@ -2771,7 +2486,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_app_id_placeholder"
+                    ads:adUnitId="@string/admob_banner_id_placeholder"
                     android:layout_marginTop="4dp"
                     android:focusable="false"
                     android:focusableInTouchMode="false"/>
@@ -2886,7 +2601,7 @@ jobs:
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     ads:adSize="BANNER"
-                    ads:adUnitId="@string/admob_app_id_placeholder"/>
+                    ads:adUnitId="@string/admob_banner_id_placeholder"/>
             </LinearLayout>
         </LinearLayout>
         EOF
@@ -2939,10 +2654,20 @@ jobs:
         cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
         <?xml version="1.0" encoding="utf-8"?>
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:ads="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:background="@color/bg_dark">
+
+            <com.google.android.gms.ads.AdView
+                android:id="@+id/adViewTopSeries"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                ads:adSize="BANNER"
+                ads:adUnitId="@string/admob_banner_id_placeholder"
+                android:focusable="false"
+                android:focusableInTouchMode="false"/>
 
             <TextView
                 android:id="@+id/tvSeriesTitle"
@@ -2975,206 +2700,40 @@ jobs:
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvEpisodes"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:padding="8dp"/>
+
+            <com.google.android.gms.ads.AdView
+                android:id="@+id/adViewBottomSeries"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                ads:adSize="BANNER"
+                ads:adUnitId="@string/admob_banner_id_placeholder"
+                android:focusable="false"
+                android:focusableInTouchMode="false"/>
         </LinearLayout>
         EOF
-        
 
-        # ============ Player Layout (ULTIMATE MODERN EDITION) ============
-        cat <<'EOF' > app/src/main/res/layout/activity_player_pro.xml
+        # ============ Player Layout (no banners) ============
+        cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
-        <androidx.constraintlayout.widget.ConstraintLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:id="@+id/controlsRoot"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/black"
-        android:clickable="true"
-        android:focusable="true">
-        
-        <androidx.media3.ui.PlayerView
-        android:id="@+id/pvMain"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:use_controller="false"
-        app:resize_mode="fit"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/black">
 
-        <ProgressBar
-        android:id="@+id/pbLoading"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
-        android:indeterminateTint="@color/primary_cyan"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/pvMain"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:show_buffering="when_playing"
+                app:show_shuffle_button="false" 
+                app:resize_mode="fit"/>
 
-        <TextView
-        android:id="@+id/tvInfo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="@drawable/bg_input_dark"
-        android:padding="12dp"
-        android:textColor="@color/white"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-
-        <!-- TOP CONTROLS -->
-        <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/topControls"
-        android:layout_width="0dp"
-        android:layout_height="80dp"
-        android:background="@drawable/player_gradient_top"
-        android:padding="16dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <ImageButton
-            android:id="@+id/btnBack"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@android:drawable/ic_menu_revert"
-            android:background="@drawable/bg_circle_button"
-            android:padding="8dp"
-            android:tint="@color/white"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
-
-        <ImageButton
-            android:id="@+id/btnSubs"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@android:drawable/ic_menu_sort_by_size"
-            android:background="@drawable/bg_circle_button"
-            android:padding="8dp"
-            android:tint="@color/white"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
-
-        <ImageButton
-            android:id="@+id/btnAudio"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@android:drawable/ic_lock_silent_mode_off"
-            android:background="@drawable/bg_circle_button"
-            android:padding="8dp"
-            android:tint="@color/white"
-            android:layout_marginEnd="12dp"
-            app:layout_constraintEnd_toStartOf="@+id/btnSubs"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"/>
-
-           </androidx.constraintlayout.widget.ConstraintLayout>
-
-        <!-- CENTER PLAY -->
-        <LinearLayout
-        android:id="@+id/centerControls"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <ImageButton
-            android:id="@+id/btnPlayPause"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@android:drawable/ic_media_pause"
-            android:background="@drawable/bg_circle_button"
-            android:padding="20dp"
-            android:tint="@color/white"/>
-        </LinearLayout>
-
-         <!-- LOCK BUTTON -->
-        <ImageButton
-        android:id="@+id/btnLock"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:src="@drawable/ic_lock_open"
-        android:background="@drawable/bg_circle_button"
-        android:padding="10dp"
-        android:tint="@color/white"
-        android:layout_marginEnd="20dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
-
-        <!-- BOTTOM CONTROLS -->
-        <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/bottomControls"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:background="@drawable/player_gradient_bottom"
-        android:padding="16dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <TextView
-            android:id="@+id/tvCurrent"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="00:00"
-            android:textColor="@color/white"
-            android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"/>
-
-        <TextView
-            android:id="@+id/tvEnd"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="00:00"
-            android:textColor="@color/white"
-            android:textStyle="bold"
-            android:layout_marginEnd="16dp"
-            app:layout_constraintEnd_toStartOf="@+id/btnResize"
-            app:layout_constraintTop_toTopOf="parent"/>
-
-        <ImageButton
-            android:id="@+id/btnResize"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@android:drawable/ic_menu_crop"
-            android:background="@null"
-            android:tint="@color/white"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="@+id/tvEnd"/>
-
-        <SeekBar
-            android:id="@+id/seekBar"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:progressTint="@color/primary_cyan"
-            android:thumbTint="@color/primary_cyan"
-            app:layout_constraintTop_toBottomOf="@+id/tvCurrent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
-
-          </androidx.constraintlayout.widget.ConstraintLayout>
-
-         </androidx.constraintlayout.widget.ConstraintLayout>
-          EOF
-
-
+        </FrameLayout>
+        EOF
 
         # ============ MANIFEST ============
         cat <<EOF > app/src/main/AndroidManifest.xml
@@ -3223,7 +2782,7 @@ jobs:
 
                 <activity
                     android:name=".PlayerActivity"
-                    android:screenOrientation="sensorLandscape"
+                    android:screenOrientation="fullSensor"
                     android:configChanges="orientation|screenSize|keyboardHidden|layoutDirection|screenLayout|smallestScreenSize"
                     android:exported="false" />
             </application>
@@ -3258,14 +2817,14 @@ jobs:
       id: upload_apk
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Ultimate-APK
+        name: ErdinPlayer-Pro-ExoFix-APK
         path: ErdinPlayer/app/build/outputs/apk/release/*.apk
 
     - name: 7. AAB'yi GitHub Artifact Olarak Yükle
       id: upload_aab
       uses: actions/upload-artifact@v4
       with:
-        name: ErdinPlayer-Ultimate-AAB
+        name: ErdinPlayer-Pro-ExoFix-AAB
         path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
 
     - name: 8. Artifact URL'lerini Göster
@@ -3278,7 +2837,7 @@ jobs:
         echo "${{ steps.upload_aab.outputs.artifact-url }}"
         echo "====================================="
 
-        echo "### ErdinPlayer Ultimate (Modern UI + Gestures) Çıktılar" >> $GITHUB_STEP_SUMMARY
+        echo "### ErdinPlayer Pro (ExoFix + UI Updates + Dynamic Ads + Gestures) Çıktılar" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
         echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
