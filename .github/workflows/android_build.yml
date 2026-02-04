@@ -1876,7 +1876,7 @@ jobs:
                 var count = 0
                 for (i in displayEpisodes.indices) {
                     val ep = displayEpisodes[i]
-                    titles.add("${ep.episodeNumber.toString().padStart(2, '0')}. Bölüm - ${ep.title}")
+                    titles.add("\${ep.episodeNumber.toString().padStart(2, '0')}. Bölüm - \${ep.title}")
                     subs.add("")
                     mapIndex.add(i)
                     
@@ -1890,7 +1890,7 @@ jobs:
                 
                 displayMapIndex = mapIndex
                 gridAdapter.update(titles, subs)
-                tvTitle.text = "$seriesName • Sezon $season"
+                tvTitle.text = "\$seriesName • Sezon \$season"
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
             private fun playEpisode(ep: EpisodeItem) {
@@ -1899,7 +1899,7 @@ jobs:
                 val pass = prefs.getPass().trim()
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val ext = ep.container_extension ?: "mp4"
-                val url = "$dns/series/$user/$pass/${ep.id}.$ext"
+                val url = "\$dns/series/\$user/\$pass/\${ep.id}.\$ext"
                 val itn = Intent(this, PlayerActivity::class.java)
                 itn.putExtra("URL", url)
                 itn.putExtra("TYPE", "VOD")
@@ -2058,7 +2058,7 @@ jobs:
                     
                     player?.addListener(object : Player.Listener {
                         override fun onPlayerError(error: PlaybackException) {
-                            Toast.makeText(this@PlayerActivity, "Hata: ${error.message}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@PlayerActivity, "Hata: \${error.message}", Toast.LENGTH_LONG).show()
                         }
                     })
                     
