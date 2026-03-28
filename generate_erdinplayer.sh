@@ -55,15 +55,18 @@ echo "include ':app'" > settings.gradle
 cat <<EOF > gradle.properties
 android.useAndroidX=true
 android.enableJetifier=true
-org.gradle.jvmargs=-Xmx2048m
+org.gradle.jvmargs=-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError
+org.gradle.parallel=true
+org.gradle.caching=true
+org.gradle.configureondemand=true
 EOF
 
 cat <<EOF > build.gradle
 buildscript {
     repositories { google(); mavenCentral() }
     dependencies {
-        classpath "com.android.tools.build:gradle:8.0.0"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0"
+        classpath "com.android.tools.build:gradle:8.3.0"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.23"
     }
 }
 allprojects { repositories { google(); mavenCentral() } }
@@ -99,9 +102,10 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             signingConfig signingConfigs.release
-            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt")
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
 
@@ -115,18 +119,26 @@ android {
 }
 
 dependencies {
-    implementation "androidx.core:core-ktx:1.9.0"
+    implementation "androidx.core:core-ktx:1.12.0"
     implementation "androidx.appcompat:appcompat:1.6.1"
-    implementation "com.google.android.material:material:1.9.0"
-    implementation "androidx.recyclerview:recyclerview:1.3.0"
+    implementation "com.google.android.material:material:1.11.0"
+    implementation "androidx.recyclerview:recyclerview:1.3.2"
     implementation "androidx.constraintlayout:constraintlayout:2.1.4"
 
-    implementation "androidx.media3:media3-exoplayer:1.1.0"
-    implementation "androidx.media3:media3-ui:1.1.0"
-    implementation "androidx.media3:media3-exoplayer-hls:1.1.0"
+    implementation "androidx.media3:media3-exoplayer:1.3.1"
+    implementation "androidx.media3:media3-ui:1.3.1"
+    implementation "androidx.media3:media3-exoplayer-hls:1.3.1"
 
     implementation "com.google.android.gms:play-services-ads:23.4.0"
 }
+EOF
+
+# proguard-rules.pro
+cat <<EOF > app/proguard-rules.pro
+-keep class com.google.android.gms.** { *; }
+-keep class androidx.media3.** { *; }
+-dontwarn com.google.android.gms.**
+-dontwarn androidx.media3.**
 EOF
 
 ########################################
@@ -392,7 +404,8 @@ object AdsHelper {
 
     private var interstitial: InterstitialAd? = null
     private var clickCount = 0
-    var CHANNEL_INTERVAL = 4
+    // Her 5 kanal tıklamasında 1 reklam (4'ten 5'e çıkarıldı)
+    var CHANNEL_INTERVAL = 5
 
     fun init(context: Context) {
         if (!initialized) {
@@ -412,10 +425,13 @@ object AdsHelper {
     }
 
     fun loadInterstitial(context: Context) {
+        val adUnitId = context.getString(
+            context.resources.getIdentifier("admob_interstitial_test", "string", context.packageName)
+        )
         val request = AdRequest.Builder().build()
         InterstitialAd.load(
             context,
-            "ca-app-pub-3940256099942544/1033173712",
+            adUnitId,
             request,
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {
