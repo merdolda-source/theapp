@@ -1,4 +1,4 @@
-name: ErdinXtream Player Pro v3 (Favs + History + Media3 + Gestures + Seek)
+name: ErdinPlayer Pro Hybrid (Final PHP Config + UI Fix + Dynamic Ads + Gestures)
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
     steps:
-    - name: 1. Depo Ã‡ekme
+    - name: 1. Depo Çekme
       uses: actions/checkout@v4
 
     - name: 2. Java 17 Kurulumu
@@ -25,7 +25,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinXtream Player Pro v3 Proje Uretimi
+    - name: 3. ErdinPlayer Pro Proje Üretimi (PHP Config + New UI + Dynamic Ads + Gestures)
       shell: bash
       run: |
         set -e
@@ -39,7 +39,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "ğŸš€ ErdinPlayer Pro (PHP Config Edition) Ã¼retiliyor..."
+        echo "🚀 ErdinPlayer Pro (PHP Config Edition) üretiliyor..."
 
         rm -rf "$APP_NAME"
 
@@ -63,9 +63,9 @@ jobs:
 
         # Keystore
         if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
-          echo "ğŸ” Keystore secrets'ten yazÄ±lÄ±yor..."
+          echo "🔐 Keystore secrets'ten yazılıyor..."
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/keystore.jks || {
-            echo "âš ï¸ base64 decode HATASI â€“ local keystore Ã¼retilecek."
+            echo "⚠️ base64 decode HATASI – local keystore üretilecek."
             keytool -genkey -v \
               -keystore app/keystore.jks \
               -keyalg RSA -keysize 2048 -validity 10000 \
@@ -75,7 +75,7 @@ jobs:
               -dname "CN=Erdin, O=ErdinMedia, C=TR"
           }
         else
-          echo "âš ï¸ ANDROID_KEYSTORE_BASE64 yok, local keystore Ã¼retilecek."
+          echo "⚠️ ANDROID_KEYSTORE_BASE64 yok, local keystore üretilecek."
           keytool -genkey -v \
             -keystore app/keystore.jks \
             -keyalg RSA -keysize 2048 -validity 10000 \
@@ -153,10 +153,12 @@ jobs:
         dependencies {
             implementation 'androidx.core:core-ktx:1.12.0'
             implementation 'androidx.appcompat:appcompat:1.6.1'
-            implementation 'com.google.android.material:material:1.11.0'
-            implementation 'androidx.recyclerview:recyclerview:1.3.2'
+            implementation 'com.google.android.material:material:1.9.0'
+            implementation 'androidx.recyclerview:recyclerview:1.3.0'
             implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
-            implementation 'androidx.leanback:leanback:1.0.0'
+            implementation 'androidx.leanback:leanback:1.0.0' 
+
+            // ExoPlayer Güncel Sürüm
             implementation 'androidx.media3:media3-exoplayer:1.3.1'
             implementation 'androidx.media3:media3-ui:1.3.1'
             implementation 'androidx.media3:media3-exoplayer-hls:1.3.1'
@@ -164,12 +166,13 @@ jobs:
             implementation 'androidx.media3:media3-exoplayer-rtsp:1.3.1'
             implementation 'androidx.media3:media3-datasource-okhttp:1.3.1'
             implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
             implementation 'com.github.bumptech.glide:glide:4.16.0'
             implementation 'com.google.android.gms:play-services-ads:23.4.0'
         }
         EOF
 
-        # ============ RENK PALETÄ° ============
+        # ============ RENK PALETİ ============
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
             <color name="bg_dark">#050710</color>
@@ -190,7 +193,6 @@ jobs:
             <color name="focus_bg">#2A2E45</color>
             <color name="player_overlay">#00000000</color>
             <color name="fav_active">#FFC400</color>
-            <color name="tab_selected_bg">#00E5FF</color>
         </resources>
         EOF
 
@@ -330,12 +332,7 @@ jobs:
             val episodeNumber: Int,
             val container_extension: String?
         )
-        data class HistoryItem(
-            val name: String,
-            val url: String,
-            val type: String,
-            val timestamp: Long
-        )
+        data class HistoryItem(val name: String, val url: String, val type: String, val timestamp: Long)
         EOF
 
         # ============ UTILS ============
@@ -356,10 +353,9 @@ jobs:
             @Volatile private var channelInterval: Int = 3
             @Volatile private var bannerListInterval: Int = 3
             @Volatile private var appId: String? = null
-            @Volatile private var adsEnabled: Boolean = true
 
             @Volatile private var lastFetchMs: Long = 0L
-            private const val TTL_MS = 60_000L  // 1 dk iÃ§inde yeniden Ã§eker
+            private const val TTL_MS = 60_000L  // 1 dk içinde yeniden çeker
 
             fun fetchLatest(context: Context, force: Boolean = false) {
                 val now = System.currentTimeMillis()
@@ -382,7 +378,6 @@ jobs:
                             interstitialId = ads.optString("admob_interstitial_id", interstitialId)
                             channelInterval = ads.optInt("channel_interval", channelInterval)
                             bannerListInterval = ads.optInt("banner_list_interval", bannerListInterval)
-                            adsEnabled = ads.optBoolean("ads_enabled", true)
                         }
                         lastFetchMs = System.currentTimeMillis()
                     } catch (e: Exception) {
@@ -391,7 +386,6 @@ jobs:
                 }.start()
             }
 
-            fun isAdsEnabled(context: Context): Boolean { fetchLatest(context); return adsEnabled }
             fun getAppId(context: Context): String? {
                 fetchLatest(context)
                 return appId
@@ -568,39 +562,29 @@ jobs:
             fun getDns(): String = getActive()?.dns ?: ""
             fun getUser(): String = getActive()?.user ?: ""
             fun getPass(): String = getActive()?.pass ?: ""
-            fun toggleFav(accountId: Int, url: String, name: String): Boolean {
-                val key = "favs_" + accountId
+            fun toggleFav(accId: Int, url: String, name: String): Boolean {
+                val key = "favs_${accId}"
                 val obj = try { org.json.JSONObject(p.getString(key, "{}") ?: "{}") } catch (e: Exception) { org.json.JSONObject() }
-                return if (obj.has(url)) {
-                    obj.remove(url); p.edit().putString(key, obj.toString()).apply(); false
-                } else {
-                    val it = org.json.JSONObject(); it.put("name", name); it.put("url", url)
-                    obj.put(url, it); p.edit().putString(key, obj.toString()).apply(); true
-                }
+                return if (obj.has(url)) { obj.remove(url); p.edit().putString(key, obj.toString()).apply(); false }
+                else { val it = org.json.JSONObject(); it.put("name", name); it.put("url", url); obj.put(url, it); p.edit().putString(key, obj.toString()).apply(); true }
             }
-            fun isFav(accountId: Int, url: String): Boolean {
-                val obj = try { org.json.JSONObject(p.getString("favs_" + accountId, "{}") ?: "{}") } catch (e: Exception) { org.json.JSONObject() }
-                return obj.has(url)
-            }
-            fun getFavs(accountId: Int): List<Pair<String, String>> {
-                val obj = try { org.json.JSONObject(p.getString("favs_" + accountId, "{}") ?: "{}") } catch (e: Exception) { org.json.JSONObject() }
+            fun isFav(accId: Int, url: String): Boolean = try { org.json.JSONObject(p.getString("favs_${accId}", "{}") ?: "{}").has(url) } catch (e: Exception) { false }
+            fun getFavs(accId: Int): List<Pair<String, String>> {
+                val obj = try { org.json.JSONObject(p.getString("favs_${accId}", "{}") ?: "{}") } catch (e: Exception) { org.json.JSONObject() }
                 val list = ArrayList<Pair<String, String>>()
-                val keys = obj.keys()
-                while (keys.hasNext()) { val url = keys.next(); val it = obj.optJSONObject(url); if (it != null) list.add(Pair(it.optString("name", url), url)) }
+                val keys = obj.keys(); while (keys.hasNext()) { val u = keys.next(); val it = obj.optJSONObject(u); if (it != null) list.add(Pair(it.optString("name", u), u)) }
                 return list
             }
-            fun addHistory(accountId: Int, name: String, url: String, type: String) {
-                val key = "hist_" + accountId
+            fun addHistory(accId: Int, name: String, url: String, type: String) {
+                val key = "hist_${accId}"
                 val arr = try { org.json.JSONArray(p.getString(key, "[]") ?: "[]") } catch (e: Exception) { org.json.JSONArray() }
-                val filtered = org.json.JSONArray()
-                for (i in 0 until arr.length()) { val o = arr.optJSONObject(i); if (o != null && o.optString("url","") != url) filtered.put(o) }
+                val f2 = org.json.JSONArray(); for (i in 0 until arr.length()) { val o = arr.optJSONObject(i); if (o != null && o.optString("url","") != url) f2.put(o) }
                 val item = org.json.JSONObject(); item.put("name", name); item.put("url", url); item.put("type", type); item.put("ts", System.currentTimeMillis())
-                val newArr = org.json.JSONArray(); newArr.put(item)
-                for (i in 0 until minOf(filtered.length(), 49)) newArr.put(filtered.optJSONObject(i))
-                p.edit().putString(key, newArr.toString()).apply()
+                val na = org.json.JSONArray(); na.put(item); for (i in 0 until minOf(f2.length(), 49)) na.put(f2.optJSONObject(i))
+                p.edit().putString(key, na.toString()).apply()
             }
-            fun getHistory(accountId: Int): List<$PACKAGE_NAME.models.HistoryItem> {
-                val arr = try { org.json.JSONArray(p.getString("hist_" + accountId, "[]") ?: "[]") } catch (e: Exception) { org.json.JSONArray() }
+            fun getHistory(accId: Int): List<$PACKAGE_NAME.models.HistoryItem> {
+                val arr = try { org.json.JSONArray(p.getString("hist_${accId}", "[]") ?: "[]") } catch (e: Exception) { org.json.JSONArray() }
                 val list = ArrayList<$PACKAGE_NAME.models.HistoryItem>()
                 for (i in 0 until arr.length()) { val o = arr.optJSONObject(i) ?: continue; list.add($PACKAGE_NAME.models.HistoryItem(o.optString("name",""), o.optString("url",""), o.optString("type","LIVE"), o.optLong("ts",0))) }
                 return list
@@ -708,7 +692,6 @@ jobs:
                 if (adView == null) return
                 val context = adView.context
                 RemoteConfig.fetchLatest(context)
-                if (!RemoteConfig.isAdsEnabled(context)) { adView.visibility = android.view.View.GONE; return }
                 val fallbackId = context.getString(R.string.admob_banner_id_placeholder)
                 val id = RemoteConfig.getBannerId(context)?.takeIf { it.isNotBlank() } ?: fallbackId
                 adView.post {
@@ -779,6 +762,7 @@ jobs:
                 val adContainer: LinearLayout = v.findViewById(R.id.adContainer)
                 val adView: AdView = v.findViewById(R.id.adViewItem)
                 val btnFav: android.widget.ImageButton = v.findViewById(R.id.btnFav)
+                val btnFav: android.widget.ImageButton = v.findViewById(R.id.btnFav)
             }
             
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -818,10 +802,9 @@ jobs:
                         }
                     }
                     
-                    val isFav = favKeys.contains(t)
                     if (onFav != null) {
                         holder.btnFav.visibility = View.VISIBLE
-                        holder.btnFav.setColorFilter(if (isFav) 0xFFFFC400.toInt() else 0xFF30354A.toInt())
+                        holder.btnFav.setColorFilter(if (favKeys.contains(t)) 0xFFFFC400.toInt() else 0xFF30354A.toInt())
                         holder.btnFav.setOnClickListener { onFav.invoke(position) }
                     } else { holder.btnFav.visibility = View.GONE }
                     holder.cardLayout.setOnClickListener { onClick(position) }
@@ -974,17 +957,17 @@ jobs:
                 
                 fun applyLanguageTexts() {
                     tvTitle.text = LangManager.t(this, "login_title", "ErdinPlayer Pro")
-                    tvLoginType.text = LangManager.t(this, "login_type", "GiriÅŸ Tipi")
+                    tvLoginType.text = LangManager.t(this, "login_type", "Giriş Tipi")
                     tvXtream.text = LangManager.t(this, "login_xtream", "Xtream")
                     tvM3u.text = LangManager.t(this, "login_m3u", "M3U")
-                    etName.hint = LangManager.t(this, "login_name_hint", "Hesap adÄ±")
+                    etName.hint = LangManager.t(this, "login_name_hint", "Hesap adı")
                     etDns.hint = LangManager.t(this, "login_dns_hint", "Xtream URL girin")
-                    etUser.hint = LangManager.t(this, "login_user_hint", "KullanÄ±cÄ± adÄ±")
-                    etPass.hint = LangManager.t(this, "login_pass_hint", "Åifre")
+                    etUser.hint = LangManager.t(this, "login_user_hint", "Kullanıcı adı")
+                    etPass.hint = LangManager.t(this, "login_pass_hint", "Şifre")
                     etM3u.hint = LangManager.t(this, "login_m3u_hint", "M3U URL girin")
                     btnAdd.text = LangManager.t(this, "login_add_button", "Hesap Ekle")
-                    tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "KayÄ±tlÄ± Hesaplar")
-                    tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Devam etmek iÃ§in alttan bir hesap seÃ§in")
+                    tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "Kayıtlı Hesaplar")
+                    tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Devam etmek için alttan bir hesap seçin")
                 }
                 applyLanguageTexts()
                 fun updateTypeUI() {
@@ -1024,13 +1007,13 @@ jobs:
                     lvAccounts.setOnItemLongClickListener { _, _, position, _ ->
                         val acc = accounts[position]
                         val dialog = AlertDialog.Builder(this, R.style.Theme_ErdinPlayer_Dialog)
-                            .setTitle("HesabÄ± Sil")
+                            .setTitle("Hesabı Sil")
                             .setMessage("Hesap silinsin mi? " + acc.name)
                             .setPositiveButton("Evet") { _, _ ->
                                 prefs.deleteAccount(acc.id)
                                 refreshList()
                             }
-                            .setNegativeButton("HayÄ±r", null)
+                            .setNegativeButton("Hayır", null)
                             .create()
                         dialog.show()
                         true
@@ -1045,7 +1028,7 @@ jobs:
                         val u = etUser.text.toString().trim().replace("""\s+""".toRegex(), "")
                         val p = etPass.text.toString().trim()
                         if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
-                            Toast.makeText(this, "Xtream URL / kullanÄ±cÄ± adÄ± / ÅŸifre zorunlu.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Xtream URL / kullanıcı adı / şifre zorunlu.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
                         if (!d.startsWith("http://", true) && !d.startsWith("https://", true)) {
@@ -1063,7 +1046,7 @@ jobs:
                     } else {
                         val m = etM3u.text.toString().trim()
                         if (m.isEmpty()) {
-                            Toast.makeText(this, "M3U URL boÅŸ olamaz.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "M3U URL boş olamaz.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
                         prefs.createM3uAccount(finalName, m)
@@ -1145,7 +1128,6 @@ jobs:
             private var accountType: String = "XTREAM"
 
             private enum class Screen { CATEGORIES, ITEMS }
-            private val MODE_LIST = listOf("LIVE","VOD","SERIES","FAVS","HISTORY")
             private var screen: Screen = Screen.CATEGORIES
             private var selectedCategory: Category? = null
             private var categoriesAll: List<Category> = emptyList()
@@ -1197,7 +1179,7 @@ jobs:
 
                 layoutManager = LinearLayoutManager(this)
                 rv.layoutManager = layoutManager
-                gridAdapter = GridAdapter(emptyList(), emptyList()) { pos -> onGridClick(pos) }
+                gridAdapter = GridAdapter(emptyList(), emptyList(), { pos -> onGridClick(pos) }, emptySet()) { pos -> toggleFav(pos) }
                 rv.adapter = gridAdapter
                 rvAccounts = findViewById(R.id.rvAccounts)
                 rvAccounts.layoutManager = LinearLayoutManager(this)
@@ -1236,7 +1218,7 @@ jobs:
                 
                 activeAcc = prefs.getActive()
                 if (activeAcc == null) {
-                    tvStatus.text = "KayÄ±tlÄ± aktif hesap yok. GiriÅŸ ekranÄ±na dÃ¶nÃ¼n."
+                    tvStatus.text = "Kayıtlı aktif hesap yok. Giriş ekranına dönün."
                     tvStatus.visibility = View.VISIBLE
                     layoutModeSelector.visibility = View.GONE
                     rv.visibility = View.GONE
@@ -1257,7 +1239,7 @@ jobs:
             private fun setupDrawerAccounts() {
                 val acc = activeAcc ?: return
                 tvDrawerUser.text = "Hesap: " + acc.name
-                tvDrawerExpire.text = "SÃ¼re: -"
+                tvDrawerExpire.text = "Süre: -"
                 val adapter = AccountsAdapter(
                     prefs.getAccounts().toMutableList(),
                     onOpen = { a ->
@@ -1265,14 +1247,14 @@ jobs:
                         activeAcc = a
                         accountType = a.type
                         tvDrawerUser.text = "Hesap: " + a.name
-                        tvDrawerExpire.text = "SÃ¼re: -"
+                        tvDrawerExpire.text = "Süre: -"
                         drawer.closeDrawer(GravityCompat.START)
                         currentMode = "LIVE"
                         showModeSelector()
                     },
                     onDelete = { a ->
                         AlertDialog.Builder(this, R.style.Theme_ErdinPlayer_Dialog)
-                            .setTitle("HesabÄ± Sil")
+                            .setTitle("Hesabı Sil")
                             .setMessage("Hesap silinsin mi? " + a.name)
                             .setPositiveButton("Evet") { _, _ ->
                                 prefs.deleteAccount(a.id)
@@ -1288,7 +1270,7 @@ jobs:
                                     showModeSelector()
                                 }
                             }
-                            .setNegativeButton("HayÄ±r", null)
+                            .setNegativeButton("Hayır", null)
                             .show()
                     }
                 )
@@ -1298,7 +1280,7 @@ jobs:
                 tvTitle.text = when (currentMode) {
                     "VOD" -> "Filmler"
                     "SERIES" -> "Diziler"
-                    else -> "CanlÄ± TV"
+                    else -> "Canlı TV"
                 }
             }
             private fun showModeSelector() {
@@ -1313,51 +1295,6 @@ jobs:
                 tvStatus.visibility = View.GONE
                 tvTitle.text = "Ne izlemek istersiniz?"
                 btnModeLive.requestFocus()
-            }
-            private fun openMode(mode: String) {
-                val acc = activeAcc
-                if (acc == null) { Toast.makeText(this, "Once hesap ekleyin.", Toast.LENGTH_SHORT).show(); return }
-                currentMode = mode
-                setTitleForMode()
-                layoutModeSelector.visibility = View.GONE
-                rv.visibility = View.VISIBLE
-                when (mode) {
-                    "FAVS" -> loadFavs()
-                    "HISTORY" -> loadHistory()
-                    else -> resetFlowAndLoad()
-                }
-            }
-            private fun loadFavs() {
-                val acc = activeAcc ?: return
-                tvTitle.text = "Favoriler"
-                pb.visibility = View.GONE; tvStatus.visibility = View.GONE
-                val favs = prefs.getFavs(acc.id)
-                if (favs.isEmpty()) { tvStatus.text = "Henuz favori yok. Kanala uzun basiniz."; tvStatus.visibility = View.VISIBLE; return }
-                val titles = favs.map { it.first }; val subs = favs.map { "Favori" }; val urls = favs.map { it.second }
-                gridAdapter = GridAdapter(titles, subs) { pos ->
-                    if (pos < 0 || pos >= urls.size) return@GridAdapter
-                    val itn = android.content.Intent(this, PlayerActivity::class.java)
-                    itn.putExtra("URL", urls[pos]); itn.putExtra("REF",""); itn.putExtra("ORG",""); itn.putExtra("TYPE","LIVE")
-                    prefs.addHistory(acc.id, titles[pos], urls[pos], "LIVE")
-                    AdsHelper.maybeShowOnChannelClick(this) { startActivity(itn) }
-                }
-                rv.adapter = gridAdapter
-            }
-            private fun loadHistory() {
-                val acc = activeAcc ?: return
-                tvTitle.text = "Gecmis"
-                pb.visibility = View.GONE; tvStatus.visibility = View.GONE
-                val history = prefs.getHistory(acc.id)
-                if (history.isEmpty()) { tvStatus.text = "Gecmis bos."; tvStatus.visibility = View.VISIBLE; return }
-                val titles = history.map { it.name }; val subs = history.map { it.type }; val urls = history.map { it.url }
-                gridAdapter = GridAdapter(titles, subs) { pos ->
-                    if (pos < 0 || pos >= urls.size) return@GridAdapter
-                    val itn = android.content.Intent(this, PlayerActivity::class.java)
-                    itn.putExtra("URL", urls[pos]); itn.putExtra("REF",""); itn.putExtra("ORG",""); itn.putExtra("TYPE", history[pos].type)
-                    prefs.addHistory(acc.id, titles[pos], urls[pos], history[pos].type)
-                    AdsHelper.maybeShowOnChannelClick(this) { startActivity(itn) }
-                }
-                rv.adapter = gridAdapter
             }
             private fun buildPlayUrl(item: StreamItem, acc: AccountProfile): String? {
                 if (acc.type == "M3U") return item.full_url
@@ -1377,8 +1314,52 @@ jobs:
                 val item = streamsAll[globalIdx]; val url = buildPlayUrl(item, acc) ?: return
                 val isNow = prefs.toggleFav(acc.id, url, item.name)
                 Toast.makeText(this, if (isNow) "Favorilere eklendi" else "Favorilerden kaldirildi", Toast.LENGTH_SHORT).show()
-                val newFavSet = prefs.getFavs(acc.id).map { it.first }.toSet()
-                gridAdapter?.update(displayTitles, displaySubtitles, newFavSet)
+                gridAdapter?.update(displayTitles, displaySubtitles, prefs.getFavs(acc.id).map { it.first }.toSet())
+            }
+            private fun loadFavs() {
+                val acc = activeAcc ?: return
+                tvTitle.text = "Favoriler"
+                pb.visibility = View.GONE; tvStatus.visibility = View.GONE
+                val favs = prefs.getFavs(acc.id)
+                if (favs.isEmpty()) { tvStatus.text = "Henuz favori yok."; tvStatus.visibility = View.VISIBLE; return }
+                val titles = favs.map { it.first }; val urls = favs.map { it.second }
+                gridAdapter = GridAdapter(titles, titles.map { "" }) { pos ->
+                    if (pos < 0 || pos >= urls.size) return@GridAdapter
+                    val itn = Intent(this, PlayerActivity::class.java)
+                    itn.putExtra("URL", urls[pos]); itn.putExtra("REF",""); itn.putExtra("ORG",""); itn.putExtra("TYPE","LIVE")
+                    prefs.addHistory(acc.id, titles[pos], urls[pos], "LIVE")
+                    AdsHelper.maybeShowOnChannelClick(this) { startActivity(itn) }
+                }
+                rv.adapter = gridAdapter
+            }
+            private fun loadHistory() {
+                val acc = activeAcc ?: return
+                tvTitle.text = "Gecmis"
+                pb.visibility = View.GONE; tvStatus.visibility = View.GONE
+                val history = prefs.getHistory(acc.id)
+                if (history.isEmpty()) { tvStatus.text = "Gecmis bos."; tvStatus.visibility = View.VISIBLE; return }
+                val titles = history.map { it.name }; val urls = history.map { it.url }; val types = history.map { it.type }
+                gridAdapter = GridAdapter(titles, types) { pos ->
+                    if (pos < 0 || pos >= urls.size) return@GridAdapter
+                    val itn = Intent(this, PlayerActivity::class.java)
+                    itn.putExtra("URL", urls[pos]); itn.putExtra("REF",""); itn.putExtra("ORG",""); itn.putExtra("TYPE", types[pos])
+                    prefs.addHistory(acc.id, titles[pos], urls[pos], types[pos])
+                    AdsHelper.maybeShowOnChannelClick(this) { startActivity(itn) }
+                }
+                rv.adapter = gridAdapter
+            }
+            private fun openMode(mode: String) {
+                val acc = activeAcc
+                if (acc == null) { Toast.makeText(this, "Once hesap ekleyin.", Toast.LENGTH_SHORT).show(); return }
+                currentMode = mode
+                setTitleForMode()
+                layoutModeSelector.visibility = View.GONE
+                rv.visibility = View.VISIBLE
+                when (mode) {
+                    "FAVS" -> loadFavs()
+                    "HISTORY" -> loadHistory()
+                    else -> resetFlowAndLoad()
+                }
             }
             private fun resetFlowAndLoad() {
                 etSearch.setText("")
@@ -1425,9 +1406,9 @@ jobs:
                 selectedCategory = cat
                 screen = Screen.ITEMS
                 tvTitle.text = when (currentMode) {
-                    "VOD" -> "Filmler â€¢ " + cat.category_name
-                    "SERIES" -> "Diziler â€¢ " + cat.category_name
-                    else -> "CanlÄ± TV â€¢ " + cat.category_name
+                    "VOD" -> "Filmler • " + cat.category_name
+                    "SERIES" -> "Diziler • " + cat.category_name
+                    else -> "Canlı TV • " + cat.category_name
                 }
                 applySearchFilter(etSearch.text?.toString() ?: "")
                 layoutManager.scrollToPositionWithOffset(0, 0)
@@ -1458,7 +1439,8 @@ jobs:
                  displayTitles = tempTitles
                  displaySubtitles = tempSubs
                  displayMapIndex = tempIndexMap
-                 gridAdapter?.update(displayTitles, displaySubtitles)
+                 val favSet = if (screen == Screen.ITEMS) prefs.getFavs(activeAcc?.id ?: 0).map { it.first }.toSet() else emptySet()
+                gridAdapter?.update(displayTitles, displaySubtitles, favSet)
             }
 
             private fun applySearchFilter(qRaw: String) {
@@ -1519,7 +1501,8 @@ jobs:
                 displaySubtitles = tempSubs
                 displayMapIndex = tempIndexMap
                 
-                gridAdapter?.update(displayTitles, displaySubtitles)
+                val favSet = if (screen == Screen.ITEMS) prefs.getFavs(activeAcc?.id ?: 0).map { it.first }.toSet() else emptySet()
+                gridAdapter?.update(displayTitles, displaySubtitles, favSet)
             }
             
             private fun onGridClick(position: Int) {
@@ -1571,7 +1554,7 @@ jobs:
                     var m3uUrl = acc.m3u?.trim() ?: ""
                     if (m3uUrl.isEmpty()) {
                         pb.visibility = View.GONE
-                        tvStatus.text = "Bu M3U hesabÄ±nda link yok."
+                        tvStatus.text = "Bu M3U hesabında link yok."
                         tvStatus.visibility = View.VISIBLE
                         return
                     }
@@ -1584,13 +1567,13 @@ jobs:
                                 pb.visibility = View.GONE
                                 categoriesAll = cats
                                 streamsAll = streamsList
-                                tvDrawerExpire.text = "SÃ¼re: M3U Playlist"
+                                tvDrawerExpire.text = "Süre: M3U Playlist"
                                 showCategories()
                             }
                         } catch (e: Exception) {
                             runOnUiThread {
                                 pb.visibility = View.GONE
-                                tvStatus.text = "M3U okunamadÄ±: " + (e.message ?: "bilinmeyen hata")
+                                tvStatus.text = "M3U okunamadı: " + (e.message ?: "bilinmeyen hata")
                                 tvStatus.visibility = View.VISIBLE
                             }
                             RemoteLogger.sendEvent(this, "m3u_fetch_failed", mapOf("error" to (e.message ?: "")))
@@ -1603,7 +1586,7 @@ jobs:
                 val pass = (acc.pass ?: "").trim()
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                     pb.visibility = View.GONE
-                    tvStatus.text = "DNS / kullanÄ±cÄ± / ÅŸifre boÅŸ."
+                    tvStatus.text = "DNS / kullanıcı / şifre boş."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
@@ -1631,13 +1614,13 @@ jobs:
                             categoriesAll = fetchedCategories
                             streamsAll = fetchedStreams
                             val expText = formatExp(accInfo.second)
-                            tvDrawerExpire.text = "SÃ¼re: " + expText
+                            tvDrawerExpire.text = "Süre: " + expText
                             showCategories()
                         }
                     } catch (e: Exception) {
                         runOnUiThread {
                             pb.visibility = View.GONE
-                            tvStatus.text = "Veriler alÄ±namadÄ±: " + (e.message ?: "bilinmeyen hata")
+                            tvStatus.text = "Veriler alınamadı: " + (e.message ?: "bilinmeyen hata")
                             tvStatus.visibility = View.VISIBLE
                         }
                         RemoteLogger.sendEvent(this, "xtream_fetch_failed", mapOf("error" to (e.message ?: "")))
@@ -1719,7 +1702,7 @@ jobs:
                 }
             }
             private fun formatExp(exp: String?): String {
-                if (exp.isNullOrEmpty() || exp == "0" || exp == "null") return "SÄ±nÄ±rsÄ±z"
+                if (exp.isNullOrEmpty() || exp == "0" || exp == "null") return "Sınırsız"
                 return try {
                     val seconds = exp.toLong()
                     val date = Date(seconds * 1000L)
@@ -1783,7 +1766,7 @@ jobs:
                 }
             }
             private fun doHttpGet(urlStr: String, redirectsLeft: Int): String {
-                if (redirectsLeft <= 0) throw Exception("Ã‡ok fazla yÃ¶nlendirme")
+                if (redirectsLeft <= 0) throw Exception("Çok fazla yönlendirme")
                 val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
                     instanceFollowRedirects = false
                     connectTimeout = 25000
@@ -1806,12 +1789,12 @@ jobs:
                     }
                     val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                     val encoding = (conn.contentEncoding ?: "").lowercase(Locale.getDefault())
-                    val raw = stream ?: throw Exception("HTTP " + code + " boÅŸ response")
+                    val raw = stream ?: throw Exception("HTTP " + code + " boş response")
                     val input = if (encoding.contains("gzip")) java.util.zip.GZIPInputStream(raw) else raw
                     val body = input.bufferedReader(Charsets.UTF_8).use { it.readText() }
                     val trimmed = body.trimStart()
                     if (trimmed.startsWith("<!DOCTYPE", true) || trimmed.startsWith("<html", true)) {
-                        throw Exception("JSON yerine HTML dÃ¶ndÃ¼ (muhtemel engel/koruma). Ä°lk 200: " + trimmed.take(200))
+                        throw Exception("JSON yerine HTML döndü (muhtemel engel/koruma). İlk 200: " + trimmed.take(200))
                     }
                     if (code !in 200..299) {
                         throw Exception("HTTP " + code + ": " + body.take(300))
@@ -1895,7 +1878,7 @@ jobs:
                     }
                 }
                 if (seriesId.isEmpty()) {
-                    tvStatus.text = "GeÃ§ersiz seri bilgisi."
+                    tvStatus.text = "Geçersiz seri bilgisi."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
@@ -1963,7 +1946,7 @@ jobs:
                 var count = 0
                 for (i in displayEpisodes.indices) {
                     val ep = displayEpisodes[i]
-                    titles.add("\${ep.episodeNumber.toString().padStart(2, '0')}. BÃ¶lÃ¼m - \${ep.title}")
+                    titles.add("\${ep.episodeNumber.toString().padStart(2, '0')}. Bölüm - \${ep.title}")
                     subs.add("")
                     mapIndex.add(i)
                     
@@ -1977,7 +1960,7 @@ jobs:
                 
                 displayMapIndex = mapIndex
                 gridAdapter.update(titles, subs)
-                tvTitle.text = "\$seriesName â€¢ Sezon \$season"
+                tvTitle.text = "\$seriesName • Sezon \$season"
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
             private fun playEpisode(ep: EpisodeItem) {
@@ -1999,7 +1982,7 @@ jobs:
                 val user = prefs.getUser().trim().replace("""\s+""".toRegex(), "")
                 val pass = prefs.getPass().trim()
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                    tvStatus.text = "DNS / kullanÄ±cÄ± / ÅŸifre eksik."
+                    tvStatus.text = "DNS / kullanıcı / şifre eksik."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
@@ -2016,7 +1999,7 @@ jobs:
                             setRequestProperty("User-Agent", FAKE_USER_AGENT)
                         }
                         if (conn.responseCode != HttpURLConnection.HTTP_OK) {
-                            runOnUiThread { tvStatus.text = "Sunucu yanÄ±tÄ±: " + conn.responseCode; tvStatus.visibility = View.VISIBLE; pb.visibility = View.GONE }
+                            runOnUiThread { tvStatus.text = "Sunucu yanıtı: " + conn.responseCode; tvStatus.visibility = View.VISIBLE; pb.visibility = View.GONE }
                             return@Thread
                         }
                         val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
@@ -2033,7 +2016,7 @@ jobs:
                             for (i in 0 until arr.length()) {
                                 val epObj = arr.getJSONObject(i)
                                 val id = epObj.optString("id", "")
-                                val title = epObj.optString("title", "BÃ¶lÃ¼m")
+                                val title = epObj.optString("title", "Bölüm")
                                 val epNum = epObj.optInt("episode_num", 1)
                                 val ext = epObj.optString("container_extension", "mp4")
                                 allEpisodes.add(EpisodeItem(id, title, seasonNum, epNum, ext))
@@ -2043,7 +2026,7 @@ jobs:
                         runOnUiThread {
                             pb.visibility = View.GONE
                             if (seasons.isEmpty()) {
-                                tvStatus.text = "Bu seri iÃ§in bÃ¶lÃ¼m bulunamadÄ±."
+                                tvStatus.text = "Bu seri için bölüm bulunamadı."
                                 tvStatus.visibility = View.VISIBLE
                             } else {
                                 showSeasons()
@@ -2052,7 +2035,7 @@ jobs:
                     } catch (e: Exception) {
                         runOnUiThread {
                             pb.visibility = View.GONE
-                            tvStatus.text = "Seri bilgisi alÄ±namadÄ±: " + (e.message ?: "bilinmeyen hata")
+                            tvStatus.text = "Seri bilgisi alınamadı: " + (e.message ?: "bilinmeyen hata")
                             tvStatus.visibility = View.VISIBLE
                         }
                     }
@@ -2086,9 +2069,9 @@ jobs:
         import androidx.media3.exoplayer.DefaultLoadControl
         import androidx.media3.exoplayer.ExoPlayer
         import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-        import androidx.media3.ui.PlayerView
         import okhttp3.OkHttpClient
         import java.util.concurrent.TimeUnit
+        import androidx.media3.ui.PlayerView
 
         class PlayerActivity : AppCompatActivity() {
             private var player: ExoPlayer? = null
@@ -2121,45 +2104,55 @@ jobs:
                 
                 setContentView(R.layout.activity_player_pro)
                 hideSystemBars()
+                
                 val playUrl = intent.getStringExtra("URL") ?: ""
                 val ref = intent.getStringExtra("REF") ?: ""
                 val org = intent.getStringExtra("ORG") ?: ""
-                val type = intent.getStringExtra("TYPE") ?: "LIVE"
-                isLive = (type == "LIVE")
-                if (playUrl.isEmpty()) { Toast.makeText(this, "Gecersiz URL.", Toast.LENGTH_SHORT).show(); finish(); return }
+                
+                if (playUrl.isEmpty()) {
+                    Toast.makeText(this, "Geçersiz yayın URL'si.", Toast.LENGTH_SHORT).show()
+                    finish()
+                    return
+                }
+                
                 playerView = findViewById(R.id.pvMain)
-                tvOsd = findViewById(R.id.tvOsd)
                 audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+
                 setupGestures()
+
                 try {
-                    val headers = mutableMapOf("User-Agent" to FAKE_USER_AGENT)
+                    val headers = mutableMapOf<String, String>()
+                    headers["User-Agent"] = FAKE_USER_AGENT
                     if (ref.isNotEmpty()) headers["Referer"] = ref
                     if (org.isNotEmpty()) headers["Origin"] = org
-                    val okClient = OkHttpClient.Builder()
-                        .connectTimeout(20, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS)
-                        .retryOnConnectionFailure(true).build()
-                    val dsFactory = OkHttpDataSource.Factory(okClient).setDefaultRequestProperties(headers)
-                    val loadControl = DefaultLoadControl.Builder()
-                        .setBufferDurationsMs(
-                            if (isLive) 4000 else 20000, if (isLive) 8000 else 60000,
-                            if (isLive) 1000 else 2500, if (isLive) 4000 else 10000).build()
+                    
+                    val httpFactory = DefaultHttpDataSource.Factory()
+                        .setConnectTimeoutMs(20000)
+                        .setReadTimeoutMs(40000)
+                        .setDefaultRequestProperties(headers)
+                        
+                    val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
+                    
                     player = ExoPlayer.Builder(this)
-                        .setMediaSourceFactory(DefaultMediaSourceFactory(dsFactory))
-                        .setLoadControl(loadControl).build()
+                        .setMediaSourceFactory(mediaSourceFactory)
+                        .build()
+                        
                     playerView.player = player
-                    playerView.useController = !isLive
-                    player?.setMediaItem(MediaItem.fromUri(playUrl))
-                    player?.prepare(); player?.playWhenReady = true
+                    
+                    val mediaItem = MediaItem.fromUri(playUrl)
+                    player?.setMediaItem(mediaItem)
+                    player?.prepare()
+                    player?.playWhenReady = true
+                    
                     player?.addListener(object : Player.Listener {
                         override fun onPlayerError(error: PlaybackException) {
                             Toast.makeText(this@PlayerActivity, "Hata: \${error.message}", Toast.LENGTH_LONG).show()
                         }
-                        override fun onPlaybackStateChanged(s: Int) {
-                            if (s == Player.STATE_READY && isLive) player?.seekToDefaultPosition()
-                        }
                     })
+                    
                 } catch (e: Exception) {
-                    Toast.makeText(this, "Oynatici hatasi: " + (e.message ?: ""), Toast.LENGTH_LONG).show(); finish()
+                    Toast.makeText(this, "Oynatıcı hatası: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
+                    finish()
                 }
             }
 
@@ -2179,11 +2172,8 @@ jobs:
                     override fun onDoubleTap(e: MotionEvent): Boolean {
                         val p = player ?: return true
                         if (!isLive) {
-                            if (e.x < playerView.width / 2f) {
-                                p.seekTo((p.currentPosition - 10000).coerceAtLeast(0)); showOsd("-10s")
-                            } else {
-                                p.seekTo((p.currentPosition + 10000).coerceAtMost(p.duration.coerceAtLeast(0))); showOsd("+10s")
-                            }
+                            if (e.x < playerView.width / 2f) { p.seekTo((p.currentPosition - 10000).coerceAtLeast(0)); showOsd("-10s") }
+                            else { p.seekTo((p.currentPosition + 10000).coerceAtMost(p.duration.coerceAtLeast(0))); showOsd("+10s") }
                         }
                         return true
                     }
@@ -2210,7 +2200,7 @@ jobs:
                                     val p = player ?: return@setOnTouchListener true
                                     val seekDelta = (dx / width * 120000).toLong()
                                     p.seekTo((p.currentPosition + seekDelta).coerceIn(0, p.duration.coerceAtLeast(0)))
-                                    showOsd(if (seekDelta >= 0) "+\${seekDelta/1000}s" else "\${seekDelta/1000}s")
+                                    showOsd(if (seekDelta >= 0) "+${seekDelta/1000}s" else "${seekDelta/1000}s")
                                 }
                                 return@setOnTouchListener true
                             }
@@ -2220,12 +2210,12 @@ jobs:
                                 val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                                 val newVol = (startVolume + (percent * maxVol * 1.5f).toInt()).coerceIn(0, maxVol)
                                 am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                                showOsd("Ses: \${newVol * 100 / maxVol}%")
+                                showOsd("Ses: ${newVol*100/maxVol}%")
                             } else {
                                 val lp = window.attributes
                                 val newB = (startBrightness + percent * 1.5f).coerceIn(0.05f, 1f)
                                 lp.screenBrightness = newB; window.attributes = lp
-                                showOsd("Parlaklik: \${(newB*100).toInt()}%")
+                                showOsd("Parlaklik: ${(newB*100).toInt()}%")
                             }
                             return@setOnTouchListener true
                         }
@@ -2305,7 +2295,7 @@ jobs:
                 android:id="@+id/tvLoginType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="GiriÅŸ Tipi"
+                android:text="Giriş Tipi"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:layout_marginBottom="4dp"/>
@@ -2359,7 +2349,7 @@ jobs:
                 android:id="@+id/etName"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:hint="Hesap adÄ±"
+                android:hint="Hesap adı"
                 android:background="@drawable/selector_input_focus"
                 android:padding="12dp"
                 android:textColor="@color/white"
@@ -2386,7 +2376,7 @@ jobs:
                     android:id="@+id/etUser"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:hint="KullanÄ±cÄ± adÄ±"
+                    android:hint="Kullanıcı adı"
                     android:background="@drawable/selector_input_focus"
                     android:padding="12dp"
                     android:textColor="@color/white"
@@ -2397,7 +2387,7 @@ jobs:
                     android:id="@+id/etPass"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:hint="Åifre"
+                    android:hint="Şifre"
                     android:inputType="textVisiblePassword"
                     android:background="@drawable/selector_input_focus"
                     android:padding="12dp"
@@ -2439,7 +2429,7 @@ jobs:
                 android:id="@+id/tvAccountsTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="KayÄ±tlÄ± Hesaplar"
+                android:text="Kayıtlı Hesaplar"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:textStyle="bold"
@@ -2448,7 +2438,7 @@ jobs:
                 android:id="@+id/tvAccountsHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Devam etmek iÃ§in alttan bir hesap seÃ§in"
+                android:text="Devam etmek için alttan bir hesap seçin"
                 android:textColor="@color/hint_yellow"
                 android:textSize="13sp"
                 android:layout_marginBottom="6dp"/>
@@ -2507,7 +2497,7 @@ jobs:
                         android:id="@+id/tvOpenDrawer"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="â˜°"
+                        android:text="☰"
                         android:textColor="@color/white"
                         android:textSize="22sp"
                         android:paddingRight="12dp"
@@ -2568,7 +2558,7 @@ jobs:
                         android:layout_width="match_parent"
                         android:layout_height="64dp"
                         android:gravity="center"
-                        android:text="CanlÄ± TV"
+                        android:text="Canlı TV"
                         android:textColor="@color/white"
                         android:textSize="18sp"
                         android:textStyle="bold"
@@ -2643,7 +2633,7 @@ jobs:
                         android:id="@+id/tvDrawerExpire"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="SÃ¼re: -"
+                        android:text="Süre: -"
                         android:textColor="@color/white"
                         android:textSize="14sp"
                         android:layout_marginTop="4dp"/>
@@ -2667,7 +2657,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:gravity="center"
-                    android:text="Ã‡Ä±kÄ±ÅŸ"
+                    android:text="Çıkış"
                     android:textColor="@color/white"
                     android:textStyle="bold"
                     android:background="@drawable/bg_focusable"
@@ -2754,7 +2744,7 @@ jobs:
                     android:id="@+id/tvAccountName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Hesap AdÄ±"
+                    android:text="Hesap Adı"
                     android:textColor="@color/white"
                     android:textStyle="bold"
                     android:textSize="15sp"/>
@@ -2950,31 +2940,31 @@ jobs:
         gradle assembleRelease --no-daemon
         gradle bundleRelease --no-daemon
 
-    - name: 6. APK'yi GitHub Artifact Olarak YÃ¼kle
+    - name: 6. APK'yi GitHub Artifact Olarak Yükle
       id: upload_apk
       uses: actions/upload-artifact@v4
       with:
         name: ErdinXtream-Pro-v3-APK
         path: ErdinXtream/app/build/outputs/apk/release/*.apk
 
-    - name: 7. AAB'yi GitHub Artifact Olarak YÃ¼kle
+    - name: 7. AAB'yi GitHub Artifact Olarak Yükle
       id: upload_aab
       uses: actions/upload-artifact@v4
       with:
         name: ErdinXtream-Pro-v3-AAB
         path: ErdinXtream/app/build/outputs/bundle/release/*.aab
 
-    - name: 8. Artifact URL'lerini GÃ¶ster
+    - name: 8. Artifact URL'lerini Göster
       run: |
         echo "====================================="
-        echo " ğŸ“¦ APK Artifact URL (GitHub):"
+        echo " 📦 APK Artifact URL (GitHub):"
         echo "${{ steps.upload_apk.outputs.artifact-url }}"
         echo "-------------------------------------"
-        echo " ğŸ“¦ AAB Artifact URL (GitHub):"
+        echo " 📦 AAB Artifact URL (GitHub):"
         echo "${{ steps.upload_aab.outputs.artifact-url }}"
         echo "====================================="
 
-        echo "### ErdinXtream Player Pro v3 Ciktilar" >> $GITHUB_STEP_SUMMARY
+        echo "### ErdinXtream Player Pro v3 Çıktılar" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "ğŸ”— [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
-        echo "ğŸ”— [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
