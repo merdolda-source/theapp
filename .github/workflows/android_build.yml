@@ -16,7 +16,7 @@ jobs:
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
     steps:
-    - name: 1. Depo Ã‡ekme
+    - name: 1. Depo Çekme
       uses: actions/checkout@v4
 
     - name: 2. Java 17 Kurulumu
@@ -25,7 +25,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: 3. ErdinPlayer Pro Proje Ãœretimi (PHP Config + New UI + Dynamic Ads + Gestures)
+    - name: 3. ErdinPlayer Pro Proje Üretimi (PHP Config + New UI + Dynamic Ads + Gestures)
       shell: bash
       run: |
         set -e
@@ -39,7 +39,7 @@ jobs:
         KEY_PASS="${ANDROID_KEY_PASSWORD:-$PASS}"
         KEY_ALIAS="${ANDROID_KEY_ALIAS:-key0}"
 
-        echo "ğŸš€ ErdinPlayer Pro (PHP Config Edition) Ã¼retiliyor..."
+        echo "🚀 ErdinPlayer Pro (PHP Config Edition) üretiliyor..."
 
         rm -rf "$APP_NAME"
 
@@ -63,9 +63,9 @@ jobs:
 
         # Keystore
         if [ -n "${ANDROID_KEYSTORE_BASE64}" ]; then
-          echo "ğŸ” Keystore secrets'ten yazÄ±lÄ±yor..."
+          echo "🔐 Keystore secrets'ten yazılıyor..."
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > app/keystore.jks || {
-            echo "âš ï¸ base64 decode HATASI â€“ local keystore Ã¼retilecek."
+            echo "⚠️ base64 decode HATASI – local keystore üretilecek."
             keytool -genkey -v \
               -keystore app/keystore.jks \
               -keyalg RSA -keysize 2048 -validity 10000 \
@@ -75,7 +75,7 @@ jobs:
               -dname "CN=Erdin, O=ErdinMedia, C=TR"
           }
         else
-          echo "âš ï¸ ANDROID_KEYSTORE_BASE64 yok, local keystore Ã¼retilecek."
+          echo "⚠️ ANDROID_KEYSTORE_BASE64 yok, local keystore üretilecek."
           keytool -genkey -v \
             -keystore app/keystore.jks \
             -keyalg RSA -keysize 2048 -validity 10000 \
@@ -158,7 +158,7 @@ jobs:
             implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
             implementation 'androidx.leanback:leanback:1.0.0' 
 
-            // ExoPlayer GÃ¼ncel SÃ¼rÃ¼m
+            // ExoPlayer Güncel Sürüm
             implementation 'androidx.media3:media3-exoplayer:1.2.0'
             implementation 'androidx.media3:media3-ui:1.2.0'
             implementation 'androidx.media3:media3-exoplayer-hls:1.2.0'
@@ -169,7 +169,7 @@ jobs:
         }
         EOF
 
-        # ============ RENK PALETÄ° ============
+        # ============ RENK PALETİ ============
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
             <color name="bg_dark">#050710</color>
@@ -350,7 +350,7 @@ jobs:
             @Volatile private var appId: String? = null
 
             @Volatile private var lastFetchMs: Long = 0L
-            private const val TTL_MS = 60_000L  // 1 dk iÃ§inde yeniden Ã§eker
+            private const val TTL_MS = 60_000L  // 1 dk içinde yeniden çeker
 
             fun fetchLatest(context: Context, force: Boolean = false) {
                 val now = System.currentTimeMillis()
@@ -917,17 +917,17 @@ jobs:
                 
                 fun applyLanguageTexts() {
                     tvTitle.text = LangManager.t(this, "login_title", "ErdinPlayer Pro")
-                    tvLoginType.text = LangManager.t(this, "login_type", "GiriÅŸ Tipi")
+                    tvLoginType.text = LangManager.t(this, "login_type", "Giriş Tipi")
                     tvXtream.text = LangManager.t(this, "login_xtream", "Xtream")
                     tvM3u.text = LangManager.t(this, "login_m3u", "M3U")
-                    etName.hint = LangManager.t(this, "login_name_hint", "Hesap adÄ±")
+                    etName.hint = LangManager.t(this, "login_name_hint", "Hesap adı")
                     etDns.hint = LangManager.t(this, "login_dns_hint", "Xtream URL girin")
-                    etUser.hint = LangManager.t(this, "login_user_hint", "KullanÄ±cÄ± adÄ±")
-                    etPass.hint = LangManager.t(this, "login_pass_hint", "Åifre")
+                    etUser.hint = LangManager.t(this, "login_user_hint", "Kullanıcı adı")
+                    etPass.hint = LangManager.t(this, "login_pass_hint", "Şifre")
                     etM3u.hint = LangManager.t(this, "login_m3u_hint", "M3U URL girin")
                     btnAdd.text = LangManager.t(this, "login_add_button", "Hesap Ekle")
-                    tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "KayÄ±tlÄ± Hesaplar")
-                    tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Devam etmek iÃ§in alttan bir hesap seÃ§in")
+                    tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "Kayıtlı Hesaplar")
+                    tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Devam etmek için alttan bir hesap seçin")
                 }
                 applyLanguageTexts()
                 fun updateTypeUI() {
@@ -967,13 +967,13 @@ jobs:
                     lvAccounts.setOnItemLongClickListener { _, _, position, _ ->
                         val acc = accounts[position]
                         val dialog = AlertDialog.Builder(this, R.style.Theme_ErdinPlayer_Dialog)
-                            .setTitle("HesabÄ± Sil")
+                            .setTitle("Hesabı Sil")
                             .setMessage("Hesap silinsin mi? " + acc.name)
                             .setPositiveButton("Evet") { _, _ ->
                                 prefs.deleteAccount(acc.id)
                                 refreshList()
                             }
-                            .setNegativeButton("HayÄ±r", null)
+                            .setNegativeButton("Hayır", null)
                             .create()
                         dialog.show()
                         true
@@ -988,7 +988,7 @@ jobs:
                         val u = etUser.text.toString().trim().replace("""\s+""".toRegex(), "")
                         val p = etPass.text.toString().trim()
                         if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
-                            Toast.makeText(this, "Xtream URL / kullanÄ±cÄ± adÄ± / ÅŸifre zorunlu.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Xtream URL / kullanıcı adı / şifre zorunlu.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
                         if (!d.startsWith("http://", true) && !d.startsWith("https://", true)) {
@@ -1006,7 +1006,7 @@ jobs:
                     } else {
                         val m = etM3u.text.toString().trim()
                         if (m.isEmpty()) {
-                            Toast.makeText(this, "M3U URL boÅŸ olamaz.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "M3U URL boş olamaz.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
                         prefs.createM3uAccount(finalName, m)
@@ -1174,7 +1174,7 @@ jobs:
                 
                 activeAcc = prefs.getActive()
                 if (activeAcc == null) {
-                    tvStatus.text = "KayÄ±tlÄ± aktif hesap yok. GiriÅŸ ekranÄ±na dÃ¶nÃ¼n."
+                    tvStatus.text = "Kayıtlı aktif hesap yok. Giriş ekranına dönün."
                     tvStatus.visibility = View.VISIBLE
                     layoutModeSelector.visibility = View.GONE
                     rv.visibility = View.GONE
@@ -1193,7 +1193,7 @@ jobs:
             private fun setupDrawerAccounts() {
                 val acc = activeAcc ?: return
                 tvDrawerUser.text = "Hesap: " + acc.name
-                tvDrawerExpire.text = "SÃ¼re: -"
+                tvDrawerExpire.text = "Süre: -"
                 val adapter = AccountsAdapter(
                     prefs.getAccounts().toMutableList(),
                     onOpen = { a ->
@@ -1201,14 +1201,14 @@ jobs:
                         activeAcc = a
                         accountType = a.type
                         tvDrawerUser.text = "Hesap: " + a.name
-                        tvDrawerExpire.text = "SÃ¼re: -"
+                        tvDrawerExpire.text = "Süre: -"
                         drawer.closeDrawer(GravityCompat.START)
                         currentMode = "LIVE"
                         showModeSelector()
                     },
                     onDelete = { a ->
                         AlertDialog.Builder(this, R.style.Theme_ErdinPlayer_Dialog)
-                            .setTitle("HesabÄ± Sil")
+                            .setTitle("Hesabı Sil")
                             .setMessage("Hesap silinsin mi? " + a.name)
                             .setPositiveButton("Evet") { _, _ ->
                                 prefs.deleteAccount(a.id)
@@ -1224,7 +1224,7 @@ jobs:
                                     showModeSelector()
                                 }
                             }
-                            .setNegativeButton("HayÄ±r", null)
+                            .setNegativeButton("Hayır", null)
                             .show()
                     }
                 )
@@ -1234,7 +1234,7 @@ jobs:
                 tvTitle.text = when (currentMode) {
                     "VOD" -> "Filmler"
                     "SERIES" -> "Diziler"
-                    else -> "CanlÄ± TV"
+                    else -> "Canlı TV"
                 }
             }
             private fun showModeSelector() {
@@ -1253,7 +1253,7 @@ jobs:
             private fun openMode(mode: String) {
                 val acc = activeAcc
                 if (acc == null) {
-                    Toast.makeText(this, "Ã–nce bir hesap ekleyin.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Önce bir hesap ekleyin.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 currentMode = mode
@@ -1307,9 +1307,9 @@ jobs:
                 selectedCategory = cat
                 screen = Screen.ITEMS
                 tvTitle.text = when (currentMode) {
-                    "VOD" -> "Filmler â€¢ " + cat.category_name
-                    "SERIES" -> "Diziler â€¢ " + cat.category_name
-                    else -> "CanlÄ± TV â€¢ " + cat.category_name
+                    "VOD" -> "Filmler • " + cat.category_name
+                    "SERIES" -> "Diziler • " + cat.category_name
+                    else -> "Canlı TV • " + cat.category_name
                 }
                 applySearchFilter(etSearch.text?.toString() ?: "")
                 layoutManager.scrollToPositionWithOffset(0, 0)
@@ -1429,7 +1429,7 @@ jobs:
                     if (acc.type == "M3U") {
                         val url = item.full_url
                         if (url.isNullOrEmpty()) {
-                            Toast.makeText(this, "GeÃ§ersiz M3U kanalÄ±.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Geçersiz M3U kanalı.", Toast.LENGTH_SHORT).show()
                             return
                         }
                         val itn = Intent(this, PlayerActivity::class.java)
@@ -1454,7 +1454,7 @@ jobs:
                     val user = (acc.user ?: "").trim().replace("""\s+""".toRegex(), "")
                     val pass = acc.pass?.trim() ?: ""
                     if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                        Toast.makeText(this, "DNS / kullanÄ±cÄ± / ÅŸifre boÅŸ.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "DNS / kullanıcı / şifre boş.", Toast.LENGTH_SHORT).show()
                         return
                     }
                     val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
@@ -1484,7 +1484,7 @@ jobs:
                     var m3uUrl = acc.m3u?.trim() ?: ""
                     if (m3uUrl.isEmpty()) {
                         pb.visibility = View.GONE
-                        tvStatus.text = "Bu M3U hesabÄ±nda link yok."
+                        tvStatus.text = "Bu M3U hesabında link yok."
                         tvStatus.visibility = View.VISIBLE
                         return
                     }
@@ -1497,13 +1497,13 @@ jobs:
                                 pb.visibility = View.GONE
                                 categoriesAll = cats
                                 streamsAll = streamsList
-                                tvDrawerExpire.text = "SÃ¼re: M3U Playlist"
+                                tvDrawerExpire.text = "Süre: M3U Playlist"
                                 showCategories()
                             }
                         } catch (e: Exception) {
                             runOnUiThread {
                                 pb.visibility = View.GONE
-                                tvStatus.text = "M3U okunamadÄ±: " + (e.message ?: "bilinmeyen hata")
+                                tvStatus.text = "M3U okunamadı: " + (e.message ?: "bilinmeyen hata")
                                 tvStatus.visibility = View.VISIBLE
                             }
                             RemoteLogger.sendEvent(this, "m3u_fetch_failed", mapOf("error" to (e.message ?: "")))
@@ -1516,7 +1516,7 @@ jobs:
                 val pass = (acc.pass ?: "").trim()
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                     pb.visibility = View.GONE
-                    tvStatus.text = "DNS / kullanÄ±cÄ± / ÅŸifre boÅŸ."
+                    tvStatus.text = "DNS / kullanıcı / şifre boş."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
@@ -1544,13 +1544,13 @@ jobs:
                             categoriesAll = fetchedCategories
                             streamsAll = fetchedStreams
                             val expText = formatExp(accInfo.second)
-                            tvDrawerExpire.text = "SÃ¼re: " + expText
+                            tvDrawerExpire.text = "Süre: " + expText
                             showCategories()
                         }
                     } catch (e: Exception) {
                         runOnUiThread {
                             pb.visibility = View.GONE
-                            tvStatus.text = "Veriler alÄ±namadÄ±: " + (e.message ?: "bilinmeyen hata")
+                            tvStatus.text = "Veriler alınamadı: " + (e.message ?: "bilinmeyen hata")
                             tvStatus.visibility = View.VISIBLE
                         }
                         RemoteLogger.sendEvent(this, "xtream_fetch_failed", mapOf("error" to (e.message ?: "")))
@@ -1632,7 +1632,7 @@ jobs:
                 }
             }
             private fun formatExp(exp: String?): String {
-                if (exp.isNullOrEmpty() || exp == "0" || exp == "null") return "SÄ±nÄ±rsÄ±z"
+                if (exp.isNullOrEmpty() || exp == "0" || exp == "null") return "Sınırsız"
                 return try {
                     val seconds = exp.toLong()
                     val date = Date(seconds * 1000L)
@@ -1696,7 +1696,7 @@ jobs:
                 }
             }
             private fun doHttpGet(urlStr: String, redirectsLeft: Int): String {
-                if (redirectsLeft <= 0) throw Exception("Ã‡ok fazla yÃ¶nlendirme")
+                if (redirectsLeft <= 0) throw Exception("Çok fazla yönlendirme")
                 val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
                     instanceFollowRedirects = false
                     connectTimeout = 25000
@@ -1719,12 +1719,12 @@ jobs:
                     }
                     val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                     val encoding = (conn.contentEncoding ?: "").lowercase(Locale.getDefault())
-                    val raw = stream ?: throw Exception("HTTP " + code + " boÅŸ response")
+                    val raw = stream ?: throw Exception("HTTP " + code + " boş response")
                     val input = if (encoding.contains("gzip")) java.util.zip.GZIPInputStream(raw) else raw
                     val body = input.bufferedReader(Charsets.UTF_8).use { it.readText() }
                     val trimmed = body.trimStart()
                     if (trimmed.startsWith("<!DOCTYPE", true) || trimmed.startsWith("<html", true)) {
-                        throw Exception("JSON yerine HTML dÃ¶ndÃ¼ (muhtemel engel/koruma). Ä°lk 200: " + trimmed.take(200))
+                        throw Exception("JSON yerine HTML döndü (muhtemel engel/koruma). İlk 200: " + trimmed.take(200))
                     }
                     if (code !in 200..299) {
                         throw Exception("HTTP " + code + ": " + body.take(300))
@@ -1808,7 +1808,7 @@ jobs:
                     }
                 }
                 if (seriesId.isEmpty()) {
-                    tvStatus.text = "GeÃ§ersiz seri bilgisi."
+                    tvStatus.text = "Geçersiz seri bilgisi."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
@@ -1876,7 +1876,7 @@ jobs:
                 var count = 0
                 for (i in displayEpisodes.indices) {
                     val ep = displayEpisodes[i]
-                    titles.add("\${ep.episodeNumber.toString().padStart(2, '0')}. BÃ¶lÃ¼m - \${ep.title}")
+                    titles.add("\${ep.episodeNumber.toString().padStart(2, '0')}. Bölüm - \${ep.title}")
                     subs.add("")
                     mapIndex.add(i)
                     
@@ -1890,7 +1890,7 @@ jobs:
                 
                 displayMapIndex = mapIndex
                 gridAdapter.update(titles, subs)
-                tvTitle.text = "\$seriesName â€¢ Sezon \$season"
+                tvTitle.text = "\$seriesName • Sezon \$season"
                 layoutManager.scrollToPositionWithOffset(0, 0)
             }
             private fun playEpisode(ep: EpisodeItem) {
@@ -1912,7 +1912,7 @@ jobs:
                 val user = prefs.getUser().trim().replace("""\s+""".toRegex(), "")
                 val pass = prefs.getPass().trim()
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                    tvStatus.text = "DNS / kullanÄ±cÄ± / ÅŸifre eksik."
+                    tvStatus.text = "DNS / kullanıcı / şifre eksik."
                     tvStatus.visibility = View.VISIBLE
                     return
                 }
@@ -1929,7 +1929,7 @@ jobs:
                             setRequestProperty("User-Agent", FAKE_USER_AGENT)
                         }
                         if (conn.responseCode != HttpURLConnection.HTTP_OK) {
-                            runOnUiThread { tvStatus.text = "Sunucu yanÄ±tÄ±: " + conn.responseCode; tvStatus.visibility = View.VISIBLE; pb.visibility = View.GONE }
+                            runOnUiThread { tvStatus.text = "Sunucu yanıtı: " + conn.responseCode; tvStatus.visibility = View.VISIBLE; pb.visibility = View.GONE }
                             return@Thread
                         }
                         val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
@@ -1946,7 +1946,7 @@ jobs:
                             for (i in 0 until arr.length()) {
                                 val epObj = arr.getJSONObject(i)
                                 val id = epObj.optString("id", "")
-                                val title = epObj.optString("title", "BÃ¶lÃ¼m")
+                                val title = epObj.optString("title", "Bölüm")
                                 val epNum = epObj.optInt("episode_num", 1)
                                 val ext = epObj.optString("container_extension", "mp4")
                                 allEpisodes.add(EpisodeItem(id, title, seasonNum, epNum, ext))
@@ -1956,7 +1956,7 @@ jobs:
                         runOnUiThread {
                             pb.visibility = View.GONE
                             if (seasons.isEmpty()) {
-                                tvStatus.text = "Bu seri iÃ§in bÃ¶lÃ¼m bulunamadÄ±."
+                                tvStatus.text = "Bu seri için bölüm bulunamadı."
                                 tvStatus.visibility = View.VISIBLE
                             } else {
                                 showSeasons()
@@ -1965,7 +1965,7 @@ jobs:
                     } catch (e: Exception) {
                         runOnUiThread {
                             pb.visibility = View.GONE
-                            tvStatus.text = "Seri bilgisi alÄ±namadÄ±: " + (e.message ?: "bilinmeyen hata")
+                            tvStatus.text = "Seri bilgisi alınamadı: " + (e.message ?: "bilinmeyen hata")
                             tvStatus.visibility = View.VISIBLE
                         }
                     }
@@ -2034,7 +2034,7 @@ jobs:
                 val org = intent.getStringExtra("ORG") ?: ""
                 
                 if (playUrl.isEmpty()) {
-                    Toast.makeText(this, "GeÃ§ersiz yayÄ±n URL'si.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Geçersiz yayın URL'si.", Toast.LENGTH_SHORT).show()
                     finish()
                     return
                 }
@@ -2075,7 +2075,7 @@ jobs:
                     })
                     
                 } catch (e: Exception) {
-                    Toast.makeText(this, "OynatÄ±cÄ± hatasÄ±: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Oynatıcı hatası: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
                     finish()
                 }
             }
@@ -2196,7 +2196,7 @@ jobs:
                 android:id="@+id/tvLoginType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="GiriÅŸ Tipi"
+                android:text="Giriş Tipi"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:layout_marginBottom="4dp"/>
@@ -2250,7 +2250,7 @@ jobs:
                 android:id="@+id/etName"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:hint="Hesap adÄ±"
+                android:hint="Hesap adı"
                 android:background="@drawable/selector_input_focus"
                 android:padding="12dp"
                 android:textColor="@color/white"
@@ -2277,7 +2277,7 @@ jobs:
                     android:id="@+id/etUser"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:hint="KullanÄ±cÄ± adÄ±"
+                    android:hint="Kullanıcı adı"
                     android:background="@drawable/selector_input_focus"
                     android:padding="12dp"
                     android:textColor="@color/white"
@@ -2288,7 +2288,7 @@ jobs:
                     android:id="@+id/etPass"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:hint="Åifre"
+                    android:hint="Şifre"
                     android:inputType="textVisiblePassword"
                     android:background="@drawable/selector_input_focus"
                     android:padding="12dp"
@@ -2330,7 +2330,7 @@ jobs:
                 android:id="@+id/tvAccountsTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="KayÄ±tlÄ± Hesaplar"
+                android:text="Kayıtlı Hesaplar"
                 android:textColor="@color/white"
                 android:textSize="16sp"
                 android:textStyle="bold"
@@ -2339,7 +2339,7 @@ jobs:
                 android:id="@+id/tvAccountsHint"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Devam etmek iÃ§in alttan bir hesap seÃ§in"
+                android:text="Devam etmek için alttan bir hesap seçin"
                 android:textColor="@color/hint_yellow"
                 android:textSize="13sp"
                 android:layout_marginBottom="6dp"/>
@@ -2398,7 +2398,7 @@ jobs:
                         android:id="@+id/tvOpenDrawer"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="â˜°"
+                        android:text="☰"
                         android:textColor="@color/white"
                         android:textSize="22sp"
                         android:paddingRight="12dp"
@@ -2459,7 +2459,7 @@ jobs:
                         android:layout_width="match_parent"
                         android:layout_height="64dp"
                         android:gravity="center"
-                        android:text="CanlÄ± TV"
+                        android:text="Canlı TV"
                         android:textColor="@color/white"
                         android:textSize="18sp"
                         android:textStyle="bold"
@@ -2534,7 +2534,7 @@ jobs:
                         android:id="@+id/tvDrawerExpire"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="SÃ¼re: -"
+                        android:text="Süre: -"
                         android:textColor="@color/white"
                         android:textSize="14sp"
                         android:layout_marginTop="4dp"/>
@@ -2558,7 +2558,7 @@ jobs:
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:gravity="center"
-                    android:text="Ã‡Ä±kÄ±ÅŸ"
+                    android:text="Çıkış"
                     android:textColor="@color/white"
                     android:textStyle="bold"
                     android:background="@drawable/bg_focusable"
@@ -2645,7 +2645,7 @@ jobs:
                     android:id="@+id/tvAccountName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Hesap AdÄ±"
+                    android:text="Hesap Adı"
                     android:textColor="@color/white"
                     android:textStyle="bold"
                     android:textSize="15sp"/>
@@ -2833,31 +2833,31 @@ jobs:
         gradle assembleRelease --no-daemon
         gradle bundleRelease --no-daemon
 
-    - name: 6. APK'yi GitHub Artifact Olarak YÃ¼kle
+    - name: 6. APK'yi GitHub Artifact Olarak Yükle
       id: upload_apk
       uses: actions/upload-artifact@v4
       with:
         name: ErdinPlayer-Pro-ExoFix-APK
         path: ErdinPlayer/app/build/outputs/apk/release/*.apk
 
-    - name: 7. AAB'yi GitHub Artifact Olarak YÃ¼kle
+    - name: 7. AAB'yi GitHub Artifact Olarak Yükle
       id: upload_aab
       uses: actions/upload-artifact@v4
       with:
         name: ErdinPlayer-Pro-ExoFix-AAB
         path: ErdinPlayer/app/build/outputs/bundle/release/*.aab
 
-    - name: 8. Artifact URL'lerini GÃ¶ster
+    - name: 8. Artifact URL'lerini Göster
       run: |
         echo "====================================="
-        echo " ğŸ“¦ APK Artifact URL (GitHub):"
+        echo " 📦 APK Artifact URL (GitHub):"
         echo "${{ steps.upload_apk.outputs.artifact-url }}"
         echo "-------------------------------------"
-        echo " ğŸ“¦ AAB Artifact URL (GitHub):"
+        echo " 📦 AAB Artifact URL (GitHub):"
         echo "${{ steps.upload_aab.outputs.artifact-url }}"
         echo "====================================="
 
-        echo "### ErdinPlayer Pro (ExoFix + UI Updates + Dynamic Ads + Gestures) Ã‡Ä±ktÄ±lar" >> $GITHUB_STEP_SUMMARY
+        echo "### ErdinPlayer Pro (ExoFix + UI Updates + Dynamic Ads + Gestures) Çıktılar" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "ğŸ”— [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
-        echo "ğŸ”— [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
