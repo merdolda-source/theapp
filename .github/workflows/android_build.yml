@@ -1295,14 +1295,16 @@ jobs:
                 tvTitle.text = "Ne izlemek istersiniz?"
                 btnModeLive.requestFocus()
             }
-            private fun buildPlayUrl(item: StreamItem, acc: AccountProfile): String? {
-                if (acc.type == "M3U") return item.full_url
-                val dnsRaw = acc.dns?.trim() ?: ""; val user = (acc.user ?: "").trim(); val pass = acc.pass?.trim() ?: ""
+            private fun buildPlayUrl(item: StreamItem, acc: AccountProfile, mode: String = currentMode): String? {
+                if (acc.type == "M3U") return item.full_url?.takeIf { it.isNotEmpty() }
+                val dnsRaw = acc.dns?.trim() ?: ""; val user = (acc.user ?: "").trim().replace("\s+".toRegex(), ""); val pass = acc.pass?.trim() ?: ""
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) return null
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
-                val path = if (currentMode == "LIVE") "live" else "movie"
-                val ext = if (currentMode == "LIVE") ".ts" else if (!item.container_extension.isNullOrEmpty()) "." + item.container_extension else ".mp4"
-                return dns + "/" + path + "/" + user + "/" + pass + "/" + (item.stream_id ?: "") + ext
+                val sid = item.stream_id?.trim() ?: ""
+                if (sid.isEmpty()) return null
+                val path = if (mode == "LIVE") "live" else "movie"
+                val ext  = if (mode == "LIVE") ".ts" else if (!item.container_extension.isNullOrEmpty()) "." + item.container_extension else ".mp4"
+                return "$dns/$path/$user/$pass/$sid$ext"
             }
             private fun toggleFav(position: Int) {
                 val acc = activeAcc ?: return
@@ -1531,15 +1533,20 @@ jobs:
                         itn.putExtra("SERIES_ID", item.series_id ?: ""); itn.putExtra("SERIES_NAME", item.name)
                         startActivity(itn); return
                     }
-                    val playUrl = buildPlayUrl(item, acc)
-                    if (playUrl.isNullOrEmpty()) { Toast.makeText(this, "Gecersiz URL.", Toast.LENGTH_SHORT).show(); return }
+                    val playMode = currentMode
+                    val playUrl = buildPlayUrl(item, acc, playMode)
+                    if (playUrl.isNullOrEmpty()) {
+                        Toast.makeText(this, "URL olusturulamadi. stream_id: \${item.stream_id}", Toast.LENGTH_LONG).show()
+                        return
+                    }
                     val itn = Intent(this, PlayerActivity::class.java)
-                    itn.putExtra("URL", playUrl); itn.putExtra("REF", item.referer ?: "")
+                    itn.putExtra("URL", playUrl)
+                    itn.putExtra("REF", item.referer ?: "")
                     itn.putExtra("ORG", item.origin ?: "")
-                    itn.putExtra("TYPE", if (currentMode == "LIVE") "LIVE" else "VOD")
-                    prefs.addHistory(acc.id, item.name, playUrl, if (currentMode == "LIVE") "LIVE" else "VOD")
+                    itn.putExtra("TYPE", if (playMode == "LIVE") "LIVE" else "VOD")
+                    prefs.addHistory(acc.id, item.name, playUrl, if (playMode == "LIVE") "LIVE" else "VOD")
                     AdsHelper.maybeShowOnChannelClick(this) {
-                        RemoteLogger.sendEvent(this, "play_channel", mapOf("channel_name" to item.name, "mode" to currentMode))
+                        RemoteLogger.sendEvent(this, "play_channel", mapOf("channel_name" to item.name, "mode" to playMode))
                         startActivity(itn)
                     }
                 }
@@ -1734,8 +1741,9 @@ jobs:
                     val obj = arr.getJSONObject(i)
                     val name = obj.optString("name", "Bilinmeyen")
                     val catId = obj.optString("category_id", "")
-                    val streamId = obj.optString("stream_id", null)
-                    val seriesId = obj.optString("series_id", null)
+                    // stream_id bazen int bazen string geliyor - ikisini de dene
+                    val streamId = if (obj.has("stream_id")) obj.get("stream_id").toString().takeIf { it != "null" && it.isNotEmpty() } else null
+                    val seriesId = if (obj.has("series_id")) obj.get("series_id").toString().takeIf { it != "null" && it.isNotEmpty() } else null
                     val ext = obj.optString("container_extension", null)
                     list.add(StreamItem(name, streamId, seriesId, ext, catId, null, null, null))
                     i++
@@ -2167,7 +2175,8 @@ jobs:
 
                 player?.addListener(object : Player.Listener {
                     override fun onPlayerError(error: PlaybackException) {
-                        Toast.makeText(this@PlayerActivity, "Hata: \${error.message}", Toast.LENGTH_LONG).show()
+                        val msg = error.message ?: "Bilinmeyen hata"
+                        Toast.makeText(this@PlayerActivity, "Oynatma hatasi: $msg", Toast.LENGTH_LONG).show()
                     }
                     override fun onPlaybackStateChanged(state: Int) {
                         if (state == Player.STATE_READY && isLive) {
@@ -2291,6 +2300,8 @@ jobs:
                 if (player == null && playUrl.isNotEmpty()) {
                     initPlayer()
                 }
+                // Ekran acik kalsin
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
 
             override fun onDestroy() {
