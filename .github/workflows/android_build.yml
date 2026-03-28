@@ -1,6 +1,6 @@
 name: ErdinXtream Player Pro (v3 - Media3 Turbo + Gestures + Favs + History + Smooth UI)
 
-on:
+"on":
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
@@ -1178,7 +1178,12 @@ jobs:
             }
 
             private fun updateTabUI() {
-                val tabs = mapOf("LIVE" to btnModeLive, "VOD" to btnModeVod, "SERIES" to btnModeSeries, "FAVS" to btnModeFavs, "HISTORY" to btnModeHistory)
+                val tabLive = findViewById<TextView>(R.id.tabModeLive)
+                val tabVod = findViewById<TextView>(R.id.tabModeVod)
+                val tabSeries = findViewById<TextView>(R.id.tabModeSeries)
+                val tabFavs = findViewById<TextView>(R.id.tabModeFavs)
+                val tabHistory = findViewById<TextView>(R.id.tabModeHistory)
+                val tabs = mapOf("LIVE" to tabLive, "VOD" to tabVod, "SERIES" to tabSeries, "FAVS" to tabFavs, "HISTORY" to tabHistory)
                 for ((mode, btn) in tabs) {
                     if (mode == currentMode) { btn.setBackgroundResource(R.drawable.bg_tab_selected); btn.setTextColor(resources.getColor(R.color.black, null)) }
                     else { btn.setBackgroundResource(R.drawable.bg_tab_normal); btn.setTextColor(resources.getColor(R.color.white, null)) }
