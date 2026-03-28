@@ -1024,7 +1024,7 @@ jobs:
                     val finalName = if (name.isNotEmpty()) name else "Hesap"
                     if (isXtream) {
                         var d = etDns.text.toString().trim()
-                        val u = etUser.text.toString().trim().replace("""\s+""".toRegex(), "")
+                        val u = etUser.text.toString().trim().replace(" ", "")
                         val p = etPass.text.toString().trim()
                         if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
                             Toast.makeText(this, "Xtream URL / kullanıcı adı / şifre zorunlu.", Toast.LENGTH_SHORT).show()
@@ -1297,7 +1297,7 @@ jobs:
             }
             private fun buildPlayUrl(item: StreamItem, acc: AccountProfile, mode: String = currentMode): String? {
                 if (acc.type == "M3U") return item.full_url?.takeIf { it.isNotEmpty() }
-                val dnsRaw = acc.dns?.trim() ?: ""; val user = (acc.user ?: "").trim().replace("\s+".toRegex(), ""); val pass = acc.pass?.trim() ?: ""
+                val dnsRaw = acc.dns?.trim() ?: ""; val user = (acc.user ?: "").trim().replace(" ".toRegex(), ""); val pass = acc.pass?.trim() ?: ""
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) return null
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val sid = item.stream_id?.trim() ?: ""
@@ -1588,7 +1588,7 @@ jobs:
                     return
                 }
                 var dnsRaw = (acc.dns ?: "").trim()
-                val user = (acc.user ?: "").trim().replace("""\s+""".toRegex(), "")
+                val user = (acc.user ?: "").trim().replace(" ", "")
                 val pass = (acc.pass ?: "").trim()
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                     pb.visibility = View.GONE
@@ -1972,7 +1972,7 @@ jobs:
             }
             private fun playEpisode(ep: EpisodeItem) {
                 val dnsRaw = prefs.getDns().trim()
-                val user = prefs.getUser().trim().replace("""\s+""".toRegex(), "")
+                val user = prefs.getUser().trim().replace(" ", "")
                 val pass = prefs.getPass().trim()
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val ext = ep.container_extension ?: "mp4"
@@ -1986,7 +1986,7 @@ jobs:
             }
             private fun loadSeriesInfo(seriesId: String) {
                 var dnsRaw = prefs.getDns().trim()
-                val user = prefs.getUser().trim().replace("""\s+""".toRegex(), "")
+                val user = prefs.getUser().trim().replace(" ", "")
                 val pass = prefs.getPass().trim()
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                     tvStatus.text = "DNS / kullanıcı / şifre eksik."
