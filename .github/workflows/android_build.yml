@@ -2200,7 +2200,7 @@ jobs:
                                     val p = player ?: return@setOnTouchListener true
                                     val seekDelta = (dx / width * 120000).toLong()
                                     p.seekTo((p.currentPosition + seekDelta).coerceIn(0, p.duration.coerceAtLeast(0)))
-                                    showOsd(if (seekDelta >= 0) "+${seekDelta/1000}s" else "${seekDelta/1000}s")
+                                    val seekSec = seekDelta/1000; showOsd(if (seekDelta >= 0) "+${seekSec}s" else "${seekSec}s")
                                 }
                                 return@setOnTouchListener true
                             }
@@ -2210,12 +2210,12 @@ jobs:
                                 val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                                 val newVol = (startVolume + (percent * maxVol * 1.5f).toInt()).coerceIn(0, maxVol)
                                 am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                                showOsd("Ses: ${newVol*100/maxVol}%")
+                                val volPct = newVol*100/maxVol; showOsd("Ses: ${volPct}%")
                             } else {
                                 val lp = window.attributes
                                 val newB = (startBrightness + percent * 1.5f).coerceIn(0.05f, 1f)
                                 lp.screenBrightness = newB; window.attributes = lp
-                                showOsd("Parlaklik: ${(newB*100).toInt()}%")
+                                val bPct = (newB*100).toInt(); showOsd("Parlaklik: ${bPct}%")
                             }
                             return@setOnTouchListener true
                         }
