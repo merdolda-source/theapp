@@ -2979,31 +2979,30 @@ jobs:
         gradle assembleRelease --no-daemon
         gradle bundleRelease --no-daemon
 
-    - name: 6. APK'yi GitHub Artifact Olarak Yükle
-      id: upload_apk
-      uses: actions/upload-artifact@v4
-      with:
-        name: ErdinXtream-Pro-v3-APK
-        path: ErdinXtream/app/build/outputs/apk/release/*.apk
-
-    - name: 7. AAB'yi GitHub Artifact Olarak Yükle
-      id: upload_aab
-      uses: actions/upload-artifact@v4
-      with:
-        name: ErdinXtream-Pro-v3-AAB
-        path: ErdinXtream/app/build/outputs/bundle/release/*.aab
-
-    - name: 8. Artifact URL'lerini Göster
+    - name: 6. APK ve AAB Dosyalarini Bul
+      id: find_files
       run: |
-        echo "====================================="
-        echo " 📦 APK Artifact URL (GitHub):"
-        echo "${{ steps.upload_apk.outputs.artifact-url }}"
-        echo "-------------------------------------"
-        echo " 📦 AAB Artifact URL (GitHub):"
-        echo "${{ steps.upload_aab.outputs.artifact-url }}"
-        echo "====================================="
+        APK=$(find ErdinXtream/app/build/outputs/apk/release -name "*.apk" | head -1)
+        AAB=$(find ErdinXtream/app/build/outputs/bundle/release -name "*.aab" | head -1)
+        echo "apk_path=$APK" >> $GITHUB_OUTPUT
+        echo "aab_path=$AAB" >> $GITHUB_OUTPUT
+        echo "APK: $APK"
+        echo "AAB: $AAB"
 
-        echo "### ErdinXtream Player Pro v3 Çıktılar" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [APK'yi buradan indir](${{ steps.upload_apk.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
-        echo "🔗 [AAB'yi buradan indir](${{ steps.upload_aab.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
+    - name: 7. GitHub Release Olustur ve APK Yukle
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v3.0.${{ github.run_number }}
+        name: ErdinXtream Pro v3.0.${{ github.run_number }}
+        body: |
+          ErdinXtream Player Pro otomatik build
+          - Media3 ExoPlayer 1.3.1
+          - Favoriler ve Izleme Gecmisi
+          - Cift dokunusla ileri/geri sarma
+          - Ses ve Parlaklik gesture kontrolu
+          - PHP uzaktan reklam kontrolu
+        files: |
+          ${{ steps.find_files.outputs.apk_path }}
+          ${{ steps.find_files.outputs.aab_path }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
