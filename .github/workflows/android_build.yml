@@ -762,7 +762,6 @@ jobs:
                 val adContainer: LinearLayout = v.findViewById(R.id.adContainer)
                 val adView: AdView = v.findViewById(R.id.adViewItem)
                 val btnFav: android.widget.ImageButton = v.findViewById(R.id.btnFav)
-                val btnFav: android.widget.ImageButton = v.findViewById(R.id.btnFav)
             }
             
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -1323,13 +1322,13 @@ jobs:
                 val favs = prefs.getFavs(acc.id)
                 if (favs.isEmpty()) { tvStatus.text = "Henuz favori yok."; tvStatus.visibility = View.VISIBLE; return }
                 val titles = favs.map { it.first }; val urls = favs.map { it.second }
-                gridAdapter = GridAdapter(titles, titles.map { "" }) { pos ->
+                gridAdapter = GridAdapter(titles, titles.map { "" }, { pos ->
                     if (pos < 0 || pos >= urls.size) return@GridAdapter
                     val itn = Intent(this, PlayerActivity::class.java)
                     itn.putExtra("URL", urls[pos]); itn.putExtra("REF",""); itn.putExtra("ORG",""); itn.putExtra("TYPE","LIVE")
                     prefs.addHistory(acc.id, titles[pos], urls[pos], "LIVE")
                     AdsHelper.maybeShowOnChannelClick(this) { startActivity(itn) }
-                }
+                })
                 rv.adapter = gridAdapter
             }
             private fun loadHistory() {
@@ -1339,13 +1338,13 @@ jobs:
                 val history = prefs.getHistory(acc.id)
                 if (history.isEmpty()) { tvStatus.text = "Gecmis bos."; tvStatus.visibility = View.VISIBLE; return }
                 val titles = history.map { it.name }; val urls = history.map { it.url }; val types = history.map { it.type }
-                gridAdapter = GridAdapter(titles, types) { pos ->
+                gridAdapter = GridAdapter(titles, types, { pos ->
                     if (pos < 0 || pos >= urls.size) return@GridAdapter
                     val itn = Intent(this, PlayerActivity::class.java)
                     itn.putExtra("URL", urls[pos]); itn.putExtra("REF",""); itn.putExtra("ORG",""); itn.putExtra("TYPE", types[pos])
                     prefs.addHistory(acc.id, titles[pos], urls[pos], types[pos])
                     AdsHelper.maybeShowOnChannelClick(this) { startActivity(itn) }
-                }
+                })
                 rv.adapter = gridAdapter
             }
             private fun openMode(mode: String) {
@@ -1865,7 +1864,7 @@ jobs:
                 rv = findViewById(R.id.rvEpisodes)
                 layoutManager = LinearLayoutManager(this)
                 rv.layoutManager = layoutManager
-                gridAdapter = GridAdapter(emptyList(), emptyList()) { pos -> onItemClick(pos) }
+                gridAdapter = GridAdapter(emptyList(), emptyList(), { pos -> onItemClick(pos) })
                 rv.adapter = gridAdapter
                 seriesName = intent.getStringExtra("SERIES_NAME") ?: "Dizi"
                 seriesId = intent.getStringExtra("SERIES_ID") ?: ""
@@ -2126,16 +2125,7 @@ jobs:
                     if (ref.isNotEmpty()) headers["Referer"] = ref
                     if (org.isNotEmpty()) headers["Origin"] = org
                     
-                    val httpFactory = DefaultHttpDataSource.Factory()
-                        .setConnectTimeoutMs(20000)
-                        .setReadTimeoutMs(40000)
-                        .setDefaultRequestProperties(headers)
-                        
-                    val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
-                    
-                    player = ExoPlayer.Builder(this)
-                        .setMediaSourceFactory(mediaSourceFactory)
-                        .build()
+
                         
                     playerView.player = player
                     
@@ -2588,6 +2578,39 @@ jobs:
                         android:textStyle="bold"
                         android:background="@drawable/bg_focusable"
                         android:focusable="true"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+                        <TextView
+                            android:id="@+id/btnModeFavs"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:text="Favoriler"
+                            android:textColor="@color/accent_gold"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:background="@drawable/bg_focusable"
+                            android:layout_marginEnd="6dp"
+                            android:focusable="true"
+                            android:clickable="true"/>
+                        <TextView
+                            android:id="@+id/btnModeHistory"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:text="Gecmis"
+                            android:textColor="@color/white"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:gravity="center"
+                            android:background="@drawable/bg_focusable"
+                            android:focusable="true"
+                            android:clickable="true"/>
+                    </LinearLayout>
                 </LinearLayout>
 
                 <androidx.recyclerview.widget.RecyclerView
