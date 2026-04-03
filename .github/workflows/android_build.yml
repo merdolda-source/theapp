@@ -2232,10 +2232,10 @@ jobs:
                 }
                 val seekMs = (getSharedPreferences("EP_Prefs",0).getInt("seek_sec",15) * 1000L)
                 btnSeekBack?.setOnClickListener {
-                    seekBy(-seekMs); showCenterInfo("◄◄ \${seekMs/1000} sn"); rescheduleHide()
+                    seekBy(-seekMs); showCenterInfo("◄◄ " + (seekMs/1000).toString() + " sn"); rescheduleHide()
                 }
                 btnSeekFwd?.setOnClickListener {
-                    seekBy(seekMs); showCenterInfo("\${seekMs/1000} sn ►►"); rescheduleHide()
+                    seekBy(seekMs); showCenterInfo((seekMs/1000).toString() + " sn ►►"); rescheduleHide()
                 }
 
                 // Pozisyon guncelleme
@@ -2322,14 +2322,14 @@ jobs:
                         KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> {
                             val seekMs = (getSharedPreferences("EP_Prefs",0).getInt("seek_sec",15) * 1000L)
                             seekBy(-seekMs)
-                            showCenterInfo("◄◄ ${seekMs/1000} saniye")
+                            showCenterInfo("◄◄ " + (seekMs/1000).toString() + " saniye")
                             playerView.showController()
                             return true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
                             val seekMs = (getSharedPreferences("EP_Prefs",0).getInt("seek_sec",15) * 1000L)
                             seekBy(seekMs)
-                            showCenterInfo("${seekMs/1000} saniye ►►")
+                            showCenterInfo((seekMs/1000).toString() + " saniye ►►")
                             playerView.showController()
                             return true
                         }
@@ -2337,7 +2337,7 @@ jobs:
                             audioManager?.let {
                                 val cur = it.getStreamVolume(AudioManager.STREAM_MUSIC)
                                 it.setStreamVolume(AudioManager.STREAM_MUSIC, (cur+1).coerceAtMost(maxVolume), 0)
-                                tvVolume.text = "🔊 ${((cur+1)*100/maxVolume)}%"
+                                tvVolume.text = "🔊 " + ((cur+1)*100/maxVolume).toString() + "%"
                                 tvVolume.visibility = View.VISIBLE
                                 handler.removeCallbacks(hideOverlayRunnable)
                                 handler.postDelayed(hideOverlayRunnable, 1500)
@@ -2348,7 +2348,7 @@ jobs:
                             audioManager?.let {
                                 val cur = it.getStreamVolume(AudioManager.STREAM_MUSIC)
                                 it.setStreamVolume(AudioManager.STREAM_MUSIC, (cur-1).coerceAtLeast(0), 0)
-                                tvVolume.text = "🔊 ${((cur-1).coerceAtLeast(0)*100/maxVolume)}%"
+                                tvVolume.text = "🔊 " + ((cur-1).coerceAtLeast(0)*100/maxVolume).toString() + "%"
                                 tvVolume.visibility = View.VISIBLE
                                 handler.removeCallbacks(hideOverlayRunnable)
                                 handler.postDelayed(hideOverlayRunnable, 1500)
@@ -2398,7 +2398,7 @@ jobs:
                                         tapCountLeft = 0
                                         val seekMs = (getSharedPreferences("EP_Prefs",0).getInt("seek_sec",15) * 1000L)
                                         seekBy(-seekMs)
-                                        showCenterInfo("◄◄ \${seekMs/1000} saniye")
+                                        showCenterInfo("◄◄ " + (seekMs/1000).toString() + " saniye")
                                     }
                                 } else {
                                     tapCountRight = if (now - lastTapRight < 350) tapCountRight + 1 else 1
@@ -2407,7 +2407,7 @@ jobs:
                                         tapCountRight = 0
                                         val seekMs2 = (getSharedPreferences("EP_Prefs",0).getInt("seek_sec",15) * 1000L)
                                         seekBy(seekMs2)
-                                        showCenterInfo("\${seekMs2/1000} saniye ►►")
+                                        showCenterInfo((seekMs2/1000).toString() + " saniye ►►")
                                     }
                                 }
                             }
