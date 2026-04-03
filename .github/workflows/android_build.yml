@@ -941,6 +941,7 @@ jobs:
         cat <<EOF > app/src/main/java/$PATH_NAME/LoginActivity.kt
         package $PACKAGE_NAME
         import android.content.Intent
+        import android.graphics.Color
         import android.os.Bundle
         import android.view.View
         import android.widget.*
@@ -958,8 +959,7 @@ jobs:
                 super.onCreate(savedInstanceState)
                 setContentView(R.layout.activity_login)
                 val prefs = Prefs(this)
-                val activeStartup = prefs.getActive()
-                if (activeStartup != null) {
+                if (prefs.getActive() != null) {
                     startActivity(Intent(this, ContentActivity::class.java))
                     finish()
                     return
@@ -970,66 +970,58 @@ jobs:
                 AdsHelper.init(this)
                 AdsHelper.loadBanner(findViewById<AdView>(R.id.adViewTopLogin))
                 AdsHelper.loadInterstitial(this)
-                val tvXtream = findViewById<TextView>(R.id.tvXtream)
-                val tvM3u = findViewById<TextView>(R.id.tvM3u)
-                val cardXtream = findViewById<View>(R.id.cardXtream)
-                val cardM3u = findViewById<View>(R.id.cardM3u)
-                val layoutXtream = findViewById<View>(R.id.layoutXtream)
-                val layoutM3u = findViewById<View>(R.id.layoutM3u)
-                val etName = findViewById<EditText>(R.id.etName)
-                val etDns = findViewById<EditText>(R.id.etDns)
-                val etPort = try { findViewById<EditText>(R.id.etPort) } catch(e:Exception) { null }
-                val etUser = findViewById<EditText>(R.id.etUser)
-                val etPass = findViewById<EditText>(R.id.etPass)
-                val etM3u = findViewById<EditText>(R.id.etM3u)
-                val btnAdd = findViewById<Button>(R.id.btnAddAccount)
-                val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
+                val tvXtream    = findViewById<TextView>(R.id.tvXtream)
+                val tvM3u       = findViewById<TextView>(R.id.tvM3u)
+                val cardXtream  = findViewById<View>(R.id.cardXtream)
+                val cardM3u     = findViewById<View>(R.id.cardM3u)
+                val layoutXtream= findViewById<View>(R.id.layoutXtream)
+                val layoutM3u   = findViewById<View>(R.id.layoutM3u)
+                val etName      = findViewById<EditText>(R.id.etName)
+                val etDns       = findViewById<EditText>(R.id.etDns)
+                val etPort      = try { findViewById<EditText>(R.id.etPort) } catch (e: Exception) { null }
+                val etUser      = findViewById<EditText>(R.id.etUser)
+                val etPass      = findViewById<EditText>(R.id.etPass)
+                val etM3u       = findViewById<EditText>(R.id.etM3u)
+                val btnAdd      = findViewById<Button>(R.id.btnAddAccount)
+                val lvAccounts  = findViewById<ListView>(R.id.lvAccounts)
                 fun updateTypeUI() {
                     if (isXtream) {
                         layoutXtream.visibility = View.VISIBLE
-                        layoutM3u.visibility = View.GONE
+                        layoutM3u.visibility    = View.GONE
                         cardXtream.setBackgroundResource(R.drawable.bg_header_card)
                         cardM3u.setBackgroundResource(android.R.color.transparent)
-                        tvXtream.setTextColor(android.graphics.Color.WHITE)
-                        tvM3u.setTextColor(android.graphics.Color.parseColor("#78909C"))
+                        tvXtream.setTextColor(Color.WHITE)
+                        tvM3u.setTextColor(Color.parseColor("#78909C"))
                     } else {
                         layoutXtream.visibility = View.GONE
-                        layoutM3u.visibility = View.VISIBLE
+                        layoutM3u.visibility    = View.VISIBLE
                         cardM3u.setBackgroundResource(R.drawable.bg_header_card)
                         cardXtream.setBackgroundResource(android.R.color.transparent)
-                        tvM3u.setTextColor(android.graphics.Color.WHITE)
-                        tvXtream.setTextColor(android.graphics.Color.parseColor("#78909C"))
+                        tvM3u.setTextColor(Color.WHITE)
+                        tvXtream.setTextColor(Color.parseColor("#78909C"))
                     }
                 }
-                cardXtream.setOnClickListener { isXtream = true; updateTypeUI() }
-                cardM3u.setOnClickListener { isXtream = false; updateTypeUI() }
+                cardXtream.setOnClickListener { isXtream = true;  updateTypeUI() }
+                cardM3u.setOnClickListener    { isXtream = false; updateTypeUI() }
                 updateTypeUI()
                 fun refreshList() {
                     val accounts: MutableList<AccountProfile> = prefs.getAccounts().toMutableList()
-                    val adapter = ArrayAdapter(
-                        this,
-                        android.R.layout.simple_list_item_1,
-                        accounts.map { a ->
-                            val t = if (a.type == "M3U") "M3U" else "Xtream"
-                            a.name + "  (" + t + ")"
-                        }
-                    )
-                    lvAccounts.adapter = adapter
-                    lvAccounts.setOnItemClickListener { _, _, position, _ ->
-                        val acc = accounts[position]
-                        prefs.setActive(acc.id)
+                    val labels = accounts.map { a ->
+                        val t = if (a.type == "M3U") "M3U" else "Xtream"
+                        a.name + "  (" + t + ")"
+                    }
+                    lvAccounts.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, labels)
+                    lvAccounts.setOnItemClickListener { _, _, pos, _ ->
+                        prefs.setActive(accounts[pos].id)
                         startActivity(Intent(this, ContentActivity::class.java))
                         finish()
                     }
-                    lvAccounts.setOnItemLongClickListener { _, _, position, _ ->
-                        val acc = accounts[position]
+                    lvAccounts.setOnItemLongClickListener { _, _, pos, _ ->
+                        val acc = accounts[pos]
                         AlertDialog.Builder(this)
                             .setTitle("Hesabi Sil")
-                            .setMessage(""" + acc.name + "" silinsin mi?")
-                            .setPositiveButton("Sil") { _, _ ->
-                                prefs.deleteAccount(acc.id)
-                                refreshList()
-                            }
+                            .setMessage(acc.name + " silinsin mi?")
+                            .setPositiveButton("Sil") { _, _ -> prefs.deleteAccount(acc.id); refreshList() }
                             .setNegativeButton("Iptal", null)
                             .create().show()
                         true
@@ -1037,12 +1029,15 @@ jobs:
                 }
                 refreshList()
                 btnAdd.setOnClickListener {
-                    val name = etName.text.toString().trim().ifEmpty { "Hesap" }
+                    val name = etName.text.toString().trim()
+                    val finalName = if (name.isNotEmpty()) name else "Hesap"
                     if (isXtream) {
                         var d = etDns.text.toString().trim()
-                        val portStr = etPort?.text?.toString()?.trim() ?: ""
-                        val u = etUser.text.toString().trim().replace("""\s+""".toRegex(), "")
-                        val p = etPass.text.toString().trim()
+                        val portEt  = etPort
+                        val portStr = if (portEt != null) portEt.text.toString().trim() else ""
+                        val uRaw    = etUser.text.toString().trim()
+                        val u       = uRaw.split(" ").joinToString("")
+                        val p       = etPass.text.toString().trim()
                         if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
                             Toast.makeText(this, "URL, kullanici adi ve sifre zorunlu.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
@@ -1051,33 +1046,47 @@ jobs:
                             d = "http://" + d
                         }
                         if (d.endsWith("/")) d = d.dropLast(1)
-                        val finalDns = if (portStr.isNotEmpty()) {
+                        val finalDns: String
+                        if (portStr.isNotEmpty()) {
                             val proto = if (d.startsWith("https")) "https" else "http"
-                            val host = d.removePrefix("https://").removePrefix("http://").split(":")[0]
-                            proto + "://" + host + ":" + portStr
-                        } else d
-                        prefs.createXtreamAccount(name, finalDns, u, p)
-                        RemoteLogger.sendEvent(this, "account_xtream_created", mapOf("name" to name))
+                            val host  = d.removePrefix("https://").removePrefix("http://").split(":")[0]
+                            finalDns  = proto + "://" + host + ":" + portStr
+                        } else {
+                            finalDns = d
+                        }
+                        prefs.createXtreamAccount(finalName, finalDns, u, p)
+                        RemoteLogger.sendEvent(this, "account_xtream_created", mapOf("name" to finalName))
                         Toast.makeText(this, "Hesap eklendi.", Toast.LENGTH_SHORT).show()
-                        etName.setText(""); etDns.setText(""); etPort?.setText(""); etUser.setText(""); etPass.setText("")
+                        etName.setText(""); etDns.setText("")
+                        if (portEt != null) portEt.setText("")
+                        etUser.setText(""); etPass.setText("")
                         refreshList()
-                        prefs.setActive(prefs.getAccounts().lastOrNull()?.id ?: 0)
-                        startActivity(Intent(this, ContentActivity::class.java))
-                        finish()
+                        val lastId = prefs.getAccounts().lastOrNull()
+                        if (lastId != null) {
+                            prefs.setActive(lastId.id)
+                            startActivity(Intent(this, ContentActivity::class.java))
+                            finish()
+                        }
                     } else {
-                        val m = etM3u.text.toString().trim()
+                        var m = etM3u.text.toString().trim()
                         if (m.isEmpty()) {
                             Toast.makeText(this, "M3U URL bos olamaz.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
-                        prefs.createM3uAccount(name, m)
-                        RemoteLogger.sendEvent(this, "account_m3u_created", mapOf("name" to name))
+                        if (!m.startsWith("http://", true) && !m.startsWith("https://", true)) {
+                            m = "http://" + m
+                        }
+                        prefs.createM3uAccount(finalName, m)
+                        RemoteLogger.sendEvent(this, "account_m3u_created", mapOf("name" to finalName))
                         Toast.makeText(this, "Hesap eklendi.", Toast.LENGTH_SHORT).show()
                         etName.setText(""); etM3u.setText("")
                         refreshList()
-                        prefs.setActive(prefs.getAccounts().lastOrNull()?.id ?: 0)
-                        startActivity(Intent(this, ContentActivity::class.java))
-                        finish()
+                        val lastId = prefs.getAccounts().lastOrNull()
+                        if (lastId != null) {
+                            prefs.setActive(lastId.id)
+                            startActivity(Intent(this, ContentActivity::class.java))
+                            finish()
+                        }
                     }
                 }
             }
@@ -1536,7 +1545,7 @@ jobs:
                         return
                     }
                     val dnsRaw = acc.dns?.trim() ?: ""
-                    val user = (acc.user ?: "").trim().replace("""\s+""".toRegex(), "")
+                    val user = (acc.user ?: "").trim().split(" ").joinToString("")
                     val pass = acc.pass?.trim() ?: ""
                     if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                         Toast.makeText(this, "DNS / kullanıcı / şifre boş.", Toast.LENGTH_SHORT).show()
@@ -1597,7 +1606,7 @@ jobs:
                     return
                 }
                 var dnsRaw = (acc.dns ?: "").trim()
-                val user = (acc.user ?: "").trim().replace("""\s+""".toRegex(), "")
+                val user = (acc.user ?: "").trim().split(" ").joinToString("")
                 val pass = (acc.pass ?: "").trim()
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                     pb.visibility = View.GONE
@@ -1928,7 +1937,7 @@ jobs:
             }
             private fun playEpisode(ep: EpisodeItem) {
                 val dnsRaw = prefs.getDns().trim()
-                val user = prefs.getUser().trim().replace("""\s+""".toRegex(), "")
+                val user = prefs.getUser().trim().split(" ").joinToString("")
                 val pass = prefs.getPass().trim()
                 val dns = if (dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
                 val ext = ep.container_extension ?: "mp4"
@@ -1942,7 +1951,7 @@ jobs:
             }
             private fun loadSeriesInfo(seriesId: String) {
                 var dnsRaw = prefs.getDns().trim()
-                val user = prefs.getUser().trim().replace("""\s+""".toRegex(), "")
+                val user = prefs.getUser().trim().split(" ").joinToString("")
                 val pass = prefs.getPass().trim()
                 if (dnsRaw.isEmpty() || user.isEmpty() || pass.isEmpty()) {
                     tvStatus.text = "DNS / kullanıcı / şifre eksik."
