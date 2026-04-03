@@ -960,70 +960,45 @@ jobs:
                 val prefs = Prefs(this)
                 val activeStartup = prefs.getActive()
                 if (activeStartup != null) {
-                    val i = Intent(this, ContentActivity::class.java)
-                    startActivity(i)
+                    startActivity(Intent(this, ContentActivity::class.java))
                     finish()
                     return
                 }
-                val lang = "tr"
-                prefs.setLang(lang)
-                LangManager.restoreFromPrefs(this, lang)
-                LangManager.init(this, lang)
+                LangManager.restoreFromPrefs(this, "tr")
+                LangManager.init(this, "tr")
                 RemoteLogger.sendEvent(this, "screen_login_open", emptyMap())
                 AdsHelper.init(this)
-                val adTop = findViewById<AdView>(R.id.adViewTopLogin)
-                AdsHelper.loadBanner(adTop)
+                AdsHelper.loadBanner(findViewById<AdView>(R.id.adViewTopLogin))
                 AdsHelper.loadInterstitial(this)
-                val tvTitle = findViewById<TextView>(R.id.tvTitle)
-                val tvLoginType = findViewById<TextView>(R.id.tvLoginType)
-                val tvAccountsTitle = findViewById<TextView>(R.id.tvAccountsTitle)
-                val tvAccountsHint = findViewById<TextView>(R.id.tvAccountsHint)
-                val btnLang = findViewById<ImageButton>(R.id.btnLangLogin)
-                btnLang.visibility = View.GONE
+                val tvXtream = findViewById<TextView>(R.id.tvXtream)
+                val tvM3u = findViewById<TextView>(R.id.tvM3u)
+                val cardXtream = findViewById<View>(R.id.cardXtream)
+                val cardM3u = findViewById<View>(R.id.cardM3u)
+                val layoutXtream = findViewById<View>(R.id.layoutXtream)
+                val layoutM3u = findViewById<View>(R.id.layoutM3u)
                 val etName = findViewById<EditText>(R.id.etName)
                 val etDns = findViewById<EditText>(R.id.etDns)
+                val etPort = try { findViewById<EditText>(R.id.etPort) } catch(e:Exception) { null }
                 val etUser = findViewById<EditText>(R.id.etUser)
                 val etPass = findViewById<EditText>(R.id.etPass)
                 val etM3u = findViewById<EditText>(R.id.etM3u)
-                val layoutXtream = findViewById<View>(R.id.layoutXtream)
-                val layoutM3u = findViewById<View>(R.id.layoutM3u)
-                val cardXtream = findViewById<View>(R.id.cardXtream)
-                val cardM3u = findViewById<View>(R.id.cardM3u)
-                val tvXtream = findViewById<TextView>(R.id.tvXtream)
-                val tvM3u = findViewById<TextView>(R.id.tvM3u)
                 val btnAdd = findViewById<Button>(R.id.btnAddAccount)
                 val lvAccounts = findViewById<ListView>(R.id.lvAccounts)
-                
-                fun applyLanguageTexts() {
-                    tvTitle.text = LangManager.t(this, "login_title", "ErdinPlayer Pro")
-                    tvLoginType.text = LangManager.t(this, "login_type", "Giriş Tipi")
-                    tvXtream.text = LangManager.t(this, "login_xtream", "Xtream")
-                    tvM3u.text = LangManager.t(this, "login_m3u", "M3U")
-                    etName.hint = LangManager.t(this, "login_name_hint", "Hesap adı")
-                    etDns.hint = LangManager.t(this, "login_dns_hint", "Xtream URL girin")
-                    etUser.hint = LangManager.t(this, "login_user_hint", "Kullanıcı adı")
-                    etPass.hint = LangManager.t(this, "login_pass_hint", "Şifre")
-                    etM3u.hint = LangManager.t(this, "login_m3u_hint", "M3U URL girin")
-                    btnAdd.text = LangManager.t(this, "login_add_button", "Hesap Ekle")
-                    tvAccountsTitle.text = LangManager.t(this, "login_saved_accounts", "Kayıtlı Hesaplar")
-                    tvAccountsHint.text = LangManager.t(this, "login_saved_hint", "Devam etmek için alttan bir hesap seçin")
-                }
-                applyLanguageTexts()
                 fun updateTypeUI() {
                     if (isXtream) {
                         layoutXtream.visibility = View.VISIBLE
                         layoutM3u.visibility = View.GONE
                         cardXtream.setBackgroundResource(R.drawable.bg_header_card)
                         cardM3u.setBackgroundResource(android.R.color.transparent)
-                        (cardXtream.getChildAt(0) as? android.widget.TextView)?.setTextColor(0xFFFFFFFF.toInt())
-                        (cardM3u.getChildAt(0) as? android.widget.TextView)?.setTextColor(0xFF78909C.toInt())
+                        tvXtream.setTextColor(android.graphics.Color.WHITE)
+                        tvM3u.setTextColor(android.graphics.Color.parseColor("#78909C"))
                     } else {
                         layoutXtream.visibility = View.GONE
                         layoutM3u.visibility = View.VISIBLE
                         cardM3u.setBackgroundResource(R.drawable.bg_header_card)
                         cardXtream.setBackgroundResource(android.R.color.transparent)
-                        (cardM3u.getChildAt(0) as? android.widget.TextView)?.setTextColor(0xFFFFFFFF.toInt())
-                        (cardXtream.getChildAt(0) as? android.widget.TextView)?.setTextColor(0xFF78909C.toInt())
+                        tvM3u.setTextColor(android.graphics.Color.WHITE)
+                        tvXtream.setTextColor(android.graphics.Color.parseColor("#78909C"))
                     }
                 }
                 cardXtream.setOnClickListener { isXtream = true; updateTypeUI() }
@@ -1036,43 +1011,40 @@ jobs:
                         android.R.layout.simple_list_item_1,
                         accounts.map { a ->
                             val t = if (a.type == "M3U") "M3U" else "Xtream"
-                            a.name + " - " + t
+                            a.name + "  (" + t + ")"
                         }
                     )
                     lvAccounts.adapter = adapter
                     lvAccounts.setOnItemClickListener { _, _, position, _ ->
                         val acc = accounts[position]
                         prefs.setActive(acc.id)
-                        val i = Intent(this, ContentActivity::class.java)
-                        startActivity(i)
+                        startActivity(Intent(this, ContentActivity::class.java))
                         finish()
                     }
                     lvAccounts.setOnItemLongClickListener { _, _, position, _ ->
                         val acc = accounts[position]
-                        val dialog = AlertDialog.Builder(this)
-                            .setTitle("Hesabı Sil")
-                            .setMessage("Hesap silinsin mi? " + acc.name)
-                            .setPositiveButton("Evet") { _, _ ->
+                        AlertDialog.Builder(this)
+                            .setTitle("Hesabi Sil")
+                            .setMessage(""" + acc.name + "" silinsin mi?")
+                            .setPositiveButton("Sil") { _, _ ->
                                 prefs.deleteAccount(acc.id)
                                 refreshList()
                             }
-                            .setNegativeButton("Hayır", null)
-                            .create()
-                        dialog.show()
+                            .setNegativeButton("Iptal", null)
+                            .create().show()
                         true
                     }
                 }
                 refreshList()
                 btnAdd.setOnClickListener {
-                    val name = etName.text.toString().trim()
-                    val finalName = if (name.isNotEmpty()) name else "Hesap"
+                    val name = etName.text.toString().trim().ifEmpty { "Hesap" }
                     if (isXtream) {
                         var d = etDns.text.toString().trim()
-                        val portStr = try { (this.findViewById<android.widget.EditText>(R.id.etPort))?.text?.toString()?.trim() ?: "" } catch(e:Exception) { "" }
+                        val portStr = etPort?.text?.toString()?.trim() ?: ""
                         val u = etUser.text.toString().trim().replace("""\s+""".toRegex(), "")
                         val p = etPass.text.toString().trim()
                         if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
-                            Toast.makeText(this, "Sunucu URL / kullanici adi / sifre zorunlu.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "URL, kullanici adi ve sifre zorunlu.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
                         if (!d.startsWith("http://", true) && !d.startsWith("https://", true)) {
@@ -1082,29 +1054,29 @@ jobs:
                         val finalDns = if (portStr.isNotEmpty()) {
                             val proto = if (d.startsWith("https")) "https" else "http"
                             val host = d.removePrefix("https://").removePrefix("http://").split(":")[0]
-                            "\$proto://\$host:\$portStr"
+                            proto + "://" + host + ":" + portStr
                         } else d
-                        prefs.createXtreamAccount(finalName, finalDns, u, p)
-                        RemoteLogger.sendEvent(this, "account_xtream_created", mapOf(
-                            "name" to finalName, "dns" to d, "user" to u
-                        ))
+                        prefs.createXtreamAccount(name, finalDns, u, p)
+                        RemoteLogger.sendEvent(this, "account_xtream_created", mapOf("name" to name))
                         Toast.makeText(this, "Hesap eklendi.", Toast.LENGTH_SHORT).show()
-                        val i = Intent(this, ContentActivity::class.java)
-                        startActivity(i)
+                        etName.setText(""); etDns.setText(""); etPort?.setText(""); etUser.setText(""); etPass.setText("")
+                        refreshList()
+                        prefs.setActive(prefs.getAccounts().lastOrNull()?.id ?: 0)
+                        startActivity(Intent(this, ContentActivity::class.java))
                         finish()
                     } else {
                         val m = etM3u.text.toString().trim()
                         if (m.isEmpty()) {
-                            Toast.makeText(this, "M3U URL boş olamaz.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "M3U URL bos olamaz.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
-                        prefs.createM3uAccount(finalName, m)
-                        RemoteLogger.sendEvent(this, "account_m3u_created", mapOf(
-                            "name" to finalName, "m3u_prefix" to m.take(160)
-                        ))
+                        prefs.createM3uAccount(name, m)
+                        RemoteLogger.sendEvent(this, "account_m3u_created", mapOf("name" to name))
                         Toast.makeText(this, "Hesap eklendi.", Toast.LENGTH_SHORT).show()
-                        val i = Intent(this, ContentActivity::class.java)
-                        startActivity(i)
+                        etName.setText(""); etM3u.setText("")
+                        refreshList()
+                        prefs.setActive(prefs.getAccounts().lastOrNull()?.id ?: 0)
+                        startActivity(Intent(this, ContentActivity::class.java))
                         finish()
                     }
                 }
