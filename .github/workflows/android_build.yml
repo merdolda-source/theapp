@@ -1,4 +1,4 @@
-name: ErdinPlayer Pro Hybrid (TV + Mobile Single Click)
+name: EminXtream Ultra Player v3.0
 
 on:
   push:
@@ -55,6 +55,7 @@ jobs:
         mkdir -p "$APP_NAME/app/src/main/res/menu"
         mkdir -p "$APP_NAME/app/src/main/res/color"
         mkdir -p "$APP_NAME/app/src/main/res/xml"
+        mkdir -p "$APP_NAME/app/src/main/res/anim"
 
         cd "$APP_NAME"
 
@@ -121,8 +122,8 @@ jobs:
                 applicationId "$PACKAGE_NAME"
                 minSdk 21
                 targetSdk 35
-                versionCode 9
-                versionName "2.1.0-hybrid"
+                versionCode 10
+                versionName "3.0.0"
             }
 
             signingConfigs {
@@ -288,7 +289,114 @@ jobs:
         </selector>
         EOF
 
-        # ============ MODELLER ============
+        # ============ SPLASH DRAWABLE ============
+        cat <<EOF > app/src/main/res/drawable/bg_splash.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <shape xmlns:android="http://schemas.android.com/apk/res/android">
+            <gradient android:startColor="#000000" android:endColor="#0A0A0A" android:angle="270"/>
+        </shape>
+        EOF
+
+        # ============ ANİMASYONLAR ============
+        cat <<EOF > app/src/main/res/anim/anim_fade.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <alpha xmlns:android="http://schemas.android.com/apk/res/android"
+            android:duration="500" android:fromAlpha="0.0" android:toAlpha="1.0"/>
+        EOF
+
+        cat <<EOF > app/src/main/res/anim/anim_slide.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <translate xmlns:android="http://schemas.android.com/apk/res/android"
+            android:duration="400" android:fromYDelta="40dp" android:toYDelta="0dp"/>
+        EOF
+
+        cat <<EOF > app/src/main/res/anim/anim_scale.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <set xmlns:android="http://schemas.android.com/apk/res/android">
+            <scale android:duration="500"
+                android:fromXScale="0.85" android:toXScale="1.0"
+                android:fromYScale="0.85" android:toYScale="1.0"
+                android:pivotX="50%" android:pivotY="50%"/>
+            <alpha android:duration="500" android:fromAlpha="0.0" android:toAlpha="1.0"/>
+        </set>
+        EOF
+
+        # ============ SPLASH LAYOUT ============
+        cat <<EOF > app/src/main/res/layout/activity_splash.xml
+        <?xml version="1.0" encoding="utf-8"?>
+        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:background="@drawable/bg_splash">
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="match_parent"
+                android:orientation="vertical" android:gravity="center" android:padding="48dp">
+                <ImageView
+                    android:id="@+id/ivSplashLogo"
+                    android:layout_width="96dp" android:layout_height="96dp"
+                    android:src="@mipmap/ic_launcher" android:layout_marginBottom="20dp"/>
+                <TextView
+                    android:id="@+id/tvSplashName"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Emin Xtream" android:textColor="@color/white"
+                    android:textSize="30sp" android:textStyle="bold" android:layout_marginBottom="6dp"/>
+                <TextView
+                    android:id="@+id/tvSplashTagline"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Ultra IPTV Player" android:textColor="@color/hint_yellow"
+                    android:textSize="14sp" android:layout_marginBottom="56dp"/>
+                <ProgressBar
+                    android:layout_width="40dp" android:layout_height="40dp"
+                    android:indeterminateTint="@color/primary_cyan" android:layout_marginBottom="12dp"/>
+            </LinearLayout>
+            <TextView
+                android:id="@+id/tvSplashVersion"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="bottom|center_horizontal" android:layout_marginBottom="28dp"
+                android:text="v3.0" android:textColor="@color/gray_600" android:textSize="11sp"/>
+        </FrameLayout>
+        EOF
+
+        # ============ SPLASH ACTIVITY ============
+        cat <<EOF > app/src/main/java/$PATH_NAME/SplashActivity.kt
+        package $PACKAGE_NAME
+        import android.annotation.SuppressLint
+        import android.content.Intent
+        import android.os.Bundle
+        import android.os.Handler
+        import android.os.Looper
+        import android.view.View
+        import android.view.animation.AnimationUtils
+        import android.widget.ImageView
+        import android.widget.TextView
+        import androidx.appcompat.app.AppCompatActivity
+        @SuppressLint("CustomSplashScreen")
+        class SplashActivity : AppCompatActivity() {
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+                setContentView(R.layout.activity_splash)
+                val logo = findViewById<ImageView>(R.id.ivSplashLogo)
+                val name = findViewById<TextView>(R.id.tvSplashName)
+                val tag  = findViewById<TextView>(R.id.tvSplashTagline)
+                val ver  = findViewById<TextView>(R.id.tvSplashVersion)
+                val v = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "3.0" } catch(e:Exception) { "3.0" }
+                ver.text = "v\$v"
+                try { logo.startAnimation(AnimationUtils.loadAnimation(this, R.anim.anim_scale)) } catch(e:Exception) {}
+                try { name.startAnimation(AnimationUtils.loadAnimation(this, R.anim.anim_fade)) } catch(e:Exception) {}
+                try { tag.startAnimation(AnimationUtils.loadAnimation(this, R.anim.anim_slide)) } catch(e:Exception) {}
+                Handler(Looper.getMainLooper()).postDelayed({
+                    val prefs = getSharedPreferences("EP_Prefs", 0)
+                    val activeId = prefs.getInt("active_id", -1)
+                    val target = if (activeId > 0) ContentActivity::class.java else LoginActivity::class.java
+                    startActivity(Intent(this, target))
+                    overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                    finish()
+                }, 2000)
+            }
+        }
+        EOF
+
+                # ============ MODELLER ============
         cat <<EOF > app/src/main/java/$PATH_NAME/models/Models.kt
         package $PACKAGE_NAME.models
         data class AccountProfile(
@@ -952,17 +1060,23 @@ jobs:
                     val finalName = if (name.isNotEmpty()) name else "Hesap"
                     if (isXtream) {
                         var d = etDns.text.toString().trim()
+                        val portStr = try { (this.findViewById<android.widget.EditText>(R.id.etPort))?.text?.toString()?.trim() ?: "" } catch(e:Exception) { "" }
                         val u = etUser.text.toString().trim().replace("""\s+""".toRegex(), "")
                         val p = etPass.text.toString().trim()
                         if (d.isEmpty() || u.isEmpty() || p.isEmpty()) {
-                            Toast.makeText(this, "Xtream URL / kullanıcı adı / şifre zorunlu.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Sunucu URL / kullanici adi / sifre zorunlu.", Toast.LENGTH_SHORT).show()
                             return@setOnClickListener
                         }
                         if (!d.startsWith("http://", true) && !d.startsWith("https://", true)) {
                             d = "http://" + d
                         }
                         if (d.endsWith("/")) d = d.dropLast(1)
-                        prefs.createXtreamAccount(finalName, d, u, p)
+                        val finalDns = if (portStr.isNotEmpty()) {
+                            val proto = if (d.startsWith("https")) "https" else "http"
+                            val host = d.removePrefix("https://").removePrefix("http://").split(":")[0]
+                            "\$proto://\$host:\$portStr"
+                        } else d
+                        prefs.createXtreamAccount(finalName, finalDns, u, p)
                         RemoteLogger.sendEvent(this, "account_xtream_created", mapOf(
                             "name" to finalName, "dns" to d, "user" to u
                         ))
@@ -1118,6 +1232,25 @@ jobs:
                     startActivity(i)
                     finish()
                 }
+                try {
+                    val btnSettings = drawer.findViewById<android.view.View>(R.id.tvSettings)
+                    btnSettings?.setOnClickListener {
+                        drawer.closeDrawer(androidx.core.view.GravityCompat.START)
+                        val sp = getSharedPreferences("EP_Prefs", 0)
+                        val cur = sp.getInt("seek_sec", 15)
+                        val opts = arrayOf("5 sn","10 sn","15 sn","30 sn","60 sn")
+                        val vals = intArrayOf(5,10,15,30,60)
+                        val ci = vals.indexOfFirst { it == cur }.coerceAtLeast(0)
+                        androidx.appcompat.app.AlertDialog.Builder(this)
+                            .setTitle("Seek Suresi (simdi: " + cur + "sn)")
+                            .setSingleChoiceItems(opts, ci) { dlg, which ->
+                                sp.edit().putInt("seek_sec", vals[which]).apply()
+                                Toast.makeText(this, "Seek: " + vals[which] + "sn", Toast.LENGTH_SHORT).show()
+                                dlg.dismiss()
+                            }
+                            .setNegativeButton("Iptal", null).show()
+                    }
+                } catch(e:Exception) {}
                 tvTitle.setOnClickListener {
                     if (screen == Screen.ITEMS && rv.visibility == View.VISIBLE) {
                         showCategories()
@@ -2027,11 +2160,11 @@ jobs:
                 tvBrightness = findViewById(R.id.tvBrightness)
                 tvVolume = findViewById(R.id.tvVolume)
                 val btnMode = findViewById<ImageButton>(R.id.btnMode)
+                val btnSeekBack = try { findViewById<ImageButton>(R.id.btnSeekBack) } catch(e:Exception) { null }
+                val btnSeekFwd  = try { findViewById<ImageButton>(R.id.btnSeekFwd)  } catch(e:Exception) { null }
+                val tvPosition  = try { findViewById<android.widget.TextView>(R.id.tvPosition) } catch(e:Exception) { null }
                 
-                playerView.useController = true
-                playerView.controllerAutoShow = true
-                playerView.controllerHideOnTouch = true
-                playerView.controllerShowTimeoutMs = 5000 
+                playerView.useController = false
                 
                 audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
@@ -2041,11 +2174,46 @@ jobs:
                 btnMode.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
                     applyResizeMode(playerView)
+                    val modeName = when(currentMode) { 0 -> "Sigdir"; 1 -> "Doldur"; else -> "Zoom" }
+                    showCenterInfo(modeName)
                     rescheduleHide()
                 }
                 btnPlayPause.setOnClickListener {
                     togglePlayPause()
+                    rescheduleHide()
                 }
+                val SEEK_MS = (getSharedPreferences("EP_Prefs",0).getInt("seek_sec",15) * 1000L)
+                btnSeekBack?.setOnClickListener {
+                    seekBy(-SEEK_MS)
+                    showCenterInfo("15 sn ◄◄")
+                    rescheduleHide()
+                }
+                btnSeekFwd?.setOnClickListener {
+                    seekBy(SEEK_MS)
+                    showCenterInfo("►► 15 sn")
+                    rescheduleHide()
+                }
+                handler.post(object : Runnable {
+                    override fun run() {
+                        try {
+                            val p = player
+                            if (p != null && p.duration > 0) {
+                                val pos = p.currentPosition / 1000
+                                val dur = p.duration / 1000
+                                val pm = pos / 60; val ps = pos % 60
+                                val dm = dur / 60; val ds = dur % 60
+                                val ph = pos / 3600; val dh = dur / 3600
+                                val posStr = if (ph > 0) "\$ph:\${String.format("%02d", pm % 60)}:\${String.format("%02d", ps)}" else "\${String.format("%02d", pm)}:\${String.format("%02d", ps)}"
+                                val durStr = if (dh > 0) "\$dh:\${String.format("%02d", dm % 60)}:\${String.format("%02d", ds)}" else "\${String.format("%02d", dm)}:\${String.format("%02d", ds)}"
+                                tvPosition?.text = "\$posStr / \$durStr"
+                                tvPosition?.visibility = android.view.View.VISIBLE
+                            } else {
+                                tvPosition?.visibility = android.view.View.GONE
+                            }
+                        } catch(e:Exception) {}
+                        handler.postDelayed(this, 1000)
+                    }
+                })
                 setupGestureOverlay(leftOverlay, true)
                 setupGestureOverlay(rightOverlay, false)
                 try {
@@ -2107,14 +2275,36 @@ jobs:
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> {
                             seekBy(-15000L)
-                            showCenterInfo("◄◄ 15 saniye")
+                            showCenterInfo("15 sn ◄◄")
                             playerView.showController()
                             return true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
                             seekBy(15000L)
-                            showCenterInfo("15 saniye ►►")
+                            showCenterInfo("►► 15 sn")
                             playerView.showController()
+                            return true
+                        }
+                        KeyEvent.KEYCODE_DPAD_UP -> {
+                            val am = audioManager
+                            if (am != null) {
+                                val cur = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                val nv = (cur + 1).coerceAtMost(maxVolume)
+                                am.setStreamVolume(AudioManager.STREAM_MUSIC, nv, 0)
+                                val pct = if (maxVolume > 0) nv * 100 / maxVolume else 0
+                                showCenterInfo("Ses: \$pct%")
+                            }
+                            return true
+                        }
+                        KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            val am = audioManager
+                            if (am != null) {
+                                val cur = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                val nv = (cur - 1).coerceAtLeast(0)
+                                am.setStreamVolume(AudioManager.STREAM_MUSIC, nv, 0)
+                                val pct = if (maxVolume > 0) nv * 100 / maxVolume else 0
+                                showCenterInfo("Ses: \$pct%")
+                            }
                             return true
                         }
                     }
@@ -2353,12 +2543,23 @@ jobs:
                     android:id="@+id/etDns"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:hint="Xtream URL girin"
+                    android:hint="Sunucu URL (http://...)"
                     android:background="@drawable/selector_input_focus"
                     android:padding="12dp"
                     android:textColor="@color/white"
                     android:textColorHint="@color/gray_600"
                     android:inputType="textUri"
+                    android:layout_marginBottom="8dp"/>
+                <EditText
+                    android:id="@+id/etPort"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:hint="Port (opsiyonel, orn: 8080)"
+                    android:background="@drawable/selector_input_focus"
+                    android:padding="12dp"
+                    android:textColor="@color/white"
+                    android:textColorHint="@color/gray_600"
+                    android:inputType="number"
                     android:layout_marginBottom="8dp"/>
                 <EditText
                     android:id="@+id/etUser"
@@ -2634,16 +2835,28 @@ jobs:
                     android:layout_height="0dp"
                     android:layout_weight="1"/>
                 <TextView
+                    android:id="@+id/tvSettings"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center"
+                    android:text="Ayarlar"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:background="@drawable/bg_focusable"
+                    android:focusable="true"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="4dp"/>
+                <TextView
                     android:id="@+id/tvLogout"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:gravity="center"
-                    android:text="Çıkış"
+                    android:text="Cikis"
                     android:textColor="@color/white"
                     android:textStyle="bold"
                     android:background="@drawable/bg_focusable"
                     android:focusable="true"
-                    android:layout_marginTop="10dp"/>
+                    android:layout_marginTop="4dp"/>
             </LinearLayout>
         </androidx.drawerlayout.widget.DrawerLayout>
         EOF
@@ -2861,37 +3074,75 @@ jobs:
         android:visibility="gone" />
 
         <LinearLayout
+        android:id="@+id/playerControlsBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:layout_gravity="bottom|center_horizontal"
-        android:gravity="right">
+        android:orientation="vertical"
+        android:background="#BB000000"
+        android:paddingBottom="16dp"
+        android:layout_gravity="bottom">
 
-        <ImageButton
-            android:id="@+id/btnPlayPause"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:background="@android:color/transparent"
-            android:src="@android:drawable/ic_media_pause"
-            android:padding="8dp"
-            android:tint="@android:color/white"
-            android:focusable="true"
-            android:nextFocusLeft="@id/btnPlayPause"
-            android:nextFocusRight="@id/btnMode"/>
+        <TextView
+            android:id="@+id/tvPosition"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#9E9E9E"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:padding="4dp"
+            android:visibility="gone"/>
 
-        <ImageButton
-            android:id="@+id/btnMode"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:background="@android:color/transparent"
-            android:src="@android:drawable/ic_menu_crop"
-            android:padding="8dp"
-            android:tint="@android:color/white"
-            android:focusable="true"
-            android:nextFocusLeft="@id/btnPlayPause"
-            android:nextFocusRight="@id/btnMode"/>
-         </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp">
+
+            <ImageButton
+                android:id="@+id/btnSeekBack"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_media_rew"
+                android:tint="@android:color/white"
+                android:focusable="true"/>
+
+            <ImageButton
+                android:id="@+id/btnPlayPause"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_media_pause"
+                android:padding="8dp"
+                android:tint="@android:color/white"
+                android:layout_marginLeft="8dp"
+                android:layout_marginRight="8dp"
+                android:focusable="true"/>
+
+            <ImageButton
+                android:id="@+id/btnSeekFwd"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_media_ff"
+                android:tint="@android:color/white"
+                android:focusable="true"/>
+
+            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+
+            <ImageButton
+                android:id="@+id/btnMode"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/ic_menu_crop"
+                android:padding="8dp"
+                android:tint="@android:color/white"
+                android:focusable="true"/>
+        </LinearLayout>
+        </LinearLayout>
         </FrameLayout>
         EOF
 
@@ -2924,14 +3175,19 @@ jobs:
                     android:value="@string/admob_app_id" />
 
                 <activity
-                    android:name=".LoginActivity"
-                    android:exported="true">
+                    android:name=".SplashActivity"
+                    android:exported="true"
+                    android:noHistory="true">
                     <intent-filter>
                         <action android:name="android.intent.action.MAIN"/>
                         <category android:name="android.intent.category.LAUNCHER"/>
                         <category android:name="android.intent.category.LEANBACK_LAUNCHER"/>
                     </intent-filter>
                 </activity>
+
+                <activity
+                    android:name=".LoginActivity"
+                    android:exported="false"/>
 
                 <activity
                     android:name=".ContentActivity"
