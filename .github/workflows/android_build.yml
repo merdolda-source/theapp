@@ -1783,65 +1783,18 @@ jobs:
                 return list
             }
             private fun httpGet(urlStr: String): String {
-                try {
-                    return doHttpGet(urlStr, 5)
-                } catch (e: Exception) {
-                    if (urlStr.startsWith("https://")) {
-                        val httpUrl = "http://" + urlStr.substringAfter("https://")
-                        try {
-                            return doHttpGet(httpUrl, 5)
-                        } catch (e2: Exception) {
-                            throw e2
-                        }
-                    } else if (urlStr.startsWith("http://")) {
-                        val httpsUrl = "https://" + urlStr.substringAfter("http://")
-                        try {
-                            return doHttpGet(httpsUrl, 5)
-                        } catch (e2: Exception) {
-                            throw e2
-                        }
-                    }
-                    throw e
-                }
-            }
-            private fun doHttpGet(urlStr: String, redirectsLeft: Int): String {
-                if (redirectsLeft <= 0) throw Exception("Çok fazla yönlendirme")
                 val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-                    instanceFollowRedirects = false
                     connectTimeout = 25000
                     readTimeout = 35000
                     requestMethod = "GET"
                     setRequestProperty("User-Agent", FAKE_USER_AGENT)
-                    setRequestProperty("Accept", "application/json,text/plain,*/*")
-                    setRequestProperty("Accept-Encoding", "gzip")
-                    setRequestProperty("Connection", "close")
+                    setRequestProperty("Accept", "*/*")
+                    setRequestProperty("Connection", "keep-alive")
                 }
-                try {
-                    val code = conn.responseCode
-                    if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
-                        val locRaw = conn.getHeaderField("Location") ?: ""
-                        if (locRaw.isNotEmpty()) {
-                            val loc = if (locRaw.startsWith("//")) urlStr.substringBefore(":") + ":" + locRaw else locRaw
-                            conn.disconnect()
-                            return doHttpGet(loc, redirectsLeft - 1)
-                        }
-                    }
-                    val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-                    val encoding = (conn.contentEncoding ?: "").lowercase(Locale.getDefault())
-                    val raw = stream ?: throw Exception("HTTP " + code + " boş response")
-                    val input = if (encoding.contains("gzip")) java.util.zip.GZIPInputStream(raw) else raw
-                    val body = input.bufferedReader(Charsets.UTF_8).use { it.readText() }
-                    val trimmed = body.trimStart()
-                    if (trimmed.startsWith("<!DOCTYPE", true) || trimmed.startsWith("<html", true)) {
-                        throw Exception("JSON yerine HTML döndü (muhtemel engel/koruma). İlk 200: " + trimmed.take(200))
-                    }
-                    if (code !in 200..299) {
-                        throw Exception("HTTP " + code + ": " + body.take(300))
-                    }
-                    return body
-                } finally {
-                    try { conn.disconnect() } catch (_: Exception) {}
+                if (conn.responseCode != HttpURLConnection.HTTP_OK) {
+                    throw Exception("HTTP " + conn.responseCode)
                 }
+                return conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
             }
         }
         EOF
