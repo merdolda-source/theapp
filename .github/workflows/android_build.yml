@@ -1013,13 +1013,17 @@ jobs:
                     if (isXtream) {
                         layoutXtream.visibility = View.VISIBLE
                         layoutM3u.visibility = View.GONE
-                        cardXtream.background = getDrawable(R.drawable.bg_header_card)
-                        cardM3u.background = getDrawable(R.drawable.selector_input_focus)
+                        cardXtream.setBackgroundResource(R.drawable.bg_header_card)
+                        cardM3u.setBackgroundResource(android.R.color.transparent)
+                        (cardXtream.getChildAt(0) as? android.widget.TextView)?.setTextColor(0xFFFFFFFF.toInt())
+                        (cardM3u.getChildAt(0) as? android.widget.TextView)?.setTextColor(0xFF78909C.toInt())
                     } else {
                         layoutXtream.visibility = View.GONE
                         layoutM3u.visibility = View.VISIBLE
-                        cardM3u.background = getDrawable(R.drawable.bg_header_card)
-                        cardXtream.background = getDrawable(R.drawable.selector_input_focus)
+                        cardM3u.setBackgroundResource(R.drawable.bg_header_card)
+                        cardXtream.setBackgroundResource(android.R.color.transparent)
+                        (cardM3u.getChildAt(0) as? android.widget.TextView)?.setTextColor(0xFFFFFFFF.toInt())
+                        (cardXtream.getChildAt(0) as? android.widget.TextView)?.setTextColor(0xFF78909C.toInt())
                     }
                 }
                 cardXtream.setOnClickListener { isXtream = true; updateTypeUI() }
@@ -2048,16 +2052,12 @@ jobs:
         import android.widget.TextView
         import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
-        import androidx.media3.common.C
         import androidx.media3.common.MediaItem
-        import androidx.media3.common.MimeTypes
         import androidx.media3.common.PlaybackException
         import androidx.media3.common.Player
         import androidx.media3.datasource.DefaultHttpDataSource
         import androidx.media3.exoplayer.ExoPlayer
-        import androidx.media3.exoplayer.hls.HlsMediaSource
         import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-        import androidx.media3.exoplayer.source.ProgressiveMediaSource
         import androidx.media3.ui.AspectRatioFrameLayout
         import androidx.media3.ui.PlayerView
         import kotlin.math.abs
@@ -2230,22 +2230,15 @@ jobs:
                     val httpFactory = DefaultHttpDataSource.Factory()
                         .setConnectTimeoutMs(20000)
                         .setReadTimeoutMs(40000)
-                        .setAllowCrossProtocolRedirects(true)
                         .setDefaultRequestProperties(headers)
                     val exo = ExoPlayer.Builder(this)
                         .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
                         .build()
                     player = exo
                     playerView.player = exo
-                    // Akilli medya kaynak secimi - uzantisiz linkler dahil
-                    val mediaSource = buildMediaSource(url, type, httpFactory)
-                    if (mediaSource != null) {
-                        exo.setMediaSource(mediaSource)
-                    } else {
-                        // Fallback: MediaItem ile dene (otomatik format algilama)
-                        val item = MediaItem.Builder().setUri(url).build()
-                        exo.setMediaItem(item)
-                    }
+                    // ExoPlayer her formati otomatik algilar
+                    // .ts, .mp4, .mkv, .m3u8, uzantisiz - hepsi calisir
+                    exo.setMediaItem(MediaItem.fromUri(url))
                     exo.prepare()
                     exo.playWhenReady = true
                     exo.addListener(object : Player.Listener {
@@ -2256,11 +2249,8 @@ jobs:
                             )
                         }
                         override fun onPlayerError(error: PlaybackException) {
-                            // Hata durumunda farkli format ile yeniden dene
-                            if (!retryWithDifferentSource(url, type, httpFactory)) {
-                                Toast.makeText(this@PlayerActivity,
-                                    "Oynatma hatasi. URL kontrol edin.", Toast.LENGTH_LONG).show()
-                            }
+                            Toast.makeText(this@PlayerActivity,
+                                "Oynatma hatasi: " + (error.message ?: ""), Toast.LENGTH_LONG).show()
                         }
                         override fun onPlaybackStateChanged(state: Int) {
                             if (state == Player.STATE_READY) {
@@ -2278,48 +2268,8 @@ jobs:
                     finish()
                 }
             }
-            private fun buildMediaSource(url: String, type: String, httpFactory: DefaultHttpDataSource.Factory): androidx.media3.exoplayer.source.MediaSource? {
-                val lower = url.lowercase()
-                return when {
-                    // HLS
-                    lower.contains(".m3u8") || lower.contains("/hls/") || lower.contains("type=m3u") ||
-                    type == "LIVE" || lower.contains(".ts") -> {
-                        val item = MediaItem.Builder().setUri(url)
-                            .setMimeType(MimeTypes.APPLICATION_M3U8).build()
-                        HlsMediaSource.Factory(httpFactory).createMediaSource(item)
-                    }
-                    // Progressive (MP4, MKV, AVI, MOV, vb.)
-                    lower.contains(".mp4") || lower.contains(".mkv") || lower.contains(".avi") ||
-                    lower.contains(".mov") || lower.contains(".flv") || lower.contains(".wmv") ||
-                    lower.contains(".webm") || lower.contains(".3gp") -> {
-                        val item = MediaItem.fromUri(url)
-                        ProgressiveMediaSource.Factory(httpFactory).createMediaSource(item)
-                    }
-                    // DASH
-                    lower.contains(".mpd") || lower.contains("/dash/") -> {
-                        null // DefaultMediaSourceFactory handles DASH
-                    }
-                    // Uzantisiz - LIVE ise HLS dene, degil ise progressive
-                    else -> null // DefaultMediaSourceFactory otomatik algilar
-                }
-            }
-            private var retried = false
-            private fun retryWithDifferentSource(url: String, type: String, httpFactory: DefaultHttpDataSource.Factory): Boolean {
-                if (retried) return false
-                retried = true
-                val exo = player ?: return false
-                try {
-                    // HLS ile dene
-                    val item = MediaItem.Builder().setUri(url)
-                        .setMimeType(MimeTypes.APPLICATION_M3U8).build()
-                    val src = HlsMediaSource.Factory(httpFactory).createMediaSource(item)
-                    exo.stop()
-                    exo.setMediaSource(src)
-                    exo.prepare()
-                    exo.playWhenReady = true
-                    return true
-                } catch(e: Exception) { return false }
-            }
+
+
             private fun updateProgress() {
                 val p = player ?: return
                 val dur = p.duration
@@ -2576,10 +2526,10 @@ jobs:
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
+                    android:layout_height="46dp"
                     android:orientation="horizontal"
-                    android:background="@color/bg_card"
-                    android:padding="4dp"
+                    android:background="@drawable/bg_input_dark"
+                    android:padding="3dp"
                     android:layout_marginBottom="20dp">
                     <LinearLayout
                         android:id="@+id/cardXtream"
@@ -2587,8 +2537,10 @@ jobs:
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center"
+                        android:orientation="vertical"
                         android:background="@drawable/bg_header_card"
-                        android:focusable="true">
+                        android:focusable="true"
+                        android:clickable="true">
                         <TextView
                             android:id="@+id/tvXtream"
                             android:layout_width="wrap_content"
@@ -2596,7 +2548,8 @@ jobs:
                             android:text="Xtream Codes"
                             android:textColor="@color/white"
                             android:textSize="13sp"
-                            android:textStyle="bold"/>
+                            android:textStyle="bold"
+                            android:gravity="center"/>
                     </LinearLayout>
                     <LinearLayout
                         android:id="@+id/cardM3u"
@@ -2604,15 +2557,18 @@ jobs:
                         android:layout_height="match_parent"
                         android:layout_weight="1"
                         android:gravity="center"
+                        android:orientation="vertical"
                         android:background="@android:color/transparent"
-                        android:focusable="true">
+                        android:focusable="true"
+                        android:clickable="true">
                         <TextView
                             android:id="@+id/tvM3u"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="M3U Liste"
                             android:textColor="@color/hint_yellow"
-                            android:textSize="13sp"/>
+                            android:textSize="13sp"
+                            android:gravity="center"/>
                     </LinearLayout>
                 </LinearLayout>
 
