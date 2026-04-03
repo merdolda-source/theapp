@@ -173,22 +173,25 @@ jobs:
         # ============ RENK PALETİ ============
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
-            <color name="bg_dark">#0A0A0A</color>
-            <color name="bg_card">#111111</color>
-            <color name="bg_card_soft">#181818</color>
-            <color name="primary_cyan">#00C853</color>
-            <color name="primary_purple">#00C853</color>
-            <color name="accent_gold">#CFD8DC</color>
-            <color name="white">#FFFFFF</color>
+            <color name="bg_dark">#080C0F</color>
+            <color name="bg_card">#0F1419</color>
+            <color name="bg_card_soft">#141A21</color>
+            <color name="primary_cyan">#1DB954</color>
+            <color name="primary_purple">#1DB954</color>
+            <color name="accent_gold">#B0BEC5</color>
+            <color name="white">#F5F5F5</color>
             <color name="black">#000000</color>
-            <color name="gray_800">#1A1A1A</color>
-            <color name="gray_700">#222222</color>
-            <color name="gray_600">#2E2E2E</color>
-            <color name="error_red">#D32F2F</color>
-            <color name="drawer_bg">#080808</color>
-            <color name="hint_yellow">#9E9E9E</color>
-            <color name="focus_ring">#00C853</color>
-            <color name="focus_bg">#0D2010</color>
+            <color name="gray_800">#161D24</color>
+            <color name="gray_700">#1E2730</color>
+            <color name="gray_600">#2A3440</color>
+            <color name="error_red">#C0392B</color>
+            <color name="drawer_bg">#060A0D</color>
+            <color name="hint_yellow">#78909C</color>
+            <color name="focus_ring">#1DB954</color>
+            <color name="focus_bg">#0A1F12</color>
+            <color name="seek_bar">#1DB954</color>
+            <color name="seek_bg">#2A3440</color>
+            <color name="text_dim">#546E7A</color>
         </resources>
         EOF
 
@@ -229,8 +232,8 @@ jobs:
         cat <<EOF > app/src/main/res/drawable/bg_input_dark.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="@color/bg_card_soft"/>
-            <corners android:radius="8dp"/>
-            <stroke android:width="1dp" android:color="@color/gray_600"/>
+            <corners android:radius="14dp"/>
+            <stroke android:width="1dp" android:color="@color/gray_700"/>
         </shape>
         EOF
         
@@ -239,15 +242,15 @@ jobs:
             <item android:state_focused="true">
                 <shape>
                     <solid android:color="@color/focus_bg"/>
-                    <corners android:radius="8dp"/>
-                    <stroke android:width="2dp" android:color="@color/focus_ring"/>
+                    <corners android:radius="14dp"/>
+                    <stroke android:width="1.5dp" android:color="@color/focus_ring"/>
                 </shape>
             </item>
             <item>
                 <shape>
                     <solid android:color="@color/bg_card_soft"/>
-                    <corners android:radius="8dp"/>
-                    <stroke android:width="1dp" android:color="@color/gray_600"/>
+                    <corners android:radius="14dp"/>
+                    <stroke android:width="1dp" android:color="@color/gray_700"/>
                 </shape>
             </item>
         </selector>
@@ -255,12 +258,13 @@ jobs:
 
         cat <<EOF > app/src/main/res/drawable/bg_header_card.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android">
-            <corners android:radius="12dp"/>
+            <corners android:radius="16dp"/>
             <gradient
-                android:startColor="@color/primary_cyan"
-                android:endColor="@color/primary_purple"
+                android:startColor="#0D2318"
+                android:endColor="#0A1F12"
                 android:angle="135"/>
-            <padding android:left="12dp" android:top="12dp" android:right="12dp" android:bottom="12dp"/>
+            <stroke android:width="1dp" android:color="@color/focus_ring"/>
+            <padding android:left="14dp" android:top="14dp" android:right="14dp" android:bottom="14dp"/>
         </shape>
         EOF
 
@@ -269,21 +273,21 @@ jobs:
             <item android:state_focused="true">
                 <shape>
                     <solid android:color="@color/focus_bg"/>
-                    <corners android:radius="12dp"/>
-                    <stroke android:width="3dp" android:color="@color/focus_ring"/>
+                    <corners android:radius="14dp"/>
+                    <stroke android:width="1.5dp" android:color="@color/focus_ring"/>
                 </shape>
             </item>
             <item android:state_pressed="true">
-                 <shape>
-                    <solid android:color="@color/gray_700"/>
-                    <corners android:radius="12dp"/>
+                <shape>
+                    <solid android:color="@color/gray_800"/>
+                    <corners android:radius="14dp"/>
                 </shape>
             </item>
             <item>
                 <shape>
                     <solid android:color="@color/bg_card"/>
-                    <corners android:radius="12dp"/>
-                    <stroke android:width="1dp" android:color="@color/gray_600"/>
+                    <corners android:radius="14dp"/>
+                    <stroke android:width="1dp" android:color="@color/gray_700"/>
                 </shape>
             </item>
         </selector>
@@ -1573,7 +1577,7 @@ jobs:
                     itn.putExtra("URL", playUrl)
                     itn.putExtra("REF", "")
                     itn.putExtra("ORG", "")
-                    itn.putExtra("TYPE", if (currentMode == "LIVE") "LIVE" else "VOD")
+                    itn.putExtra("TYPE", if (currentMode == "LIVE") "LIVE" else if (currentMode == "SERIES") "SERIES" else "VOD")
                     AdsHelper.maybeShowOnChannelClick(this) {
                         RemoteLogger.sendEvent(this, "play_xtream", mapOf("channel_name" to item.name, "mode" to currentMode))
                         startActivity(itn)
@@ -2087,15 +2091,20 @@ jobs:
         import android.view.View
         import android.view.WindowManager
         import android.widget.ImageButton
+        import android.widget.SeekBar
         import android.widget.TextView
         import android.widget.Toast
         import androidx.appcompat.app.AppCompatActivity
+        import androidx.media3.common.C
         import androidx.media3.common.MediaItem
+        import androidx.media3.common.MimeTypes
         import androidx.media3.common.PlaybackException
         import androidx.media3.common.Player
         import androidx.media3.datasource.DefaultHttpDataSource
         import androidx.media3.exoplayer.ExoPlayer
+        import androidx.media3.exoplayer.hls.HlsMediaSource
         import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+        import androidx.media3.exoplayer.source.ProgressiveMediaSource
         import androidx.media3.ui.AspectRatioFrameLayout
         import androidx.media3.ui.PlayerView
         import kotlin.math.abs
@@ -2108,7 +2117,14 @@ jobs:
             private lateinit var tvCenterInfo: TextView
             private lateinit var tvBrightness: TextView
             private lateinit var tvVolume: TextView
+            private lateinit var tvPosition: TextView
+            private lateinit var tvDuration: TextView
+            private lateinit var seekBar: SeekBar
             private lateinit var btnPlayPause: ImageButton
+            private lateinit var btnSeekBack: ImageButton
+            private lateinit var btnSeekFwd: ImageButton
+            private lateinit var btnMode: ImageButton
+            private lateinit var controlsBar: View
             private var audioManager: AudioManager? = null
             private var maxVolume: Int = 0
             private var gestureStartVolume: Int = 0
@@ -2121,16 +2137,24 @@ jobs:
             private var tapCountLeft: Int = 0
             private var tapCountRight: Int = 0
             private var playUrl: String = ""
-            private val FAKE_USER_AGENT =
-                "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
+            private var playType: String = "LIVE"
+            private var isSeekBarDragging = false
+            private var controlsVisible = true
+            private val SEEK_MS get() = (getSharedPreferences("EP_Prefs", 0).getInt("seek_sec", 15) * 1000L)
+            private val FAKE_USER_AGENT = "Mozilla/5.0 (Linux; Android 12; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Mobile Safari/537.36"
             private val handler = Handler(Looper.getMainLooper())
-            
             private val hideOverlayRunnable = Runnable {
                 tvBrightness.visibility = View.GONE
                 tvVolume.visibility = View.GONE
                 tvCenterInfo.visibility = View.GONE
             }
-
+            private val hideControlsRunnable = Runnable { hideControls() }
+            private val updateProgressRunnable = object : Runnable {
+                override fun run() {
+                    updateProgress()
+                    handler.postDelayed(this, 500)
+                }
+            }
             override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -2145,91 +2169,130 @@ jobs:
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 setContentView(R.layout.activity_player_pro)
                 playUrl = intent.getStringExtra("URL") ?: ""
+                playType = intent.getStringExtra("TYPE") ?: "LIVE"
                 val ref = intent.getStringExtra("REF") ?: ""
                 val org = intent.getStringExtra("ORG") ?: ""
                 if (playUrl.isEmpty()) {
-                    Toast.makeText(this, "Geçersiz yayın URL'si.", Toast.LENGTH_SHORT).show()
-                    finish()
-                    return
+                    Toast.makeText(this, "Gecersiz URL.", Toast.LENGTH_SHORT).show()
+                    finish(); return
                 }
-                playerView = findViewById(R.id.pvMain)
-                btnPlayPause = findViewById(R.id.btnPlayPause)
+                playerView  = findViewById(R.id.pvMain)
+                tvCenterInfo= findViewById(R.id.tvInfoCenter)
+                tvBrightness= findViewById(R.id.tvBrightness)
+                tvVolume    = findViewById(R.id.tvVolume)
+                tvPosition  = findViewById(R.id.tvPosition)
+                tvDuration  = findViewById(R.id.tvDuration)
+                seekBar     = findViewById(R.id.seekBar)
+                btnPlayPause= findViewById(R.id.btnPlayPause)
+                btnSeekBack = findViewById(R.id.btnSeekBack)
+                btnSeekFwd  = findViewById(R.id.btnSeekFwd)
+                btnMode     = findViewById(R.id.btnMode)
+                controlsBar = findViewById(R.id.playerControlsBar)
                 leftOverlay = findViewById(R.id.overlayLeft)
-                rightOverlay = findViewById(R.id.overlayRight)
-                tvCenterInfo = findViewById(R.id.tvInfoCenter)
-                tvBrightness = findViewById(R.id.tvBrightness)
-                tvVolume = findViewById(R.id.tvVolume)
-                val btnMode = findViewById<ImageButton>(R.id.btnMode)
-                val btnSeekBack = try { findViewById<ImageButton>(R.id.btnSeekBack) } catch(e:Exception) { null }
-                val btnSeekFwd  = try { findViewById<ImageButton>(R.id.btnSeekFwd)  } catch(e:Exception) { null }
-                val tvPosition  = try { findViewById<android.widget.TextView>(R.id.tvPosition) } catch(e:Exception) { null }
-                
-                playerView.useController = false
-                
+                rightOverlay= findViewById(R.id.overlayRight)
                 audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15
                 val lp = window.attributes
                 currentBrightness = if (lp.screenBrightness in 0f..1f) lp.screenBrightness else 0.5f
+                // ExoPlayer kendi controllerini gizle - bizimkini kullaniyoruz
+                playerView.useController = false
                 applyResizeMode(playerView)
+                setupButtons()
+                setupSeekBar()
+                setupGestureOverlay(leftOverlay, true)
+                setupGestureOverlay(rightOverlay, false)
+                buildPlayer(playUrl, playType, ref, org)
+                handler.post(updateProgressRunnable)
+                scheduleHideControls()
+            }
+            private fun setupButtons() {
                 btnMode.setOnClickListener {
                     currentMode = (currentMode + 1) % 3
                     applyResizeMode(playerView)
-                    val modeName = when(currentMode) { 0 -> "Sigdir"; 1 -> "Doldur"; else -> "Zoom" }
-                    showCenterInfo(modeName)
+                    val name = when(currentMode) { 0 -> "Sigdir"; 1 -> "Doldur"; else -> "Zoom" }
+                    showCenterInfo(name)
                     rescheduleHide()
                 }
-                btnPlayPause.setOnClickListener {
-                    togglePlayPause()
-                    rescheduleHide()
-                }
-                val SEEK_MS = (getSharedPreferences("EP_Prefs",0).getInt("seek_sec",15) * 1000L)
-                btnSeekBack?.setOnClickListener {
+                btnPlayPause.setOnClickListener { togglePlayPause(); rescheduleHide() }
+                btnSeekBack.setOnClickListener {
+                    if (playType == "LIVE") return@setOnClickListener
                     seekBy(-SEEK_MS)
-                    showCenterInfo("15 sn ◄◄")
+                    showCenterInfo("- " + (SEEK_MS/1000) + " sn")
                     rescheduleHide()
                 }
-                btnSeekFwd?.setOnClickListener {
+                btnSeekFwd.setOnClickListener {
+                    if (playType == "LIVE") return@setOnClickListener
                     seekBy(SEEK_MS)
-                    showCenterInfo("►► 15 sn")
+                    showCenterInfo("+ " + (SEEK_MS/1000) + " sn")
                     rescheduleHide()
                 }
-                handler.post(object : Runnable {
-                    override fun run() {
-                        try {
-                            val p = player
-                            if (p != null && p.duration > 0) {
-                                val pos = p.currentPosition / 1000
-                                val dur = p.duration / 1000
-                                val pm = pos / 60; val ps = pos % 60
-                                val dm = dur / 60; val ds = dur % 60
-                                val ph = pos / 3600; val dh = dur / 3600
-                                val posStr = if (ph > 0) "\$ph:\${String.format("%02d", pm % 60)}:\${String.format("%02d", ps)}" else "\${String.format("%02d", pm)}:\${String.format("%02d", ps)}"
-                                val durStr = if (dh > 0) "\$dh:\${String.format("%02d", dm % 60)}:\${String.format("%02d", ds)}" else "\${String.format("%02d", dm)}:\${String.format("%02d", ds)}"
-                                tvPosition?.text = "\$posStr / \$durStr"
-                                tvPosition?.visibility = android.view.View.VISIBLE
-                            } else {
-                                tvPosition?.visibility = android.view.View.GONE
+                // CANLI TV'de seek butonlarini gizle
+                if (playType == "LIVE") {
+                    btnSeekBack.alpha = 0.3f
+                    btnSeekFwd.alpha = 0.3f
+                }
+            }
+            private fun setupSeekBar() {
+                // SeekBar sadece VOD/SERIES'te goster
+                if (playType == "LIVE") {
+                    seekBar.visibility = View.GONE
+                    tvPosition.visibility = View.GONE
+                    tvDuration.visibility = View.GONE
+                    return
+                }
+                seekBar.visibility = View.VISIBLE
+                seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(sb: SeekBar, progress: Int, fromUser: Boolean) {
+                        if (fromUser) {
+                            val p = player ?: return
+                            val dur = p.duration
+                            if (dur > 0) {
+                                val seekTo = (progress.toLong() * dur) / 1000L
+                                val m = (seekTo / 1000) / 60; val s = (seekTo / 1000) % 60
+                                showCenterInfo(String.format("%02d:%02d", m, s))
                             }
-                        } catch(e:Exception) {}
-                        handler.postDelayed(this, 1000)
+                        }
+                    }
+                    override fun onStartTrackingTouch(sb: SeekBar) {
+                        isSeekBarDragging = true
+                        handler.removeCallbacks(hideControlsRunnable)
+                    }
+                    override fun onStopTrackingTouch(sb: SeekBar) {
+                        isSeekBarDragging = false
+                        val p = player ?: return
+                        val dur = p.duration
+                        if (dur > 0) {
+                            val seekTo = (sb.progress.toLong() * dur) / 1000L
+                            p.seekTo(seekTo)
+                        }
+                        rescheduleHide()
                     }
                 })
-                setupGestureOverlay(leftOverlay, true)
-                setupGestureOverlay(rightOverlay, false)
+            }
+            private fun buildPlayer(url: String, type: String, ref: String, org: String) {
                 try {
-                    val headers = mutableMapOf<String, String>()
-                    headers["User-Agent"] = FAKE_USER_AGENT
+                    val headers = mutableMapOf("User-Agent" to FAKE_USER_AGENT)
                     if (ref.isNotEmpty()) headers["Referer"] = ref
                     if (org.isNotEmpty()) headers["Origin"] = org
                     val httpFactory = DefaultHttpDataSource.Factory()
                         .setConnectTimeoutMs(20000)
                         .setReadTimeoutMs(40000)
+                        .setAllowCrossProtocolRedirects(true)
                         .setDefaultRequestProperties(headers)
-                    val mediaSourceFactory = DefaultMediaSourceFactory(httpFactory)
-                    player = ExoPlayer.Builder(this).setMediaSourceFactory(mediaSourceFactory).build()
-                    val exo = player!!
+                    val exo = ExoPlayer.Builder(this)
+                        .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
+                        .build()
+                    player = exo
                     playerView.player = exo
-                    exo.setMediaItem(MediaItem.fromUri(playUrl))
+                    // Akilli medya kaynak secimi - uzantisiz linkler dahil
+                    val mediaSource = buildMediaSource(url, type, httpFactory)
+                    if (mediaSource != null) {
+                        exo.setMediaSource(mediaSource)
+                    } else {
+                        // Fallback: MediaItem ile dene (otomatik format algilama)
+                        val item = MediaItem.Builder().setUri(url).build()
+                        exo.setMediaItem(item)
+                    }
                     exo.prepare()
                     exo.playWhenReady = true
                     exo.addListener(object : Player.Listener {
@@ -2238,86 +2301,145 @@ jobs:
                                 if (isPlaying) android.R.drawable.ic_media_pause
                                 else android.R.drawable.ic_media_play
                             )
-                            if (isPlaying) {
-                                playerView.controllerShowTimeoutMs = 5000
-                            } else {
-                                playerView.controllerShowTimeoutMs = -1 
-                            }
                         }
                         override fun onPlayerError(error: PlaybackException) {
-                            Toast.makeText(this@PlayerActivity, "Oynatma hatası: \${error.message}", Toast.LENGTH_LONG).show()
+                            // Hata durumunda farkli format ile yeniden dene
+                            if (!retryWithDifferentSource(url, type, httpFactory)) {
+                                Toast.makeText(this@PlayerActivity,
+                                    "Oynatma hatasi. URL kontrol edin.", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                        override fun onPlaybackStateChanged(state: Int) {
+                            if (state == Player.STATE_READY) {
+                                val dur = exo.duration
+                                if (dur > 0 && playType != "LIVE") {
+                                    tvPosition.visibility = View.VISIBLE
+                                    tvDuration.visibility = View.VISIBLE
+                                    seekBar.visibility = View.VISIBLE
+                                }
+                            }
                         }
                     })
                 } catch (e: Exception) {
-                    Toast.makeText(this, "Oynatıcı başlatılamadı: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "Oynatici hatasi: " + (e.message ?: ""), Toast.LENGTH_LONG).show()
                     finish()
                 }
             }
-            
-            private fun togglePlayPause() {
-                player?.let {
-                    if (it.isPlaying) it.pause() else it.play()
-                    rescheduleHide()
+            private fun buildMediaSource(url: String, type: String, httpFactory: DefaultHttpDataSource.Factory): androidx.media3.exoplayer.source.MediaSource? {
+                val lower = url.lowercase()
+                return when {
+                    // HLS
+                    lower.contains(".m3u8") || lower.contains("/hls/") || lower.contains("type=m3u") ||
+                    type == "LIVE" || lower.contains(".ts") -> {
+                        val item = MediaItem.Builder().setUri(url)
+                            .setMimeType(MimeTypes.APPLICATION_M3U8).build()
+                        HlsMediaSource.Factory(httpFactory).createMediaSource(item)
+                    }
+                    // Progressive (MP4, MKV, AVI, MOV, vb.)
+                    lower.contains(".mp4") || lower.contains(".mkv") || lower.contains(".avi") ||
+                    lower.contains(".mov") || lower.contains(".flv") || lower.contains(".wmv") ||
+                    lower.contains(".webm") || lower.contains(".3gp") -> {
+                        val item = MediaItem.fromUri(url)
+                        ProgressiveMediaSource.Factory(httpFactory).createMediaSource(item)
+                    }
+                    // DASH
+                    lower.contains(".mpd") || lower.contains("/dash/") -> {
+                        null // DefaultMediaSourceFactory handles DASH
+                    }
+                    // Uzantisiz - LIVE ise HLS dene, degil ise progressive
+                    else -> null // DefaultMediaSourceFactory otomatik algilar
                 }
             }
-
-            // TV Kumanda Tuşlarını Yakala
+            private var retried = false
+            private fun retryWithDifferentSource(url: String, type: String, httpFactory: DefaultHttpDataSource.Factory): Boolean {
+                if (retried) return false
+                retried = true
+                val exo = player ?: return false
+                try {
+                    // HLS ile dene
+                    val item = MediaItem.Builder().setUri(url)
+                        .setMimeType(MimeTypes.APPLICATION_M3U8).build()
+                    val src = HlsMediaSource.Factory(httpFactory).createMediaSource(item)
+                    exo.stop()
+                    exo.setMediaSource(src)
+                    exo.prepare()
+                    exo.playWhenReady = true
+                    return true
+                } catch(e: Exception) { return false }
+            }
+            private fun updateProgress() {
+                val p = player ?: return
+                val dur = p.duration
+                val pos = p.currentPosition
+                if (dur <= 0 || playType == "LIVE" || isSeekBarDragging) return
+                val posS = pos / 1000
+                val durS = dur / 1000
+                val pm = posS / 60; val ps = posS % 60
+                val dm = durS / 60; val ds = durS % 60
+                tvPosition.text = String.format("%02d:%02d", pm, ps)
+                tvDuration.text = String.format("%02d:%02d", dm, ds)
+                tvPosition.visibility = View.VISIBLE
+                tvDuration.visibility = View.VISIBLE
+                val progress = if (dur > 0) ((pos * 1000L) / dur).toInt() else 0
+                seekBar.progress = progress
+            }
+            private fun togglePlayPause() {
+                player?.let { if (it.isPlaying) it.pause() else it.play() }
+            }
             override fun dispatchKeyEvent(event: KeyEvent): Boolean {
                 if (event.action == KeyEvent.ACTION_DOWN) {
+                    showControls()
                     when (event.keyCode) {
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
-                            if (!playerView.isControllerFullyVisible) {
-                                playerView.showController()
-                            } else {
-                                togglePlayPause()
-                            }
-                            return true
+                            togglePlayPause(); return true
                         }
                         KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> {
-                            seekBy(-15000L)
-                            showCenterInfo("15 sn ◄◄")
-                            playerView.showController()
+                            if (playType != "LIVE") { seekBy(-SEEK_MS); showCenterInfo("- " + (SEEK_MS/1000) + " sn") }
                             return true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
-                            seekBy(15000L)
-                            showCenterInfo("►► 15 sn")
-                            playerView.showController()
+                            if (playType != "LIVE") { seekBy(SEEK_MS); showCenterInfo("+ " + (SEEK_MS/1000) + " sn") }
                             return true
                         }
                         KeyEvent.KEYCODE_DPAD_UP -> {
-                            val am = audioManager
-                            if (am != null) {
-                                val cur = am.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                val nv = (cur + 1).coerceAtMost(maxVolume)
-                                am.setStreamVolume(AudioManager.STREAM_MUSIC, nv, 0)
-                                val pct = if (maxVolume > 0) nv * 100 / maxVolume else 0
-                                showCenterInfo("Ses: \$pct%")
-                            }
+                            val am = audioManager ?: return true
+                            val nv = (am.getStreamVolume(AudioManager.STREAM_MUSIC) + 1).coerceAtMost(maxVolume)
+                            am.setStreamVolume(AudioManager.STREAM_MUSIC, nv, 0)
+                            val pct = if (maxVolume > 0) nv * 100 / maxVolume else 0
+                            showCenterInfo("Ses: \$pct%")
                             return true
                         }
                         KeyEvent.KEYCODE_DPAD_DOWN -> {
-                            val am = audioManager
-                            if (am != null) {
-                                val cur = am.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                val nv = (cur - 1).coerceAtLeast(0)
-                                am.setStreamVolume(AudioManager.STREAM_MUSIC, nv, 0)
-                                val pct = if (maxVolume > 0) nv * 100 / maxVolume else 0
-                                showCenterInfo("Ses: \$pct%")
-                            }
+                            val am = audioManager ?: return true
+                            val nv = (am.getStreamVolume(AudioManager.STREAM_MUSIC) - 1).coerceAtLeast(0)
+                            am.setStreamVolume(AudioManager.STREAM_MUSIC, nv, 0)
+                            val pct = if (maxVolume > 0) nv * 100 / maxVolume else 0
+                            showCenterInfo("Ses: \$pct%")
                             return true
                         }
+                        KeyEvent.KEYCODE_BACK -> { finish(); return true }
                     }
                 }
                 return super.dispatchKeyEvent(event)
             }
-            
+            private fun showControls() {
+                controlsVisible = true
+                controlsBar.visibility = View.VISIBLE
+                scheduleHideControls()
+            }
+            private fun hideControls() {
+                controlsVisible = false
+                controlsBar.visibility = View.GONE
+            }
+            private fun scheduleHideControls() {
+                handler.removeCallbacks(hideControlsRunnable)
+                handler.postDelayed(hideControlsRunnable, 4000)
+            }
             private fun rescheduleHide() {
+                showControls()
                 handler.removeCallbacks(hideOverlayRunnable)
                 handler.postDelayed(hideOverlayRunnable, 2000)
-                playerView.showController()
             }
-
             private fun setupGestureOverlay(view: View, isLeft: Boolean) {
                 view.setOnTouchListener { v, event ->
                     val am = audioManager
@@ -2328,11 +2450,12 @@ jobs:
                             gestureStartVolume = am?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: (maxVolume / 2)
                             gestureStartBrightness = currentBrightness
                             handler.removeCallbacks(hideOverlayRunnable)
+                            showControls()
                             true
                         }
                         MotionEvent.ACTION_MOVE -> {
                             val dy = event.y - gestureStartY
-                            if (abs(dy) > 50) {
+                            if (abs(dy) > 40) {
                                 isGesture = true
                                 val percent = -dy / v.height.toFloat()
                                 if (isLeft) adjustBrightness(percent) else adjustVolume(percent)
@@ -2341,27 +2464,29 @@ jobs:
                         }
                         MotionEvent.ACTION_UP -> {
                             if (!isGesture) {
-                                playerView.showController()
+                                if (!controlsVisible) showControls()
                                 val now = System.currentTimeMillis()
                                 if (isLeft) {
                                     tapCountLeft = if (now - lastTapLeft < 350) tapCountLeft + 1 else 1
                                     lastTapLeft = now
-                                    if (tapCountLeft >= 2) {
+                                    if (tapCountLeft >= 2 && playType != "LIVE") {
                                         tapCountLeft = 0
-                                        seekBy(-15000L)
-                                        showCenterInfo("◄◄ 15 saniye")
+                                        seekBy(-SEEK_MS)
+                                        showCenterInfo("- " + (SEEK_MS/1000) + " sn")
                                     }
                                 } else {
                                     tapCountRight = if (now - lastTapRight < 350) tapCountRight + 1 else 1
                                     lastTapRight = now
-                                    if (tapCountRight >= 2) {
+                                    if (tapCountRight >= 2 && playType != "LIVE") {
                                         tapCountRight = 0
-                                        seekBy(15000L)
-                                        showCenterInfo("15 saniye ►►")
+                                        seekBy(SEEK_MS)
+                                        showCenterInfo("+ " + (SEEK_MS/1000) + " sn")
                                     }
                                 }
                             }
-                            rescheduleHide()
+                            handler.removeCallbacks(hideOverlayRunnable)
+                            handler.postDelayed(hideOverlayRunnable, 1500)
+                            scheduleHideControls()
                             true
                         }
                         else -> false
@@ -2371,31 +2496,24 @@ jobs:
             private fun adjustVolume(percentDelta: Float) {
                 val am = audioManager ?: return
                 val change = (percentDelta * maxVolume).toInt()
-                var newVol = gestureStartVolume + change
-                if (newVol < 0) newVol = 0
-                if (newVol > maxVolume) newVol = maxVolume
+                val newVol = (gestureStartVolume + change).coerceIn(0, maxVolume)
                 am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
                 val percent = if (maxVolume > 0) (newVol * 100 / maxVolume) else 0
                 tvVolume.text = "Ses: \$percent%"
                 tvVolume.visibility = View.VISIBLE
             }
             private fun adjustBrightness(percentDelta: Float) {
-                var newB = gestureStartBrightness + percentDelta
-                if (newB < 0f) newB = 0f
-                if (newB > 1f) newB = 1f
+                val newB = (gestureStartBrightness + percentDelta).coerceIn(0.01f, 1f)
                 val lp = window.attributes
                 lp.screenBrightness = newB
                 window.attributes = lp
                 currentBrightness = newB
-                tvBrightness.text = "Parlaklık: \${(currentBrightness * 100f).toInt()}%"
+                tvBrightness.text = "Prlk: " + (currentBrightness * 100f).toInt() + "%"
                 tvBrightness.visibility = View.VISIBLE
             }
             private fun seekBy(deltaMs: Long) {
                 val p = player ?: return
-                var newPos = p.currentPosition + deltaMs
-                if (newPos < 0L) newPos = 0L
-                val duration = p.duration
-                if (duration > 0 && newPos > duration) newPos = duration
+                val newPos = (p.currentPosition + deltaMs).coerceIn(0L, if (p.duration > 0) p.duration else Long.MAX_VALUE)
                 p.seekTo(newPos)
             }
             private fun applyResizeMode(pv: PlayerView) {
@@ -2408,21 +2526,15 @@ jobs:
             private fun showCenterInfo(text: String) {
                 tvCenterInfo.text = text
                 tvCenterInfo.visibility = View.VISIBLE
-                rescheduleHide()
+                handler.removeCallbacks(hideOverlayRunnable)
+                handler.postDelayed(hideOverlayRunnable, 1500)
             }
-            override fun onPause() {
-                super.onPause()
-                player?.pause()
-            }
-            override fun onStop() {
-                super.onStop()
-                player?.pause()
-            }
+            override fun onPause() { super.onPause(); player?.pause() }
+            override fun onStop() { super.onStop(); player?.pause() }
             override fun onDestroy() {
                 super.onDestroy()
                 handler.removeCallbacksAndMessages(null)
-                player?.release()
-                player = null
+                player?.release(); player = null
             }
         }
         EOF
@@ -2430,215 +2542,317 @@ jobs:
         # ============ LAYOUTLAR (Hybrid Fix: Remove focusableInTouchMode) ============
         cat <<EOF > app/src/main/res/layout/activity_login.xml
         <?xml version="1.0" encoding="utf-8"?>
-        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
             xmlns:ads="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:background="@color/bg_dark">
-            <com.google.android.gms.ads.AdView
-                android:id="@+id/adViewTopLogin"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                ads:adSize="BANNER"
-                ads:adUnitId="@string/admob_banner_test"
-                android:layout_marginBottom="8dp"
-                android:focusable="false"
-                android:focusableInTouchMode="false"/>
+            android:background="@color/bg_dark"
+            android:fillViewport="true">
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="10dp">
-                <TextView
-                    android:id="@+id/tvTitle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="ErdinPlayer Pro"
-                    android:textColor="@color/primary_cyan"
-                    android:textStyle="bold"
-                    android:textSize="22sp"/>
-                <ImageButton
-                    android:id="@+id/btnLangLogin"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_menu_manage"
-                    android:tint="@color/white"/>
-            </LinearLayout>
-            <TextView
-                android:id="@+id/tvLoginType"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Giriş Tipi"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:layout_marginBottom="4dp"/>
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="14dp">
-                <LinearLayout
-                    android:id="@+id/cardXtream"
-                    android:layout_width="0dp"
-                    android:layout_height="72dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="8dp"
-                    android:background="@drawable/bg_header_card"
-                    android:layout_marginRight="6dp"
-                    android:focusable="true">
-                    <TextView
-                        android:id="@+id/tvXtream"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Xtream"
-                        android:textStyle="bold"
-                        android:textColor="@color/white"
-                        android:textSize="16sp"/>
-                </LinearLayout>
-                <LinearLayout
-                    android:id="@+id/cardM3u"
-                    android:layout_width="0dp"
-                    android:layout_height="72dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:padding="8dp"
-                    android:background="@drawable/selector_input_focus"
-                    android:layout_marginLeft="6dp"
-                    android:focusable="true">
-                    <TextView
-                        android:id="@+id/tvM3u"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="M3U"
-                        android:textStyle="bold"
-                        android:textColor="@color/white"
-                        android:textSize="16sp"/>
-                </LinearLayout>
-            </LinearLayout>
-            <EditText
-                android:id="@+id/etName"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:hint="Hesap adı"
-                android:background="@drawable/selector_input_focus"
-                android:padding="12dp"
-                android:textColor="@color/white"
-                android:textColorHint="@color/gray_600"
-                android:inputType="textPersonName"
-                android:layout_marginBottom="10dp"/>
-            <LinearLayout
-                android:id="@+id/layoutXtream"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-                <EditText
-                    android:id="@+id/etDns"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="Sunucu URL (http://...)"
-                    android:background="@drawable/selector_input_focus"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/gray_600"
-                    android:inputType="textUri"
-                    android:layout_marginBottom="8dp"/>
-                <EditText
-                    android:id="@+id/etPort"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="Port (opsiyonel, orn: 8080)"
-                    android:background="@drawable/selector_input_focus"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/gray_600"
-                    android:inputType="number"
-                    android:layout_marginBottom="8dp"/>
-                <EditText
-                    android:id="@+id/etUser"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="Kullanıcı adı"
-                    android:background="@drawable/selector_input_focus"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/gray_600"
-                    android:inputType="textEmailAddress"
-                    android:layout_marginBottom="8dp"/>
-                <EditText
-                    android:id="@+id/etPass"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="Şifre"
-                    android:inputType="textVisiblePassword"
-                    android:background="@drawable/selector_input_focus"
-                    android:padding="12dp"
-                    android:textColor="@color/white"
-                    android:textColorHint="@color/gray_600"
-                    android:layout_marginBottom="8dp"/>
-            </LinearLayout>
-            <LinearLayout
-                android:id="@+id/layoutM3u"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:visibility="gone">
-                <EditText
-                    android:id="@+id/etM3u"
+                android:paddingLeft="24dp"
+                android:paddingRight="24dp"
+                android:paddingTop="16dp"
+                android:paddingBottom="32dp">
+
+                <com.google.android.gms.ads.AdView
+                    android:id="@+id/adViewTopLogin"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:hint="M3U URL girin"
+                    android:layout_height="wrap_content"
+                    ads:adSize="BANNER"
+                    ads:adUnitId="@string/admob_banner_test"
+                    android:layout_marginBottom="16dp"
+                    android:focusable="false"
+                    android:focusableInTouchMode="false"/>
+
+                <!-- Logo + Baslik -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="28dp">
+                    <ImageView
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:src="@mipmap/ic_launcher"
+                        android:layout_marginRight="12dp"/>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:id="@+id/tvTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Emin Xtream"
+                            android:textColor="@color/white"
+                            android:textSize="22sp"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Hesap ekle veya sec"
+                            android:textColor="@color/hint_yellow"
+                            android:textSize="12sp"/>
+                    </LinearLayout>
+                    <ImageButton
+                        android:id="@+id/btnLangLogin"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="@android:color/transparent"
+                        android:src="@android:drawable/ic_menu_manage"
+                        android:tint="@color/gray_600"
+                        android:visibility="gone"/>
+                </LinearLayout>
+
+                <!-- Tab Secici -->
+                <TextView
+                    android:id="@+id/tvLoginType"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Baglanti tipi"
+                    android:textColor="@color/hint_yellow"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:layout_marginBottom="8dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:orientation="horizontal"
+                    android:background="@color/bg_card"
+                    android:padding="4dp"
+                    android:layout_marginBottom="20dp">
+                    <LinearLayout
+                        android:id="@+id/cardXtream"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:background="@drawable/bg_header_card"
+                        android:focusable="true">
+                        <TextView
+                            android:id="@+id/tvXtream"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Xtream Codes"
+                            android:textColor="@color/white"
+                            android:textSize="13sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/cardM3u"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:background="@android:color/transparent"
+                        android:focusable="true">
+                        <TextView
+                            android:id="@+id/tvM3u"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="M3U Liste"
+                            android:textColor="@color/hint_yellow"
+                            android:textSize="13sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Hesap Adi -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hesap Adi"
+                    android:textColor="@color/hint_yellow"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.06"
+                    android:layout_marginBottom="6dp"/>
+                <EditText
+                    android:id="@+id/etName"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:hint="orn: Ev, Is, Tatil"
                     android:background="@drawable/selector_input_focus"
-                    android:padding="12dp"
+                    android:paddingLeft="16dp"
+                    android:paddingRight="16dp"
                     android:textColor="@color/white"
                     android:textColorHint="@color/hint_yellow"
-                    android:inputType="textUri"
-                    android:layout_marginBottom="10dp"/>
+                    android:textSize="14sp"
+                    android:inputType="textPersonName"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- Xtream Alanlari -->
+                <LinearLayout
+                    android:id="@+id/layoutXtream"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sunucu"
+                        android:textColor="@color/hint_yellow"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.06"
+                        android:layout_marginBottom="6dp"/>
+
+                    <!-- DNS + Port ayni satirda -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+                        <EditText
+                            android:id="@+id/etDns"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:hint="http://sunucu.com"
+                            android:background="@drawable/selector_input_focus"
+                            android:paddingLeft="16dp"
+                            android:paddingRight="8dp"
+                            android:textColor="@color/white"
+                            android:textColorHint="@color/hint_yellow"
+                            android:textSize="13sp"
+                            android:inputType="textUri"
+                            android:layout_marginRight="8dp"/>
+                        <EditText
+                            android:id="@+id/etPort"
+                            android:layout_width="90dp"
+                            android:layout_height="match_parent"
+                            android:hint=":8080"
+                            android:background="@drawable/selector_input_focus"
+                            android:gravity="center"
+                            android:textColor="@color/white"
+                            android:textColorHint="@color/hint_yellow"
+                            android:textSize="13sp"
+                            android:inputType="number"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Giris"
+                        android:textColor="@color/hint_yellow"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.06"
+                        android:layout_marginBottom="6dp"/>
+                    <EditText
+                        android:id="@+id/etUser"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:hint="Kullanici adi"
+                        android:background="@drawable/selector_input_focus"
+                        android:paddingLeft="16dp"
+                        android:paddingRight="16dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/hint_yellow"
+                        android:textSize="14sp"
+                        android:inputType="textNoSuggestions"
+                        android:layout_marginBottom="10dp"/>
+                    <EditText
+                        android:id="@+id/etPass"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:hint="Sifre"
+                        android:background="@drawable/selector_input_focus"
+                        android:paddingLeft="16dp"
+                        android:paddingRight="16dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/hint_yellow"
+                        android:textSize="14sp"
+                        android:inputType="textVisiblePassword"
+                        android:layout_marginBottom="4dp"/>
+                </LinearLayout>
+
+                <!-- M3U Alani -->
+                <LinearLayout
+                    android:id="@+id/layoutM3u"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Playlist URL"
+                        android:textColor="@color/hint_yellow"
+                        android:textSize="11sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.06"
+                        android:layout_marginBottom="6dp"/>
+                    <EditText
+                        android:id="@+id/etM3u"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:hint="http://... veya https://..."
+                        android:background="@drawable/selector_input_focus"
+                        android:paddingLeft="16dp"
+                        android:paddingRight="16dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/hint_yellow"
+                        android:textSize="13sp"
+                        android:inputType="textUri"
+                        android:layout_marginBottom="4dp"/>
+                </LinearLayout>
+
+                <!-- Ekle Butonu -->
+                <Button
+                    android:id="@+id/btnAddAccount"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="Hesap Ekle"
+                    android:textStyle="bold"
+                    android:textColor="@color/black"
+                    android:textSize="15sp"
+                    android:background="@color/primary_cyan"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="28dp"
+                    android:focusable="true"/>
+
+                <!-- Kayitli Hesaplar -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="10dp">
+                    <TextView
+                        android:id="@+id/tvAccountsTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Kayitli Hesaplar"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold"/>
+                    <TextView
+                        android:id="@+id/tvAccountsHint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Secmek icin dokun"
+                        android:textColor="@color/hint_yellow"
+                        android:textSize="11sp"/>
+                </LinearLayout>
+
+                <ListView
+                    android:id="@+id/lvAccounts"
+                    android:layout_width="match_parent"
+                    android:layout_height="320dp"
+                    android:divider="@android:color/transparent"
+                    android:dividerHeight="8dp"/>
+
             </LinearLayout>
-            <Button
-                android:id="@+id/btnAddAccount"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:text="Hesap Ekle"
-                android:textStyle="bold"
-                android:textColor="@color/black"
-                android:textSize="16sp"
-                android:background="@color/primary_cyan"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="16dp"
-                android:focusable="true"/>
-            <TextView
-                android:id="@+id/tvAccountsTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Kayıtlı Hesaplar"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="2dp"/>
-            <TextView
-                android:id="@+id/tvAccountsHint"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Devam etmek için alttan bir hesap seçin"
-                android:textColor="@color/hint_yellow"
-                android:textSize="13sp"
-                android:layout_marginBottom="6dp"/>
-            <ListView
-                android:id="@+id/lvAccounts"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:divider="@android:color/transparent"
-                android:dividerHeight="10dp"/>
-        </LinearLayout>
+        </ScrollView>
         EOF
 
         cat <<EOF > app/src/main/res/layout/activity_content.xml
@@ -3009,140 +3223,197 @@ jobs:
         cat <<EOF > app/src/main/res/layout/activity_player_pro.xml
         <?xml version="1.0" encoding="utf-8"?>
         <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/black">
-
-        <androidx.media3.ui.PlayerView
-        android:id="@+id/pvMain"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-        <LinearLayout
-        android:id="@+id/overlayContainer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="horizontal"
-        android:layout_marginBottom="72dp">
-
-        <View
-            android:id="@+id/overlayLeft"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1" />
-
-        <View
-            android:id="@+id/overlayRight"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1" />
-         </LinearLayout>
-
-         <TextView
-        android:id="@+id/tvInfoCenter"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        android:background="#80000000"
-        android:padding="8dp"
-        android:layout_gravity="center"
-        android:visibility="gone" />
-
-        <TextView
-        android:id="@+id/tvBrightness"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@android:color/white"
-        android:textSize="14sp"
-        android:background="#80000000"
-        android:padding="6dp"
-        android:layout_gravity="top|left"
-        android:layout_margin="12dp"
-        android:visibility="gone" />
-
-        <TextView
-        android:id="@+id/tvVolume"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@android:color/white"
-        android:textSize="14sp"
-        android:background="#80000000"
-        android:padding="6dp"
-        android:layout_gravity="top|right"
-        android:layout_margin="12dp"
-        android:visibility="gone" />
-
-        <LinearLayout
-        android:id="@+id/playerControlsBar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#BB000000"
-        android:paddingBottom="16dp"
-        android:layout_gravity="bottom">
-
-        <TextView
-            android:id="@+id/tvPosition"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="#9E9E9E"
-            android:textSize="11sp"
-            android:gravity="center"
-            android:padding="4dp"
-            android:visibility="gone"/>
+            android:layout_height="match_parent"
+            android:background="@color/black">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:paddingLeft="12dp"
-            android:paddingRight="12dp">
-
-            <ImageButton
-                android:id="@+id/btnSeekBack"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
-                android:background="@android:color/transparent"
-                android:src="@android:drawable/ic_media_rew"
-                android:tint="@android:color/white"
+            <!-- Video -->
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/pvMain"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:focusable="true"/>
 
-            <ImageButton
-                android:id="@+id/btnPlayPause"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:background="@android:color/transparent"
-                android:src="@android:drawable/ic_media_pause"
-                android:padding="8dp"
-                android:tint="@android:color/white"
-                android:layout_marginLeft="8dp"
-                android:layout_marginRight="8dp"
-                android:focusable="true"/>
+            <!-- Gesture overlaylar -->
+            <LinearLayout
+                android:id="@+id/overlayContainer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:layout_marginBottom="120dp">
+                <View
+                    android:id="@+id/overlayLeft"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"/>
+                <View
+                    android:id="@+id/overlayRight"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"/>
+            </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/btnSeekFwd"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
-                android:background="@android:color/transparent"
-                android:src="@android:drawable/ic_media_ff"
-                android:tint="@android:color/white"
-                android:focusable="true"/>
+            <!-- Merkez bilgi (seek/mod) -->
+            <TextView
+                android:id="@+id/tvInfoCenter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:background="#CC000000"
+                android:padding="12dp"
+                android:layout_gravity="center"
+                android:visibility="gone"/>
 
-            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+            <!-- Sol parlaklık -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginLeft="16dp"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/tvBrightness"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp"
+                    android:background="#CC000000"
+                    android:padding="8dp"
+                    android:visibility="gone"/>
+            </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/btnMode"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:background="@android:color/transparent"
-                android:src="@android:drawable/ic_menu_crop"
-                android:padding="8dp"
-                android:tint="@android:color/white"
-                android:focusable="true"/>
-        </LinearLayout>
-        </LinearLayout>
+            <!-- Sag ses -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical|end"
+                android:layout_marginRight="16dp"
+                android:orientation="vertical"
+                android:gravity="center">
+                <TextView
+                    android:id="@+id/tvVolume"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp"
+                    android:background="#CC000000"
+                    android:padding="8dp"
+                    android:visibility="gone"/>
+            </LinearLayout>
+
+            <!-- Alt kontrol cubugu -->
+            <LinearLayout
+                android:id="@+id/playerControlsBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#CC000000"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp"
+                android:layout_gravity="bottom">
+
+                <!-- Süre / Pozisyon -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingLeft="16dp"
+                    android:paddingRight="16dp"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="2dp">
+                    <TextView
+                        android:id="@+id/tvPosition"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#CCFFFFFF"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace"
+                        android:visibility="gone"/>
+                    <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+                    <TextView
+                        android:id="@+id/tvDuration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#66FFFFFF"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace"
+                        android:visibility="gone"/>
+                </LinearLayout>
+
+                <!-- Seek bar (sadece VOD için görünür) -->
+                <SeekBar
+                    android:id="@+id/seekBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="28dp"
+                    android:paddingLeft="16dp"
+                    android:paddingRight="16dp"
+                    android:progressTint="@color/primary_cyan"
+                    android:thumbTint="@color/primary_cyan"
+                    android:progressBackgroundTint="@color/gray_600"
+                    android:secondaryProgressTint="@color/gray_700"
+                    android:layout_marginBottom="4dp"
+                    android:visibility="gone"/>
+
+                <!-- Butonlar -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp">
+
+                    <!-- Geri Sar -->
+                    <ImageButton
+                        android:id="@+id/btnSeekBack"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@android:color/transparent"
+                        android:src="@android:drawable/ic_media_rew"
+                        android:tint="@android:color/white"
+                        android:focusable="true"/>
+
+                    <!-- Play/Pause -->
+                    <ImageButton
+                        android:id="@+id/btnPlayPause"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:background="@android:color/transparent"
+                        android:src="@android:drawable/ic_media_pause"
+                        android:padding="8dp"
+                        android:tint="@android:color/white"
+                        android:layout_marginLeft="4dp"
+                        android:layout_marginRight="4dp"
+                        android:focusable="true"/>
+
+                    <!-- Ileri Sar -->
+                    <ImageButton
+                        android:id="@+id/btnSeekFwd"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@android:color/transparent"
+                        android:src="@android:drawable/ic_media_ff"
+                        android:tint="@android:color/white"
+                        android:focusable="true"/>
+
+                    <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+
+                    <!-- Ekran modu -->
+                    <ImageButton
+                        android:id="@+id/btnMode"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="@android:color/transparent"
+                        android:src="@android:drawable/ic_menu_crop"
+                        android:padding="8dp"
+                        android:tint="#AAFFFFFF"
+                        android:focusable="true"/>
+                </LinearLayout>
+            </LinearLayout>
+
         </FrameLayout>
         EOF
 
