@@ -115,11 +115,11 @@ jobs:
         printf '%s\n' '}' >> app/build.gradle
         printf '%s\n' '' >> app/build.gradle
         printf '%s\n' 'android {' >> app/build.gradle
-        printf '%s\n' '    namespace '\''$PACKAGE_NAME'\''' >> app/build.gradle
+        printf "%s\n" "    namespace '$PACKAGE_NAME'" >> app/build.gradle
         printf '%s\n' '    compileSdk 34' >> app/build.gradle
         printf '%s\n' '' >> app/build.gradle
         printf '%s\n' '    defaultConfig {' >> app/build.gradle
-        printf '%s\n' '        applicationId "$PACKAGE_NAME"' >> app/build.gradle
+        printf "%s\n" "        applicationId \"$PACKAGE_NAME\"" >> app/build.gradle
         printf '%s\n' '        minSdk 21' >> app/build.gradle
         printf '%s\n' '        targetSdk 35' >> app/build.gradle
         printf '%s\n' '        versionCode 20' >> app/build.gradle
@@ -129,9 +129,9 @@ jobs:
         printf '%s\n' '    signingConfigs {' >> app/build.gradle
         printf '%s\n' '        release {' >> app/build.gradle
         printf '%s\n' '            storeFile file("keystore.jks")' >> app/build.gradle
-        printf '%s\n' '            storePassword "$STORE_PASS"' >> app/build.gradle
-        printf '%s\n' '            keyAlias "$KEY_ALIAS"' >> app/build.gradle
-        printf '%s\n' '            keyPassword "$KEY_PASS"' >> app/build.gradle
+        printf "%s\n" "            storePassword \"$STORE_PASS\"" >> app/build.gradle
+        printf "%s\n" "            keyAlias \"$KEY_ALIAS\"" >> app/build.gradle
+        printf "%s\n" "            keyPassword \"$KEY_PASS\"" >> app/build.gradle
         printf '%s\n' '        }' >> app/build.gradle
         printf '%s\n' '    }' >> app/build.gradle
         printf '%s\n' '' >> app/build.gradle
