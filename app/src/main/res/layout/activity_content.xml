@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:ads="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawerLayout"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="vertical" android:background="@color/bg_dark">
+        <com.google.android.gms.ads.AdView android:id="@+id/adViewTopContent"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            ads:adSize="BANNER" ads:adUnitId="@string/admob_banner_test"
+            android:layout_marginBottom="4dp"
+            android:focusable="false" android:focusableInTouchMode="false"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical"
+            android:background="@color/bg_card"
+            android:paddingLeft="12dp" android:paddingRight="12dp"
+            android:paddingTop="10dp" android:paddingBottom="10dp">
+            <TextView android:id="@+id/tvOpenDrawer"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="&#9776;" android:textColor="@color/white"
+                android:textSize="22sp" android:paddingRight="12dp" android:focusable="true"/>
+            <TextView android:id="@+id/tvTitleBar"
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:text="EminPlayer"
+                android:textColor="@color/white" android:textSize="18sp"
+                android:textStyle="bold" android:focusable="true"/>
+            <EditText android:id="@+id/etSearch"
+                android:layout_width="200dp" android:layout_height="40dp"
+                android:hint="Ara..." android:background="@drawable/selector_input_focus"
+                android:paddingLeft="10dp" android:paddingRight="10dp"
+                android:textColor="@color/white" android:textColorHint="@color/hint_yellow"
+                android:singleLine="true" android:imeOptions="actionSearch"
+                android:focusable="true" android:focusableInTouchMode="true"/>
+        </LinearLayout>
+        <ProgressBar android:id="@+id/pbLoading"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp" android:layout_marginBottom="8dp"
+            android:visibility="gone"/>
+        <TextView android:id="@+id/tvStatus"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="@color/error_red" android:textSize="14sp"
+            android:padding="8dp" android:visibility="gone"/>
+        <LinearLayout android:id="@+id/layoutModeSelector"
+            android:layout_width="match_parent" android:layout_height="0dp"
+            android:layout_weight="1" android:orientation="vertical"
+            android:gravity="center" android:padding="24dp">
+            <TextView android:id="@+id/btnModeLive"
+                android:layout_width="match_parent" android:layout_height="64dp"
+                android:gravity="center" android:text="Canli TV"
+                android:textColor="@color/white" android:textSize="18sp"
+                android:textStyle="bold" android:background="@drawable/bg_focusable"
+                android:focusable="true" android:layout_marginBottom="16dp"/>
+            <TextView android:id="@+id/btnModeVod"
+                android:layout_width="match_parent" android:layout_height="64dp"
+                android:gravity="center" android:text="Filmler"
+                android:textColor="@color/white" android:textSize="18sp"
+                android:textStyle="bold" android:background="@drawable/bg_focusable"
+                android:focusable="true" android:layout_marginBottom="16dp"/>
+            <TextView android:id="@+id/btnModeSeries"
+                android:layout_width="match_parent" android:layout_height="64dp"
+                android:gravity="center" android:text="Diziler"
+                android:textColor="@color/white" android:textSize="18sp"
+                android:textStyle="bold" android:background="@drawable/bg_focusable"
+                android:focusable="true"/>
+        </LinearLayout>
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvContent"
+            android:layout_width="match_parent" android:layout_height="0dp"
+            android:layout_weight="1" android:padding="8dp" android:visibility="gone"/>
+        <com.google.android.gms.ads.AdView android:id="@+id/adViewBottomContent"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            ads:adSize="BANNER" ads:adUnitId="@string/admob_banner_test"
+            android:layout_marginTop="4dp"
+            android:focusable="false" android:focusableInTouchMode="false"/>
+    </LinearLayout>
+    <LinearLayout android:layout_width="300dp" android:layout_height="match_parent"
+        android:layout_gravity="start" android:orientation="vertical"
+        android:background="@color/drawer_bg" android:padding="12dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:background="@drawable/bg_header_card"
+            android:padding="12dp">
+            <TextView android:id="@+id/tvDrawerUser"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Hesap: -" android:textColor="@color/white"
+                android:textStyle="bold" android:textSize="16sp"/>
+            <TextView android:id="@+id/tvDrawerExpire"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Sure: -" android:textColor="@color/white"
+                android:textSize="14sp" android:layout_marginTop="4dp"/>
+        </LinearLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Ekli Hesaplar" android:textColor="@color/hint_yellow"
+            android:textStyle="bold" android:textSize="14sp"
+            android:layout_marginTop="12dp" android:layout_marginBottom="8dp"/>
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvAccounts"
+            android:layout_width="match_parent" android:layout_height="0dp"
+            android:layout_weight="1"/>
+        <TextView android:id="@+id/tvSettings"
+            android:layout_width="match_parent" android:layout_height="48dp"
+            android:gravity="center" android:text="Ayarlar"
+            android:textColor="@color/white" android:textSize="14sp"
+            android:background="@drawable/bg_focusable" android:focusable="true"
+            android:layout_marginTop="6dp" android:layout_marginBottom="4dp"/>
+        <TextView android:id="@+id/tvLogout"
+            android:layout_width="match_parent" android:layout_height="56dp"
+            android:gravity="center" android:text="Cikis"
+            android:textColor="@color/white" android:textStyle="bold"
+            android:background="@drawable/bg_focusable" android:focusable="true"
+            android:layout_marginTop="4dp"/>
+    </LinearLayout>
+</androidx.drawerlayout.widget.DrawerLayout>

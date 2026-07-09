@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/bg_dark">
+    <TextView android:id="@+id/tvSeriesTitle"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textColor="@color/white" android:background="@color/bg_card"
+        android:textSize="20sp" android:textStyle="bold"
+        android:padding="16dp" android:focusable="true"/>
+    <ProgressBar android:id="@+id/pbSeries"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_gravity="center" android:visibility="gone"/>
+    <TextView android:id="@+id/tvSeriesStatus"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textColor="@color/error_red" android:textSize="14sp"
+        android:padding="8dp" android:visibility="gone"/>
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvEpisodes"
+        android:layout_width="match_parent" android:layout_height="match_parent"
+        android:padding="8dp"/>
+</LinearLayout>

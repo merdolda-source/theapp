@@ -1,0 +1,4 @@
+-keep class com.google.android.gms.** { *; }
+-keep class androidx.media3.** { *; }
+-dontwarn com.google.android.gms.**
+-dontwarn androidx.media3.**

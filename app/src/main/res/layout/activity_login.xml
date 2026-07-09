@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:ads="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/bg_dark" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:paddingLeft="24dp" android:paddingRight="24dp"
+        android:paddingTop="16dp" android:paddingBottom="32dp">
+        <com.google.android.gms.ads.AdView android:id="@+id/adViewTopLogin"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            ads:adSize="BANNER" ads:adUnitId="@string/admob_banner_test"
+            android:layout_marginBottom="16dp"
+            android:focusable="false" android:focusableInTouchMode="false"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical"
+            android:layout_marginBottom="28dp">
+            <ImageView android:layout_width="42dp" android:layout_height="42dp"
+                android:src="@mipmap/ic_launcher" android:layout_marginRight="12dp"/>
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:orientation="vertical">
+                <TextView android:id="@+id/tvTitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Emin Xtream" android:textColor="@color/white"
+                    android:textSize="22sp" android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Hesap ekle veya sec" android:textColor="@color/hint_yellow"
+                    android:textSize="12sp"/>
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="46dp"
+            android:orientation="horizontal" android:background="@drawable/bg_input_dark"
+            android:padding="3dp" android:layout_marginBottom="20dp">
+            <LinearLayout android:id="@+id/cardXtream"
+                android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:gravity="center"
+                android:background="@drawable/bg_header_card"
+                android:focusable="true" android:clickable="true">
+                <TextView android:id="@+id/tvXtream"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Xtream Codes" android:textColor="@color/white"
+                    android:textSize="13sp" android:textStyle="bold"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cardM3u"
+                android:layout_width="0dp" android:layout_height="match_parent"
+                android:layout_weight="1" android:gravity="center"
+                android:background="@android:color/transparent"
+                android:focusable="true" android:clickable="true">
+                <TextView android:id="@+id/tvM3u"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="M3U Liste" android:textColor="@color/hint_yellow"
+                    android:textSize="13sp"/>
+            </LinearLayout>
+        </LinearLayout>
+        <EditText android:id="@+id/etName"
+            android:layout_width="match_parent" android:layout_height="52dp"
+            android:hint="Hesap Adi" android:background="@drawable/selector_input_focus"
+            android:paddingLeft="16dp" android:paddingRight="16dp"
+            android:textColor="@color/white" android:textColorHint="@color/hint_yellow"
+            android:textSize="14sp" android:inputType="textPersonName"
+            android:layout_marginBottom="12dp"/>
+        <LinearLayout android:id="@+id/layoutXtream"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="52dp"
+                android:orientation="horizontal" android:layout_marginBottom="12dp">
+                <EditText android:id="@+id/etDns"
+                    android:layout_width="0dp" android:layout_height="match_parent"
+                    android:layout_weight="1" android:hint="http://sunucu.com"
+                    android:background="@drawable/selector_input_focus"
+                    android:paddingLeft="16dp" android:paddingRight="8dp"
+                    android:textColor="@color/white" android:textColorHint="@color/hint_yellow"
+                    android:textSize="13sp" android:inputType="textUri" android:layout_marginRight="8dp"/>
+                <EditText android:id="@+id/etPort"
+                    android:layout_width="90dp" android:layout_height="match_parent"
+                    android:hint=":8080" android:background="@drawable/selector_input_focus"
+                    android:gravity="center" android:textColor="@color/white"
+                    android:textColorHint="@color/hint_yellow"
+                    android:textSize="13sp" android:inputType="number"/>
+            </LinearLayout>
+            <EditText android:id="@+id/etUser"
+                android:layout_width="match_parent" android:layout_height="52dp"
+                android:hint="Kullanici adi" android:background="@drawable/selector_input_focus"
+                android:paddingLeft="16dp" android:paddingRight="16dp"
+                android:textColor="@color/white" android:textColorHint="@color/hint_yellow"
+                android:textSize="14sp" android:inputType="textNoSuggestions"
+                android:layout_marginBottom="10dp"/>
+            <EditText android:id="@+id/etPass"
+                android:layout_width="match_parent" android:layout_height="52dp"
+                android:hint="Sifre" android:background="@drawable/selector_input_focus"
+                android:paddingLeft="16dp" android:paddingRight="16dp"
+                android:textColor="@color/white" android:textColorHint="@color/hint_yellow"
+                android:textSize="14sp" android:inputType="textVisiblePassword"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/layoutM3u"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:visibility="gone">
+            <EditText android:id="@+id/etM3u"
+                android:layout_width="match_parent" android:layout_height="52dp"
+                android:hint="http://.../playlist.m3u"
+                android:background="@drawable/selector_input_focus"
+                android:paddingLeft="16dp" android:paddingRight="16dp"
+                android:textColor="@color/white" android:textColorHint="@color/hint_yellow"
+                android:textSize="13sp" android:inputType="textUri"/>
+        </LinearLayout>
+        <Button android:id="@+id/btnAddAccount"
+            android:layout_width="match_parent" android:layout_height="52dp"
+            android:text="Hesap Ekle" android:textStyle="bold"
+            android:textColor="@color/black" android:textSize="15sp"
+            android:background="@color/primary_cyan"
+            android:layout_marginTop="16dp" android:layout_marginBottom="28dp"
+            android:focusable="true"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Kayitli Hesaplar" android:textColor="@color/white"
+            android:textSize="14sp" android:textStyle="bold" android:layout_marginBottom="10dp"/>
+        <ListView android:id="@+id/lvAccounts"
+            android:layout_width="match_parent" android:layout_height="320dp"
+            android:divider="@android:color/transparent" android:dividerHeight="8dp"/>
+    </LinearLayout>
+</ScrollView>

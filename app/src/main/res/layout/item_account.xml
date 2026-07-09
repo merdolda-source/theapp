@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/accountContainer"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="horizontal" android:background="@drawable/bg_focusable"
+    android:gravity="center_vertical" android:minHeight="72dp"
+    android:padding="10dp" android:focusable="true">
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+        android:layout_weight="1" android:orientation="vertical">
+        <TextView android:id="@+id/tvAccountName"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Hesap Adi" android:textColor="@color/white"
+            android:textStyle="bold" android:textSize="15sp"/>
+        <TextView android:id="@+id/tvAccountType"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Xtream" android:textColor="@color/primary_cyan"
+            android:textSize="12sp" android:layout_marginTop="2dp"/>
+    </LinearLayout>
+    <ImageButton android:id="@+id/btnDeleteAccount"
+        android:layout_width="36dp" android:layout_height="36dp"
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/ic_menu_delete"
+        android:tint="@color/error_red" android:focusable="true"/>
+</LinearLayout>
