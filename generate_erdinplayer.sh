@@ -212,7 +212,7 @@ EOF
 
 cat <<EOF > app/src/main/res/values/styles.xml
 <resources>
-    <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="Theme.ErdinPlayer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/bg_base</item>
         <item name="android:textColor">@color/text_primary</item>
         <item name="colorAccent">@color/accent_primary</item>
