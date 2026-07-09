@@ -14,6 +14,7 @@ import com.erdin.player.adapters.GridAdapter
 import com.erdin.player.models.EpisodeItem
 import com.erdin.player.utils.Prefs
 import com.erdin.player.utils.RemoteConfig
+import com.erdin.player.utils.UrlUtils
 class SeriesDetailActivity : AppCompatActivity() {
     private lateinit var prefs:Prefs
     private lateinit var tvTitle:TextView; private lateinit var tvStatus:TextView
@@ -78,7 +79,7 @@ class SeriesDetailActivity : AppCompatActivity() {
         val user=prefs.getUser().trim().split(" ").joinToString("")
         val pass=prefs.getPass().trim()
         val ext=ep.container_extension?:"mp4"
-        val url="$dns/series/$user/$pass/${ep.id}.$ext"
+        val url="$dns/series/${UrlUtils.encPathSegment(user)}/${UrlUtils.encPathSegment(pass)}/${ep.id}.$ext"
         startActivity(Intent(this,PlayerActivity::class.java).apply {
             putExtra("URL",url); putExtra("TYPE","VOD"); putExtra("REF",""); putExtra("ORG","")
             putExtra("TITLE",ep.title); putExtra("ITEM_KEY","series_${ep.id}")
@@ -89,7 +90,7 @@ class SeriesDetailActivity : AppCompatActivity() {
         val user=prefs.getUser().trim().split(" ").joinToString("")
         val pass=prefs.getPass().trim()
         if(dns.isEmpty()||user.isEmpty()||pass.isEmpty()) { tvStatus.text="DNS/kullanici/sifre eksik."; tvStatus.visibility=View.VISIBLE; return }
-        val urlStr="$dns/player_api.php?username=$user&password=$pass&action=get_series_info&series_id=$seriesId"
+        val urlStr="$dns/player_api.php?username=${UrlUtils.encQueryParam(user)}&password=${UrlUtils.encQueryParam(pass)}&action=get_series_info&series_id=${UrlUtils.encQueryParam(seriesId)}"
         pb.visibility=View.VISIBLE; tvStatus.visibility=View.GONE
         Thread {
             try {

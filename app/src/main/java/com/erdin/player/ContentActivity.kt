@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.ads.AdView
 import org.json.JSONArray
 import org.json.JSONObject
+import com.erdin.player.utils.UrlUtils
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
@@ -236,7 +237,7 @@ class ContentActivity : AppCompatActivity() {
             val path=if(currentMode=="LIVE") "live" else "movie"
             val ext=if(currentMode=="LIVE") ".ts" else (if(!item.container_extension.isNullOrEmpty()) "."+item.container_extension else ".mp4")
             val id=item.stream_id?:""
-            val playUrl="$dns/$path/$user/$pass/$id$ext"
+            val playUrl="$dns/$path/${UrlUtils.encPathSegment(user)}/${UrlUtils.encPathSegment(pass)}/$id$ext"
             val itn=Intent(this,PlayerActivity::class.java)
             itn.putExtra("URL",playUrl); itn.putExtra("REF",""); itn.putExtra("ORG","")
             itn.putExtra("TYPE",if(currentMode=="LIVE") "LIVE" else if(currentMode=="SERIES") "SERIES" else "VOD")
@@ -258,7 +259,7 @@ class ContentActivity : AppCompatActivity() {
         val dnsRaw=(acc.dns?:"").trim(); val user=(acc.user?:"").trim().split(" ").joinToString(""); val pass=(acc.pass?:"").trim()
         if (dnsRaw.isEmpty()||user.isEmpty()||pass.isEmpty()) { pb.visibility=View.GONE; tvStatus.text="DNS/kullanici/sifre bos."; tvStatus.visibility=View.VISIBLE; return }
         val dns=if(dnsRaw.endsWith("/")) dnsRaw.dropLast(1) else dnsRaw
-        val base="$dns/player_api.php?username=$user&password=$pass"
+        val base="$dns/player_api.php?username=${UrlUtils.encQueryParam(user)}&password=${UrlUtils.encQueryParam(pass)}"
         val catAction=when(currentMode) { "VOD"->"get_vod_categories"; "SERIES"->"get_series_categories"; else->"get_live_categories" }
         val streamsAction=when(currentMode) { "VOD"->"get_vod_streams"; "SERIES"->"get_series"; else->"get_live_streams" }
         Thread {
