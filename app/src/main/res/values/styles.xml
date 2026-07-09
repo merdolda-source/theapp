@@ -18,4 +18,11 @@
     <style name="NavLabelInactive" parent="TextAppearance.MaterialComponents.Caption">
         <item name="android:textSize">11sp</item>
     </style>
+
+    <style name="DarkAlertDialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_header_card</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="colorAccent">@color/primary_cyan</item>
+    </style>
 </resources>

@@ -113,19 +113,41 @@ class ContentActivity : AppCompatActivity() {
         rvAccounts.adapter=AccountsAdapter(prefs.getAccounts().toMutableList(),
             onOpen={a -> prefs.setActive(a.id); activeAcc=a; tvDrawerUser.text="Hesap: "+a.name
                 openMode(currentMode) },
-            onDelete={a -> AlertDialog.Builder(this).setTitle("Hesabi Sil").setMessage("Silinsin mi? "+a.name)
-                .setPositiveButton("Evet") { _,_ -> prefs.deleteAccount(a.id)
-                    val act=prefs.getActive()
-                    if (act==null) { startActivity(Intent(this,LoginActivity::class.java)); finish() }
-                    else { activeAcc=act; tvDrawerUser.text="Hesap: "+act.name; setupAccountsList() } }
-                .setNegativeButton("Hayir",null).show() })
+            onDelete={a -> confirmDeleteAccount(a) })
+    }
+    private fun confirmDeleteAccount(a:AccountProfile) {
+        val dlg=AlertDialog.Builder(this,R.style.DarkAlertDialog)
+            .setTitle("Hesabi Sil")
+            .setMessage("\""+a.name+"\" hesabini silmek istiyor musun?")
+            .setPositiveButton("Evet") { _,_ -> prefs.deleteAccount(a.id)
+                val act=prefs.getActive()
+                if (act==null) { startActivity(Intent(this,LoginActivity::class.java)); finish() }
+                else { activeAcc=act; tvDrawerUser.text="Hesap: "+act.name; setupAccountsList() } }
+            .setNegativeButton("Vazgec",null)
+            .create()
+        dlg.show()
+        dlg.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(resources.getColor(R.color.error_red,theme))
+        dlg.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(resources.getColor(R.color.text_secondary,theme))
+    }
+    private fun setupVolumeControl() {
+        val am=getSystemService(AUDIO_SERVICE) as? android.media.AudioManager ?: return
+        val sb=findViewById<SeekBar>(R.id.seekVolume)
+        val max=am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+        sb.max=max; sb.progress=am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
+        sb.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb:SeekBar,p:Int,fromUser:Boolean) {
+                if(fromUser) am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC,p,0)
+            }
+            override fun onStartTrackingTouch(sb:SeekBar) {}
+            override fun onStopTrackingTouch(sb:SeekBar) {}
+        })
     }
     private fun openSettings() {
-        setupAccountsList()
+        setupAccountsList(); setupVolumeControl()
         tvTitle.text="Ayarlar"; etSearch.visibility=View.GONE
         rv.visibility=View.GONE; layoutSettings.visibility=View.VISIBLE
         pb.visibility=View.GONE; tvStatus.visibility=View.GONE
-        val nativeContainer=findViewById<FrameLayout>(R.id.nativeAdContainer)
+        val nativeContainer=findViewById<FrameLayout>(R.id.nativeAdContainerSettings)
         nativeContainer.visibility=View.VISIBLE
         AdsHelper.loadNativeAdInto(this, nativeContainer) { }
     }
@@ -141,9 +163,6 @@ class ContentActivity : AppCompatActivity() {
         etSearch.visibility=View.VISIBLE; layoutSettings.visibility=View.GONE; rv.visibility=View.VISIBLE
         etSearch.setText(""); screen=Screen.CATEGORIES; selectedCategory=null
         categoriesAll=emptyList(); streamsAll=emptyList()
-        val nativeContainer=findViewById<FrameLayout>(R.id.nativeAdContainer)
-        nativeContainer.visibility=View.VISIBLE
-        AdsHelper.loadNativeAdInto(this, nativeContainer) { }
         fetchCategoriesAndStreams()
     }
     override fun onBackPressed() {

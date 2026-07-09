@@ -82,18 +82,37 @@
                     android:textColor="@color/white" android:textSize="14sp"
                     android:background="@drawable/bg_focusable" android:focusable="true"
                     android:layout_marginBottom="10dp"/>
+
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="Ses Seviyesi" android:textColor="@color/hint_yellow"
+                    android:textStyle="bold" android:textSize="14sp"
+                    android:layout_marginBottom="8dp"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:background="@drawable/bg_header_card" android:padding="12dp"
+                    android:layout_marginBottom="16dp">
+                    <ImageView android:layout_width="22dp" android:layout_height="22dp"
+                        android:src="@android:drawable/ic_lock_silent_mode_off" android:tint="@color/white"
+                        android:layout_marginEnd="10dp"/>
+                    <SeekBar android:id="@+id/seekVolume"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:progressTint="@color/primary_cyan" android:thumbTint="@color/primary_cyan"/>
+                </LinearLayout>
+
                 <TextView android:id="@+id/tvLogout"
                     android:layout_width="match_parent" android:layout_height="56dp"
                     android:gravity="center" android:text="Cikis Yap"
                     android:textColor="@color/error_red" android:textStyle="bold"
-                    android:background="@drawable/bg_focusable" android:focusable="true"/>
+                    android:background="@drawable/bg_focusable" android:focusable="true"
+                    android:layout_marginBottom="16dp"/>
+
+                <FrameLayout android:id="@+id/nativeAdContainerSettings"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:visibility="gone"/>
             </LinearLayout>
         </ScrollView>
     </FrameLayout>
-
-    <FrameLayout android:id="@+id/nativeAdContainer"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="4dp" android:visibility="gone"/>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNav"

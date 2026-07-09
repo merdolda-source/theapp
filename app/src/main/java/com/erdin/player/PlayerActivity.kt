@@ -329,6 +329,10 @@ class PlayerActivity : AppCompatActivity() {
     }
     private fun setupSeekBar() {
         if (playType == "LIVE") { seekBar.visibility = View.GONE; return }
+        // Ilerleme 0-1000 olceginde hesaplaniyor (tickProgress/onStopTrackingTouch),
+        // SeekBar'in varsayilan max'i (100) ile eslesmezse cubuk suenin ilk %10'unda
+        // gorsel olarak tavan yapar - ileri sarma calismiyormus gibi gorunur.
+        seekBar.max = 1000
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
                 if (fromUser) { val dur=player?.duration?:0L; if(dur>0) { val t=p.toLong()*dur/1000L; center("%02d:%02d".format(t/60000,(t/1000)%60)) } }

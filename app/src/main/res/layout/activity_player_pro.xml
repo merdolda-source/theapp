@@ -183,6 +183,7 @@
             </LinearLayout>
             <SeekBar android:id="@+id/seekBar"
                 android:layout_width="match_parent" android:layout_height="28dp"
+                android:max="1000"
                 android:progressTint="@color/primary_cyan" android:thumbTint="@color/primary_cyan"
                 android:progressBackgroundTint="@color/seek_bg"
                 android:layout_marginBottom="8dp" android:visibility="gone"/>
