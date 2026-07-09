@@ -185,6 +185,9 @@ jobs:
             implementation "androidx.recyclerview:recyclerview:1.3.2"
             implementation "androidx.constraintlayout:constraintlayout:2.1.4"
             implementation "androidx.leanback:leanback:1.0.0"
+            implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
+            implementation "androidx.cardview:cardview:1.0.0"
+            implementation "io.coil-kt:coil:2.6.0"
 
             implementation "androidx.media3:media3-exoplayer:1.3.1"
             implementation "androidx.media3:media3-ui:1.3.1"
@@ -216,20 +219,23 @@ jobs:
 
         cat <<EOF > app/src/main/res/values/colors.xml
         <resources>
-            <color name="bg_base">#0A0E13</color>
-            <color name="bg_elevated">#121822</color>
+            <color name="bg_base">#0C0D10</color>
+            <color name="bg_elevated">#1A1B20</color>
+            <color name="bg_card">#202127</color>
             <color name="glass_fill">#26FFFFFF</color>
-            <color name="glass_stroke">#40FFFFFF</color>
-            <color name="accent_primary">#22D3EE</color>
-            <color name="accent_secondary">#7C5CFC</color>
-            <color name="text_primary">#FFFFFF</color>
-            <color name="text_secondary">#9AA5B1</color>
-            <color name="success">#22C55E</color>
-            <color name="error_red">#FF5C5C</color>
-            <color name="hint_yellow">#FFC93C</color>
+            <color name="glass_stroke">#33FFFFFF</color>
+            <color name="accent_primary">#F5A623</color>
+            <color name="accent_primary_dark">#C97F0E</color>
+            <color name="accent_secondary">#E5484D</color>
+            <color name="text_primary">#F5F6F7</color>
+            <color name="text_secondary">#9B9DA6</color>
+            <color name="success">#2ECC71</color>
+            <color name="error_red">#E5484D</color>
+            <color name="hint_yellow">#F5A623</color>
             <color name="white">#FFFFFF</color>
             <color name="black">#000000</color>
             <color name="transparent">#00000000</color>
+            <color name="scrim_bottom">#E6000000</color>
         </resources>
         EOF
 
@@ -348,6 +354,40 @@ jobs:
         </shape>
         EOF
 
+        cat <<EOF > app/src/main/res/drawable/bg_poster_placeholder.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+            <solid android:color="@color/bg_card"/>
+        </shape>
+        EOF
+
+        cat <<EOF > app/src/main/res/drawable/bg_poster_scrim.xml
+        <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+            <gradient
+                android:angle="90"
+                android:startColor="#00000000"
+                android:endColor="@color/scrim_bottom" />
+        </shape>
+        EOF
+
+        cat <<EOF > app/src/main/res/drawable/bg_item_focus_overlay.xml
+        <selector xmlns:android="http://schemas.android.com/apk/res/android">
+            <item android:state_focused="true">
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/transparent"/>
+                    <corners android:radius="10dp"/>
+                    <stroke android:width="3dp" android:color="@color/accent_primary"/>
+                </shape>
+            </item>
+            <item android:state_pressed="true">
+                <shape android:shape="rectangle">
+                    <solid android:color="#33000000"/>
+                    <corners android:radius="10dp"/>
+                </shape>
+            </item>
+            <item android:color="@color/transparent" />
+        </selector>
+        EOF
+
         cat <<EOF > app/src/main/res/drawable/bg_player_controls.xml
         <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
             <gradient
@@ -357,38 +397,63 @@ jobs:
         </shape>
         EOF
 
-        cat <<EOF > app/src/main/res/drawable/ic_launcher_background.xml
-        <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-            <solid android:color="#0A0E13"/>
-        </shape>
-        EOF
+        # NOT: Adaptive icon (vektor) kasten eklenmiyor - gercek ikon
+        # mipmap-hdpi/ic_launcher.png (yukarida indirilen) tek basina kullanilir.
+        # Bir adaptive-icon eklemek bu PNG'yi API 26+ cihazlarda gizler.
 
-        cat <<EOF > app/src/main/res/drawable/ic_launcher_foreground.xml
-        <vector xmlns:android="http://schemas.android.com/apk/res/android"
-            android:width="108dp" android:height="108dp"
-            android:viewportWidth="108" android:viewportHeight="108">
-            <path android:fillColor="#22D3EE" android:pathData="M40,32 L78,54 L40,76 Z"/>
-        </vector>
-        EOF
-
-        cat <<EOF > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-        <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-            <background android:drawable="@drawable/ic_launcher_background"/>
-            <foreground android:drawable="@drawable/ic_launcher_foreground"/>
-        </adaptive-icon>
+        cat <<EOF > app/src/main/res/color/nav_item_color.xml
+        <selector xmlns:android="http://schemas.android.com/apk/res/android">
+            <item android:color="@color/accent_primary" android:state_checked="true" />
+            <item android:color="@color/text_secondary" />
+        </selector>
         EOF
 
         ########################################
         # MENU (bottom nav)
         ########################################
 
+        cat <<EOF > app/src/main/res/drawable/ic_nav_live.xml
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+            <path android:fillColor="#FF000000" android:pathData="M4,6h16v11H4z M2,19h20v1.5H2z M9.5,8.5l6,3.5l-6,3.5z"/>
+        </vector>
+        EOF
+
+        cat <<EOF > app/src/main/res/drawable/ic_nav_vod.xml
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+            <path android:fillColor="#FF000000" android:pathData="M4,4h16v16H4z M4,4h16v2H4z M4,18h16v2H4z M4,4h2v16H4z M18,4h2v16h-2z"/>
+        </vector>
+        EOF
+
+        cat <<EOF > app/src/main/res/drawable/ic_nav_series.xml
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+            <path android:fillColor="#FF000000" android:pathData="M3,5h18v12H3z M8,19h8v1.5H8z M3,5h18v2H3z"/>
+        </vector>
+        EOF
+
+        cat <<EOF > app/src/main/res/drawable/ic_nav_accounts.xml
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+            <path android:fillColor="#FF000000" android:pathData="M12,4a4,4 0,1 1,0 8a4,4 0,1 1,0 -8z M4,20c0,-4.4 3.6,-7 8,-7s8,2.6 8,7z"/>
+        </vector>
+        EOF
+
+        cat <<EOF > app/src/main/res/drawable/ic_nav_settings.xml
+        <vector xmlns:android="http://schemas.android.com/apk/res/android"
+            android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+            <path android:fillColor="#FF000000" android:pathData="M12,8a4,4 0,1 1,0 8a4,4 0,1 1,0 -8z M5,12a7,7 0,0 1,0.3 -2l-1.8,-1.4l1.5,-2.6l2.2,0.7c0.6,-0.5 1.3,-0.9 2,-1.1l0.3,-2.3h3l0.3,2.3c0.7,0.2 1.4,0.6 2,1.1l2.2,-0.7l1.5,2.6l-1.8,1.4c0.1,0.6 0.1,1.4 0,2l1.8,1.4l-1.5,2.6l-2.2,-0.7c-0.6,0.5 -1.3,0.9 -2,1.1l-0.3,2.3h-3l-0.3,-2.3c-0.7,-0.2 -1.4,-0.6 -2,-1.1l-2.2,0.7l-1.5,-2.6l1.8,-1.4c-0.2,-0.6 -0.3,-1.3 -0.3,-2z"/>
+        </vector>
+        EOF
+
         cat <<EOF > app/src/main/res/menu/bottom_nav_menu.xml
         <menu xmlns:android="http://schemas.android.com/apk/res/android">
-            <item android:id="@+id/nav_live" android:title="Canli TV" android:icon="@android:drawable/ic_menu_view" />
-            <item android:id="@+id/nav_vod" android:title="Filmler" android:icon="@android:drawable/ic_menu_slideshow" />
-            <item android:id="@+id/nav_series" android:title="Diziler" android:icon="@android:drawable/ic_menu_recent_history" />
-            <item android:id="@+id/nav_accounts" android:title="Hesaplarim" android:icon="@android:drawable/ic_menu_myplaces" />
-            <item android:id="@+id/nav_settings" android:title="Ayarlar" android:icon="@android:drawable/ic_menu_preferences" />
+            <item android:id="@+id/nav_live" android:title="Canli TV" android:icon="@drawable/ic_nav_live" />
+            <item android:id="@+id/nav_vod" android:title="Filmler" android:icon="@drawable/ic_nav_vod" />
+            <item android:id="@+id/nav_series" android:title="Diziler" android:icon="@drawable/ic_nav_series" />
+            <item android:id="@+id/nav_accounts" android:title="Hesaplarim" android:icon="@drawable/ic_nav_accounts" />
+            <item android:id="@+id/nav_settings" android:title="Ayarlar" android:icon="@drawable/ic_nav_settings" />
         </menu>
         EOF
 
@@ -422,7 +487,16 @@ jobs:
             val category_id: String?,
             val full_url: String?,
             val referer: String?,
-            val origin: String?
+            val origin: String?,
+            val icon_url: String?
+        )
+
+        data class Episode(
+            val episode_id: String,
+            val title: String,
+            val episode_num: Int,
+            val season: Int,
+            val container_extension: String?
         )
         EOF
 
@@ -901,8 +975,10 @@ jobs:
         import android.view.LayoutInflater
         import android.view.View
         import android.view.ViewGroup
+        import android.widget.ImageView
         import android.widget.TextView
         import androidx.recyclerview.widget.RecyclerView
+        import coil.load
         import $PACKAGE_NAME.R
         import $PACKAGE_NAME.models.StreamItem
 
@@ -913,6 +989,7 @@ jobs:
 
             class VH(v: View) : RecyclerView.ViewHolder(v) {
                 val txt: TextView = v.findViewById(R.id.txtStreamName)
+                val img: ImageView = v.findViewById(R.id.imgPoster)
             }
 
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -924,6 +1001,16 @@ jobs:
                 val item = list[position]
                 holder.txt.text = item.name
                 holder.itemView.setOnClickListener { onClick(item) }
+
+                if (!item.icon_url.isNullOrEmpty()) {
+                    holder.img.load(item.icon_url) {
+                        crossfade(true)
+                        placeholder(R.drawable.bg_poster_placeholder)
+                        error(R.drawable.bg_poster_placeholder)
+                    }
+                } else {
+                    holder.img.setImageResource(R.drawable.bg_poster_placeholder)
+                }
             }
 
             override fun getItemCount(): Int = list.size
@@ -1209,7 +1296,7 @@ jobs:
                 rvAccounts = findViewById(R.id.rvAccounts)
 
                 rvCategories.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-                rvStreams.layoutManager = GridLayoutManager(this, if (resources.configuration.screenWidthDp >= 700) 4 else 2)
+                rvStreams.layoutManager = GridLayoutManager(this, if (resources.configuration.screenWidthDp >= 700) 6 else 3)
                 rvAccounts.layoutManager = LinearLayoutManager(this)
 
                 findViewById<View>(R.id.btnAddAccount).setOnClickListener {
@@ -1357,6 +1444,7 @@ jobs:
                         var currentGroup = "Genel"
                         var currentRef: String? = null
                         var currentOrg: String? = null
+                        var currentLogo: String? = null
 
                         for (rawLine in lines) {
                             val line = rawLine.trim()
@@ -1371,6 +1459,12 @@ jobs:
                                     val start = groupIndex + "group-title=\"".length
                                     val end = line.indexOf("\"", start)
                                     if (end > start) group = line.substring(start, end)
+                                }
+                                val logoIndex = line.indexOf("tvg-logo=\"")
+                                if (logoIndex >= 0) {
+                                    val start = logoIndex + "tvg-logo=\"".length
+                                    val end = line.indexOf("\"", start)
+                                    if (end > start) currentLogo = line.substring(start, end)
                                 }
                                 val commaIndex = line.lastIndexOf(',')
                                 if (commaIndex >= 0 && commaIndex < line.length - 1) {
@@ -1394,11 +1488,13 @@ jobs:
                                     StreamItem(
                                         name = currentName, stream_id = null, series_id = null,
                                         container_extension = null, category_id = cat.category_id,
-                                        full_url = playUrl, referer = currentRef, origin = currentOrg
+                                        full_url = playUrl, referer = currentRef, origin = currentOrg,
+                                        icon_url = currentLogo
                                     )
                                 )
                                 currentRef = null
                                 currentOrg = null
+                                currentLogo = null
                             }
                         }
 
@@ -1489,7 +1585,8 @@ jobs:
                                     series_id = o.optString("series_id", null),
                                     container_extension = o.optString("container_extension", null),
                                     category_id = o.optString("category_id", ""),
-                                    full_url = null, referer = null, origin = null
+                                    full_url = null, referer = null, origin = null,
+                                    icon_url = o.optString("stream_icon", o.optString("cover", null))
                                 )
                             )
                             j++
@@ -1545,6 +1642,15 @@ jobs:
             private fun openItem(item: StreamItem) {
                 val acc = active ?: return
 
+                if (currentMode == "SERIES" && acc.type != "M3U") {
+                    val i = Intent(this, SeriesDetailActivity::class.java)
+                    i.putExtra("SERIES_ID", item.series_id ?: "")
+                    i.putExtra("SERIES_NAME", item.name)
+                    i.putExtra("POSTER", item.icon_url ?: "")
+                    startActivity(i)
+                    return
+                }
+
                 val playUrl: String
                 val ref: String
                 val org: String
@@ -1561,7 +1667,7 @@ jobs:
                     val pass = acc.pass?.trim() ?: ""
                     val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
 
-                    val path = when (currentMode) { "VOD" -> "movie"; "SERIES" -> "series"; else -> "live" }
+                    val path = when (currentMode) { "VOD" -> "movie"; else -> "live" }
                     val ext = if (currentMode == "LIVE") ".ts" else {
                         val e = item.container_extension
                         if (!e.isNullOrEmpty()) "." + e else ".mp4"
@@ -1676,6 +1782,179 @@ jobs:
 
             override fun onBackPressed() {
                 // gecis ekraninda geri tusu ile player'a atlama engellenir, kullanici bekler ya da odullu izler
+            }
+        }
+        EOF
+
+        ########################################
+        # SERIES DETAIL ACTIVITY (sezon secici + bolum listesi)
+        ########################################
+
+        cat <<EOF > app/src/main/java/$PATH_NAME/SeriesDetailActivity.kt
+        package $PACKAGE_NAME
+
+        import android.content.Intent
+        import android.os.Bundle
+        import android.view.View
+        import android.widget.ImageView
+        import android.widget.ProgressBar
+        import android.widget.TextView
+        import android.widget.Toast
+        import androidx.appcompat.app.AppCompatActivity
+        import androidx.recyclerview.widget.LinearLayoutManager
+        import androidx.recyclerview.widget.RecyclerView
+        import coil.load
+        import $PACKAGE_NAME.models.Episode
+        import $PACKAGE_NAME.utils.Prefs
+        import org.json.JSONObject
+        import java.net.HttpURLConnection
+        import java.net.URL
+
+        class SeriesDetailActivity : AppCompatActivity() {
+
+            private val seasonEpisodes = LinkedHashMap<Int, MutableList<Episode>>()
+            private var selectedSeason = -1
+
+            override fun onCreate(savedInstanceState: Bundle?) {
+                super.onCreate(savedInstanceState)
+                setContentView(R.layout.activity_series_detail)
+
+                val seriesId = intent.getStringExtra("SERIES_ID") ?: ""
+                val seriesName = intent.getStringExtra("SERIES_NAME") ?: "Dizi"
+                val poster = intent.getStringExtra("POSTER") ?: ""
+
+                val acc = Prefs(this).getActive()
+                if (acc == null || seriesId.isEmpty()) {
+                    Toast.makeText(this, "Dizi bilgisi alinamadi.", Toast.LENGTH_SHORT).show()
+                    finish()
+                    return
+                }
+
+                findViewById<TextView>(R.id.tvSeriesTitle).text = seriesName
+                findViewById<View>(R.id.btnBackSeries).setOnClickListener { finish() }
+
+                val imgCover = findViewById<ImageView>(R.id.imgSeriesCover)
+                if (poster.isNotEmpty()) imgCover.load(poster) else imgCover.setImageResource(R.drawable.bg_poster_placeholder)
+
+                val pb = findViewById<ProgressBar>(R.id.pbSeriesLoading)
+                val rvSeasons = findViewById<RecyclerView>(R.id.rvSeasons)
+                val rvEpisodes = findViewById<RecyclerView>(R.id.rvEpisodes)
+                rvSeasons.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+                rvEpisodes.layoutManager = LinearLayoutManager(this)
+
+                val dnsRaw = acc.dns?.trim() ?: ""
+                val user = acc.user?.trim() ?: ""
+                val pass = acc.pass?.trim() ?: ""
+                val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+                val infoUrl = dns + "/player_api.php?username=" + user + "&password=" + pass +
+                    "&action=get_series_info&series_id=" + seriesId
+
+                pb.visibility = View.VISIBLE
+
+                Thread {
+                    try {
+                        val conn = URL(infoUrl).openConnection() as HttpURLConnection
+                        conn.connectTimeout = 10000
+                        conn.readTimeout = 15000
+                        conn.requestMethod = "GET"
+                        if (conn.responseCode != HttpURLConnection.HTTP_OK) {
+                            runOnUiThread { pb.visibility = View.GONE; Toast.makeText(this, "Bolum listesi alinamadi.", Toast.LENGTH_SHORT).show() }
+                            return@Thread
+                        }
+                        val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                        val obj = JSONObject(body)
+                        val episodesObj = obj.optJSONObject("episodes")
+
+                        if (episodesObj != null) {
+                            val seasonKeys = episodesObj.keys()
+                            while (seasonKeys.hasNext()) {
+                                val seasonKey = seasonKeys.next()
+                                val seasonNum = seasonKey.toIntOrNull() ?: continue
+                                val arr = episodesObj.optJSONArray(seasonKey) ?: continue
+                                val list = ArrayList<Episode>()
+                                var i = 0
+                                while (i < arr.length()) {
+                                    val e = arr.getJSONObject(i)
+                                    list.add(
+                                        Episode(
+                                            episode_id = e.optString("id", ""),
+                                            title = e.optString("title", "Bolum " + (i + 1)),
+                                            episode_num = e.optInt("episode_num", i + 1),
+                                            season = seasonNum,
+                                            container_extension = e.optString("container_extension", "mp4")
+                                        )
+                                    )
+                                    i++
+                                }
+                                seasonEpisodes[seasonNum] = list
+                            }
+                        }
+
+                        runOnUiThread {
+                            pb.visibility = View.GONE
+                            if (seasonEpisodes.isEmpty()) {
+                                Toast.makeText(this, "Bu dizide bolum bulunamadi.", Toast.LENGTH_SHORT).show()
+                                return@runOnUiThread
+                            }
+                            val seasons = seasonEpisodes.keys.sorted()
+
+                            rvSeasons.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                                override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+                                    val v = layoutInflater.inflate(R.layout.item_category, parent, false)
+                                    return object : RecyclerView.ViewHolder(v) {}
+                                }
+                                override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+                                    val season = seasons[position]
+                                    val txt = holder.itemView.findViewById<TextView>(R.id.txtCategory)
+                                    txt.text = "Sezon " + season
+                                    holder.itemView.isSelected = season == selectedSeason
+                                    holder.itemView.setOnClickListener {
+                                        selectedSeason = season
+                                        notifyDataSetChanged()
+                                        showEpisodes(rvEpisodes, seasonEpisodes[season] ?: emptyList(), seriesId)
+                                    }
+                                }
+                                override fun getItemCount(): Int = seasons.size
+                            }
+
+                            selectedSeason = seasons[0]
+                            showEpisodes(rvEpisodes, seasonEpisodes[selectedSeason] ?: emptyList(), seriesId)
+                        }
+                    } catch (e: Exception) {
+                        runOnUiThread { pb.visibility = View.GONE; Toast.makeText(this, "Hata: " + e.message, Toast.LENGTH_SHORT).show() }
+                    }
+                }.start()
+            }
+
+            private fun showEpisodes(rv: RecyclerView, episodes: List<Episode>, seriesId: String) {
+                rv.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                    override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+                        val v = layoutInflater.inflate(R.layout.item_episode, parent, false)
+                        return object : RecyclerView.ViewHolder(v) {}
+                    }
+                    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+                        val ep = episodes[position]
+                        val txt = holder.itemView.findViewById<TextView>(R.id.txtEpisodeTitle)
+                        txt.text = "S" + ep.season + "E" + ep.episode_num + " - " + ep.title
+                        holder.itemView.setOnClickListener { playEpisode(ep) }
+                    }
+                    override fun getItemCount(): Int = episodes.size
+                }
+            }
+
+            private fun playEpisode(ep: Episode) {
+                val acc = Prefs(this).getActive() ?: return
+                val dnsRaw = acc.dns?.trim() ?: ""
+                val user = acc.user?.trim() ?: ""
+                val pass = acc.pass?.trim() ?: ""
+                val dns = if (dnsRaw.endsWith("/")) dnsRaw.substring(0, dnsRaw.length - 1) else dnsRaw
+                val ext = if (!ep.container_extension.isNullOrEmpty()) ep.container_extension else "mp4"
+
+                val playUrl = dns + "/series/" + user + "/" + pass + "/" + ep.episode_id + "." + ext
+
+                val i = Intent(this, PlayerActivity::class.java)
+                i.putExtra("URL", playUrl); i.putExtra("REF", ""); i.putExtra("ORG", "")
+                startActivity(i)
             }
         }
         EOF
@@ -1995,7 +2274,6 @@ jobs:
                         android:background="@drawable/bg_item_focus"
                         android:gravity="center"
                         android:focusable="true"
-                        android:focusableInTouchMode="true"
                         android:layout_marginEnd="6dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:text="Xtream" android:textColor="@color/text_primary" android:textStyle="bold" />
@@ -2009,7 +2287,6 @@ jobs:
                         android:background="@drawable/bg_item_focus"
                         android:gravity="center"
                         android:focusable="true"
-                        android:focusableInTouchMode="true"
                         android:layout_marginStart="6dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:text="M3U" android:textColor="@color/text_primary" android:textStyle="bold" />
@@ -2122,8 +2399,8 @@ jobs:
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@color/bg_elevated"
-                app:itemIconTint="@color/accent_primary"
-                app:itemTextColor="@color/accent_primary"
+                app:itemIconTint="@color/nav_item_color"
+                app:itemTextColor="@color/nav_item_color"
                 app:menu="@menu/bottom_nav_menu" />
         </LinearLayout>
         EOF
@@ -2249,21 +2526,59 @@ jobs:
             android:layout_height="match_parent"
             android:padding="4dp">
             <TextView android:id="@+id/txtCategory" android:layout_width="wrap_content" android:layout_height="match_parent"
-                android:minWidth="80dp" android:gravity="center" android:paddingHorizontal="14dp"
-                android:textColor="@color/text_primary" android:textSize="13sp"
-                android:background="@drawable/bg_item_focus" android:focusable="true" android:focusableInTouchMode="true" />
+                android:minWidth="80dp" android:gravity="center" android:paddingHorizontal="16dp"
+                android:textColor="@color/text_primary" android:textSize="13sp" android:fontFamily="sans-serif-medium"
+                android:background="@drawable/bg_item_focus" android:focusable="true" />
         </LinearLayout>
         EOF
 
         cat <<EOF > app/src/main/res/layout/item_grid_pro.xml
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="5dp">
-            <TextView android:id="@+id/txtStreamName" android:layout_width="match_parent" android:layout_height="64dp"
-                android:gravity="center_vertical" android:paddingHorizontal="12dp"
-                android:textColor="@color/text_primary" android:textSize="14sp" android:maxLines="2" android:ellipsize="end"
-                android:background="@drawable/bg_item_focus" android:focusable="true" android:focusableInTouchMode="true" />
+            android:orientation="vertical"
+            android:padding="6dp">
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="150dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/bg_card"
+                android:focusable="true"
+                android:foreground="@drawable/bg_item_focus_overlay">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <ImageView
+                        android:id="@+id/imgPoster"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:contentDescription="@null" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_gravity="bottom"
+                        android:background="@drawable/bg_poster_scrim" />
+
+                    <TextView
+                        android:id="@+id/txtStreamName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom"
+                        android:padding="8dp"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:maxLines="2"
+                        android:ellipsize="end" />
+                </FrameLayout>
+            </androidx.cardview.widget.CardView>
         </LinearLayout>
         EOF
 
@@ -2275,8 +2590,7 @@ jobs:
             android:paddingHorizontal="12dp"
             android:layout_marginBottom="8dp"
             android:gravity="center_vertical"
-            android:focusable="true"
-            android:focusableInTouchMode="true">
+            android:focusable="true">
 
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:layout_weight="1">
                 <TextView android:id="@+id/tvAccountName" android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -2287,6 +2601,54 @@ jobs:
 
             <ImageButton android:id="@+id/btnDeleteAccount" android:layout_width="32dp" android:layout_height="32dp"
                 android:background="@android:color/transparent" android:src="@android:drawable/ic_menu_delete" android:tint="@color/error_red" />
+        </LinearLayout>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/item_episode.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_item_focus"
+            android:paddingHorizontal="14dp"
+            android:layout_marginBottom="6dp"
+            android:gravity="center_vertical"
+            android:focusable="true">
+
+            <TextView android:id="@+id/txtEpisodeTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:textColor="@color/text_primary" android:textSize="14sp" android:maxLines="1" android:ellipsize="end" />
+        </LinearLayout>
+        EOF
+
+        cat <<EOF > app/src/main/res/layout/activity_series_detail.xml
+        <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@color/bg_base">
+
+            <FrameLayout android:layout_width="match_parent" android:layout_height="200dp">
+                <ImageView android:id="@+id/imgSeriesCover" android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:scaleType="centerCrop" android:contentDescription="@null" />
+                <View android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/bg_poster_scrim" />
+                <ImageButton android:id="@+id/btnBackSeries" android:layout_width="44dp" android:layout_height="44dp"
+                    android:layout_margin="10dp" android:background="@android:color/transparent"
+                    android:src="@android:drawable/ic_menu_close_clear_cancel" android:tint="@color/white" />
+                <TextView android:id="@+id/tvSeriesTitle" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_gravity="bottom" android:padding="14dp" android:textColor="@color/white"
+                    android:textSize="20sp" android:textStyle="bold" android:maxLines="2" android:ellipsize="end" />
+            </FrameLayout>
+
+            <ProgressBar android:id="@+id/pbSeriesLoading" style="?android:attr/progressBarStyleLarge"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal" android:layout_marginTop="16dp" android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvSeasons"
+                android:layout_width="match_parent" android:layout_height="52dp"
+                android:paddingHorizontal="8dp" android:paddingTop="8dp" android:clipToPadding="false" />
+
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvEpisodes"
+                android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+                android:padding="10dp" android:clipToPadding="false" />
         </LinearLayout>
         EOF
 
@@ -2337,6 +2699,7 @@ jobs:
 
                 <activity android:name=".LoginActivity" />
                 <activity android:name=".HomeActivity" />
+                <activity android:name=".SeriesDetailActivity" />
                 <activity android:name=".TransitionActivity" android:theme="@style/Theme.ErdinPlayer.Splash" />
                 <activity
                     android:name=".PlayerActivity"
