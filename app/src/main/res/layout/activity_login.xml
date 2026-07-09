@@ -61,22 +61,12 @@
         <LinearLayout android:id="@+id/layoutXtream"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="52dp"
-                android:orientation="horizontal" android:layout_marginBottom="12dp">
-                <EditText android:id="@+id/etDns"
-                    android:layout_width="0dp" android:layout_height="match_parent"
-                    android:layout_weight="1" android:hint="http://sunucu.com"
-                    android:background="@drawable/selector_input_focus"
-                    android:paddingLeft="16dp" android:paddingRight="8dp"
-                    android:textColor="@color/white" android:textColorHint="@color/hint_yellow"
-                    android:textSize="13sp" android:inputType="textUri" android:layout_marginRight="8dp"/>
-                <EditText android:id="@+id/etPort"
-                    android:layout_width="90dp" android:layout_height="match_parent"
-                    android:hint=":8080" android:background="@drawable/selector_input_focus"
-                    android:gravity="center" android:textColor="@color/white"
-                    android:textColorHint="@color/hint_yellow"
-                    android:textSize="13sp" android:inputType="number"/>
-            </LinearLayout>
+            <EditText android:id="@+id/etDns"
+                android:layout_width="match_parent" android:layout_height="52dp"
+                android:hint="http://sunucu.com:8080" android:background="@drawable/selector_input_focus"
+                android:paddingLeft="16dp" android:paddingRight="16dp"
+                android:textColor="@color/white" android:textColorHint="@color/hint_yellow"
+                android:textSize="13sp" android:inputType="textUri" android:layout_marginBottom="12dp"/>
             <EditText android:id="@+id/etUser"
                 android:layout_width="match_parent" android:layout_height="52dp"
                 android:hint="Kullanici adi" android:background="@drawable/selector_input_focus"

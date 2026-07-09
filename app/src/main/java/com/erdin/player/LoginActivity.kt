@@ -27,7 +27,6 @@ class LoginActivity : AppCompatActivity() {
         val lX = findViewById<View>(R.id.layoutXtream); val lM = findViewById<View>(R.id.layoutM3u)
         val etName = findViewById<EditText>(R.id.etName)
         val etDns = findViewById<EditText>(R.id.etDns)
-        val etPort = try { findViewById<EditText>(R.id.etPort) } catch(_:Exception) { null }
         val etUser = findViewById<EditText>(R.id.etUser)
         val etPass = findViewById<EditText>(R.id.etPass)
         val etM3u = findViewById<EditText>(R.id.etM3u)
@@ -69,21 +68,15 @@ class LoginActivity : AppCompatActivity() {
             val finalName = etName.text.toString().trim().ifEmpty { "Hesap" }
             if (isXtream) {
                 var d = etDns.text.toString().trim()
-                val portStr = etPort?.text?.toString()?.trim() ?: ""
                 val u = etUser.text.toString().trim().split(" ").joinToString("")
                 val p = etPass.text.toString().trim()
                 if (d.isEmpty()||u.isEmpty()||p.isEmpty()) { Toast.makeText(this,"URL, kullanici adi ve sifre zorunlu.",Toast.LENGTH_SHORT).show(); return@setOnClickListener }
                 if (!d.startsWith("http://",true) && !d.startsWith("https://",true)) d = "http://$d"
-                d = d.trimEnd('/')
-                val finalDns = if (portStr.isNotEmpty()) {
-                    val proto = if (d.startsWith("https")) "https" else "http"
-                    val host = d.removePrefix("https://").removePrefix("http://").split(":")[0]
-                    "$proto://$host:$portStr"
-                } else d
+                val finalDns = d.trimEnd('/')
                 prefs.createXtreamAccount(finalName,finalDns,u,p)
                 RemoteLogger.sendEvent(this,"account_xtream_created",mapOf("name" to finalName))
                 Toast.makeText(this,"Hesap eklendi.",Toast.LENGTH_SHORT).show()
-                etName.setText(""); etDns.setText(""); etPort?.setText(""); etUser.setText(""); etPass.setText("")
+                etName.setText(""); etDns.setText(""); etUser.setText(""); etPass.setText("")
                 refreshList()
                 prefs.getAccounts().lastOrNull()?.let { prefs.setActive(it.id); startActivity(Intent(this,ContentActivity::class.java)); finish() }
             } else {

@@ -124,6 +124,7 @@ class PlayerActivity : AppCompatActivity() {
         return set.filter { it.isNotEmpty() }
     }
     private fun buildPlayer(url: String, ref: String, org: String, startMs: Long) {
+        findViewById<View>(R.id.layoutPlayerError).visibility = View.GONE
         player?.release()
         val headers = mutableMapOf("User-Agent" to UA)
         if (ref.isNotEmpty()) headers["Referer"] = ref
@@ -157,11 +158,22 @@ class PlayerActivity : AppCompatActivity() {
                     attempt++; center("Format ${attempt+1}/${candidates.size} deneniyor...")
                     buildPlayer(candidates[attempt], ref, org, 0L)
                 } else {
-                    Toast.makeText(this@PlayerActivity,"Hata: "+(err.message?:""),Toast.LENGTH_LONG).show()
+                    showPlayerError(err)
                     RemoteLogger.sendEvent(this@PlayerActivity,"player_error",mapOf("url" to url,"err" to (err.message?:"")))
                 }
             }
         })
+    }
+    private fun showPlayerError(err: PlaybackException) {
+        pbBuffering.visibility = View.GONE
+        val code = err.errorCodeName
+        val msg = err.cause?.message ?: err.message ?: "Bilinmeyen hata"
+        findViewById<TextView>(R.id.tvPlayerError).text = "Yayin acilamadi.\n$code\n$msg"
+        findViewById<View>(R.id.layoutPlayerError).visibility = View.VISIBLE
+        findViewById<View>(R.id.btnPlayerRetry).setOnClickListener {
+            attempt = 0
+            buildPlayer(candidates[attempt], intent.getStringExtra("REF") ?: "", intent.getStringExtra("ORG") ?: "", 0L)
+        }
     }
     private fun bindViews() {
         pvMain=findViewById(R.id.pvMain); pbBuffering=findViewById(R.id.pbBuffering)
