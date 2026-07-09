@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.ErdinPlayer" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="Theme.ErdinPlayer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/bg_dark</item>
         <item name="android:textColor">@color/white</item>
         <item name="colorAccent">@color/primary_cyan</item>

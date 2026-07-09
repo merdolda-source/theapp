@@ -2,7 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:ads="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:orientation="vertical" android:padding="8dp">
+    android:orientation="vertical" android:padding="6dp">
+
     <LinearLayout android:id="@+id/cardLayout"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:minHeight="72dp" android:orientation="vertical"
@@ -16,6 +17,22 @@
             android:textColor="@color/hint_yellow" android:textSize="12sp"
             android:layout_marginTop="4dp" android:visibility="gone"/>
     </LinearLayout>
+
+    <FrameLayout android:id="@+id/posterLayout"
+        android:layout_width="match_parent" android:layout_height="150dp"
+        android:visibility="gone" android:background="@color/bg_card">
+        <ImageView android:id="@+id/imgPoster"
+            android:layout_width="match_parent" android:layout_height="match_parent"
+            android:scaleType="centerCrop" android:contentDescription="@null"/>
+        <View android:layout_width="match_parent" android:layout_height="52dp"
+            android:layout_gravity="bottom" android:background="@drawable/bg_poster_scrim"/>
+        <TextView android:id="@+id/txtPosterName"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_gravity="bottom" android:padding="8dp"
+            android:textColor="@color/white" android:textSize="12sp" android:textStyle="bold"
+            android:maxLines="2" android:ellipsize="end"/>
+    </FrameLayout>
+
     <LinearLayout android:id="@+id/adContainer"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:gravity="center"

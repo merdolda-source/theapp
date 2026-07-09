@@ -7,11 +7,10 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.ads.AdView
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import org.json.JSONArray
 import org.json.JSONObject
 import com.erdin.player.utils.UrlUtils
@@ -30,21 +29,18 @@ import com.erdin.player.utils.RemoteConfig
 import com.erdin.player.utils.RemoteLogger
 class ContentActivity : AppCompatActivity() {
     private lateinit var prefs:Prefs
-    private lateinit var drawer:DrawerLayout
     private lateinit var rv:RecyclerView
     private lateinit var pb:ProgressBar
     private lateinit var tvStatus:TextView
     private lateinit var tvTitle:TextView
     private lateinit var etSearch:EditText
-    private lateinit var tvDrawerOpen:TextView
     private lateinit var rvAccounts:RecyclerView
     private lateinit var tvDrawerUser:TextView
     private lateinit var tvDrawerExpire:TextView
     private lateinit var tvLogout:TextView
-    private lateinit var layoutModeSelector:View
-    private lateinit var btnModeLive:TextView
-    private lateinit var btnModeVod:TextView
-    private lateinit var btnModeSeries:TextView
+    private lateinit var tvAddAccount:TextView
+    private lateinit var layoutSettings:View
+    private lateinit var bottomNav:BottomNavigationView
     private var currentMode="LIVE"
     private var activeAcc:AccountProfile?=null
     private enum class Screen { CATEGORIES, ITEMS }
@@ -67,40 +63,31 @@ class ContentActivity : AppCompatActivity() {
         AdsHelper.init(this); AdsHelper.loadInterstitial(this)
         AdsHelper.loadBanner(findViewById<AdView>(R.id.adViewTopContent))
         AdsHelper.loadBanner(findViewById<AdView>(R.id.adViewBottomContent))
-        drawer=findViewById(R.id.drawerLayout); rv=findViewById(R.id.rvContent)
+        rv=findViewById(R.id.rvContent)
         pb=findViewById(R.id.pbLoading); tvStatus=findViewById(R.id.tvStatus)
         tvTitle=findViewById(R.id.tvTitleBar); etSearch=findViewById(R.id.etSearch)
-        tvDrawerOpen=findViewById(R.id.tvOpenDrawer)
-        layoutModeSelector=findViewById(R.id.layoutModeSelector)
-        btnModeLive=findViewById(R.id.btnModeLive); btnModeVod=findViewById(R.id.btnModeVod)
-        btnModeSeries=findViewById(R.id.btnModeSeries)
+        layoutSettings=findViewById(R.id.layoutSettings)
+        bottomNav=findViewById(R.id.bottomNav)
         layoutManager=LinearLayoutManager(this); rv.layoutManager=layoutManager
         gridAdapter=GridAdapter(emptyList(),emptyList()) { pos -> onGridClick(pos) }
         rv.adapter=gridAdapter
         rvAccounts=findViewById(R.id.rvAccounts); rvAccounts.layoutManager=LinearLayoutManager(this)
         tvDrawerUser=findViewById(R.id.tvDrawerUser); tvDrawerExpire=findViewById(R.id.tvDrawerExpire)
-        tvLogout=findViewById(R.id.tvLogout)
-        tvDrawerOpen.setOnClickListener { drawer.openDrawer(GravityCompat.START) }
+        tvLogout=findViewById(R.id.tvLogout); tvAddAccount=findViewById(R.id.tvAddAccount)
         tvLogout.setOnClickListener {
             prefs.clearActive()
             startActivity(Intent(this,LoginActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK) })
             finish()
         }
-        try {
-            drawer.findViewById<View>(R.id.tvSettings)?.setOnClickListener {
-                drawer.closeDrawer(GravityCompat.START)
-                val sp=getSharedPreferences("EP_Prefs",0); val cur=sp.getInt("seek_sec",10)
-                val opts=arrayOf("5 sn","10 sn","15 sn","30 sn","60 sn"); val vals=intArrayOf(5,10,15,30,60)
-                AlertDialog.Builder(this).setTitle("Seek Suresi (simdi: ${cur}sn)")
-                    .setSingleChoiceItems(opts,vals.indexOfFirst{it==cur}.coerceAtLeast(0)) { dlg,w ->
-                        sp.edit().putInt("seek_sec",vals[w]).apply()
-                        Toast.makeText(this,"Seek: ${vals[w]}sn",Toast.LENGTH_SHORT).show(); dlg.dismiss()
-                    }.setNegativeButton("Iptal",null).show()
-            }
-        } catch(_:Exception) {}
-        tvTitle.setOnClickListener {
-            if (screen==Screen.ITEMS && rv.visibility==View.VISIBLE) showCategories()
-            else drawer.openDrawer(GravityCompat.START)
+        tvAddAccount.setOnClickListener { startActivity(Intent(this,LoginActivity::class.java)) }
+        findViewById<View>(R.id.tvSettings).setOnClickListener {
+            val sp=getSharedPreferences("EP_Prefs",0); val cur=sp.getInt("seek_sec",10)
+            val opts=arrayOf("5 sn","10 sn","15 sn","30 sn","60 sn"); val vals=intArrayOf(5,10,15,30,60)
+            AlertDialog.Builder(this).setTitle("Seek Suresi (simdi: ${cur}sn)")
+                .setSingleChoiceItems(opts,vals.indexOfFirst{it==cur}.coerceAtLeast(0)) { dlg,w ->
+                    sp.edit().putInt("seek_sec",vals[w]).apply()
+                    Toast.makeText(this,"Seek: ${vals[w]}sn",Toast.LENGTH_SHORT).show(); dlg.dismiss()
+                }.setNegativeButton("Iptal",null).show()
         }
         etSearch.addTextChangedListener(object:TextWatcher {
             override fun beforeTextChanged(s:CharSequence?,a:Int,b:Int,c:Int){}
@@ -110,49 +97,58 @@ class ContentActivity : AppCompatActivity() {
             }
         })
         activeAcc=prefs.getActive()
-        if (activeAcc==null) { tvStatus.text="Kayitli hesap yok."; tvStatus.visibility=View.VISIBLE; layoutModeSelector.visibility=View.GONE; rv.visibility=View.GONE; return }
-        setupDrawerAccounts()
-        btnModeLive.setOnClickListener { openMode("LIVE") }
-        btnModeVod.setOnClickListener { openMode("VOD") }
-        btnModeSeries.setOnClickListener { openMode("SERIES") }
-        showModeSelector()
+        if (activeAcc==null) { tvStatus.text="Kayitli hesap yok."; tvStatus.visibility=View.VISIBLE; rv.visibility=View.GONE; return }
+        setupAccountsList()
+        bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_live -> { openMode("LIVE"); true }
+                R.id.nav_vod -> { openMode("VOD"); true }
+                R.id.nav_series -> { openMode("SERIES"); true }
+                R.id.nav_settings -> { openSettings(); true }
+                else -> false
+            }
+        }
+        openMode("LIVE")
     }
-    private fun setupDrawerAccounts() {
+    private fun setupAccountsList() {
         val acc=activeAcc?:return
         tvDrawerUser.text="Hesap: "+acc.name; tvDrawerExpire.text="Sure: -"
         rvAccounts.adapter=AccountsAdapter(prefs.getAccounts().toMutableList(),
             onOpen={a -> prefs.setActive(a.id); activeAcc=a; tvDrawerUser.text="Hesap: "+a.name
-                drawer.closeDrawer(GravityCompat.START); showModeSelector() },
+                openMode(currentMode) },
             onDelete={a -> AlertDialog.Builder(this).setTitle("Hesabi Sil").setMessage("Silinsin mi? "+a.name)
                 .setPositiveButton("Evet") { _,_ -> prefs.deleteAccount(a.id)
                     val act=prefs.getActive()
                     if (act==null) { startActivity(Intent(this,LoginActivity::class.java)); finish() }
-                    else { activeAcc=act; tvDrawerUser.text="Hesap: "+act.name; showModeSelector() } }
+                    else { activeAcc=act; tvDrawerUser.text="Hesap: "+act.name; setupAccountsList() } }
                 .setNegativeButton("Hayir",null).show() })
     }
-    private fun showModeSelector() {
-        screen=Screen.CATEGORIES; selectedCategory=null; categoriesAll=emptyList(); streamsAll=emptyList()
-        etSearch.setText(""); layoutModeSelector.visibility=View.VISIBLE; rv.visibility=View.GONE
-        pb.visibility=View.GONE; tvStatus.visibility=View.GONE; tvTitle.text="Ne izlemek istersiniz?"
-        btnModeLive.requestFocus()
+    private fun openSettings() {
+        setupAccountsList()
+        tvTitle.text="Ayarlar"; etSearch.visibility=View.GONE
+        rv.visibility=View.GONE; layoutSettings.visibility=View.VISIBLE
+        pb.visibility=View.GONE; tvStatus.visibility=View.GONE
     }
     private fun openMode(mode:String) {
         val acc=activeAcc; if (acc==null) { Toast.makeText(this,"Once hesap ekleyin.",Toast.LENGTH_SHORT).show(); return }
-        if (acc.type=="M3U" && mode!="LIVE") { Toast.makeText(this,"M3U: sadece Canli TV.",Toast.LENGTH_SHORT).show(); return }
+        if (acc.type=="M3U" && mode!="LIVE") {
+            Toast.makeText(this,"M3U: sadece Canli TV.",Toast.LENGTH_SHORT).show()
+            bottomNav.selectedItemId = R.id.nav_live
+            return
+        }
         currentMode=mode
         tvTitle.text=when(mode) { "VOD"->"Filmler"; "SERIES"->"Diziler"; else->"Canli TV" }
-        layoutModeSelector.visibility=View.GONE; rv.visibility=View.VISIBLE
+        etSearch.visibility=View.VISIBLE; layoutSettings.visibility=View.GONE; rv.visibility=View.VISIBLE
         etSearch.setText(""); screen=Screen.CATEGORIES; selectedCategory=null
         categoriesAll=emptyList(); streamsAll=emptyList()
         fetchCategoriesAndStreams()
     }
     override fun onBackPressed() {
-        if (drawer.isDrawerOpen(GravityCompat.START)) { drawer.closeDrawer(GravityCompat.START); return }
+        if (layoutSettings.visibility==View.VISIBLE) { bottomNav.selectedItemId = R.id.nav_live; return }
         if (screen==Screen.ITEMS && rv.visibility==View.VISIBLE) {
             if (etSearch.text.isNotEmpty()) { etSearch.setText(""); return }
             showCategories(); return
         }
-        if (layoutModeSelector.visibility!=View.VISIBLE) { showModeSelector(); return }
         super.onBackPressed()
     }
     private fun showCategories() {
@@ -163,41 +159,56 @@ class ContentActivity : AppCompatActivity() {
     }
     private fun applyGlobalSearch(qRaw:String) {
         val q=qRaw.trim().lowercase(Locale.getDefault()); if (rv.visibility!=View.VISIBLE) return
-        screen=Screen.ITEMS
+        screen=Screen.ITEMS; useGridLayout()
         val filtered=streamsAll.filter { it.name.lowercase(Locale.getDefault()).contains(q) }
         filteredStreamIdx=filtered.map { streamsAll.indexOf(it) }
-        val tt=ArrayList<String>(); val ts=ArrayList<String>(); val ti=ArrayList<Int>()
+        val tt=ArrayList<String>(); val ts=ArrayList<String>(); val ti=ArrayList<Int>(); val ic=ArrayList<String?>()
         for (i in filtered.indices) {
             tt.add(filtered[i].name)
             ts.add("Kat: "+(categoriesAll.find{it.category_id==filtered[i].category_id}?.category_name?:"-"))
-            ti.add(i)
+            ti.add(i); ic.add(filtered[i].icon_url)
         }
-        displayTitles=tt; displaySubtitles=ts; displayMapIndex=ti; gridAdapter?.update(tt,ts)
+        displayTitles=tt; displaySubtitles=ts; displayMapIndex=ti; gridAdapter?.update(tt,ts,ic)
     }
     private fun applySearchFilter(qRaw:String) {
         val q=qRaw.trim().lowercase(Locale.getDefault()); if (rv.visibility!=View.VISIBLE) return
         val adInterval=RemoteConfig.getBannerListInterval(this)
-        val tt=ArrayList<String>(); val ts=ArrayList<String>(); val ti=ArrayList<Int>()
+        val tt=ArrayList<String>(); val ts=ArrayList<String>(); val ti=ArrayList<Int>(); val ic=ArrayList<String?>()
         if (screen==Screen.CATEGORIES) {
+            useListLayout()
             val cats=if(q.isEmpty()) categoriesAll else categoriesAll.filter{it.category_name.lowercase(Locale.getDefault()).contains(q)}
             filteredCategoryIds=cats.map{it.category_id}
             var count=0
             for (i in cats.indices) {
-                tt.add(cats[i].category_name); ts.add(""); ti.add(i); count++
-                if (adInterval>0 && count%adInterval==0) { tt.add("###AD###"); ts.add(""); ti.add(-1) }
+                tt.add(cats[i].category_name); ts.add(""); ti.add(i); ic.add(null); count++
+                if (adInterval>0 && count%adInterval==0) { tt.add("###AD###"); ts.add(""); ti.add(-1); ic.add(null) }
             }
         } else {
+            useGridLayout()
             val catId=selectedCategory?.category_id
             val items=if(catId.isNullOrEmpty()) streamsAll else streamsAll.filter{it.category_id==catId}
             val filtered=if(q.isEmpty()) items else items.filter{it.name.lowercase(Locale.getDefault()).contains(q)}
             filteredStreamIdx=filtered.map{streamsAll.indexOf(it)}
             var count=0
             for (i in filtered.indices) {
-                tt.add(filtered[i].name); ts.add(""); ti.add(i); count++
-                if (adInterval>0 && count%adInterval==0) { tt.add("###AD###"); ts.add(""); ti.add(-1) }
+                tt.add(filtered[i].name); ts.add(""); ti.add(i); ic.add(filtered[i].icon_url); count++
+                if (adInterval>0 && count%adInterval==0) { tt.add("###AD###"); ts.add(""); ti.add(-1); ic.add(null) }
             }
         }
-        displayTitles=tt; displaySubtitles=ts; displayMapIndex=ti; gridAdapter?.update(tt,ts)
+        displayTitles=tt; displaySubtitles=ts; displayMapIndex=ti; gridAdapter?.update(tt,ts,ic)
+    }
+    private fun useGridLayout() {
+        if (layoutManager !is androidx.recyclerview.widget.GridLayoutManager) {
+            val spanCount = if (resources.configuration.screenWidthDp >= 600) 5 else 3
+            layoutManager = androidx.recyclerview.widget.GridLayoutManager(this, spanCount)
+            rv.layoutManager = layoutManager
+        }
+    }
+    private fun useListLayout() {
+        if (layoutManager is androidx.recyclerview.widget.GridLayoutManager) {
+            layoutManager = LinearLayoutManager(this)
+            rv.layoutManager = layoutManager
+        }
     }
     private fun onGridClick(pos:Int) {
         if (pos<0 || pos>=displayMapIndex.size) return
@@ -322,7 +333,8 @@ class ContentActivity : AppCompatActivity() {
         val arr=JSONArray(httpGet(urlStr)); val list=ArrayList<StreamItem>(); var i=0
         while(i<arr.length()) {
             val o=arr.getJSONObject(i)
-            list.add(StreamItem(o.optString("name","?"),o.optString("stream_id",null),o.optString("series_id",null),o.optString("container_extension",null),o.optString("category_id",""),null,null,null)); i++
+            val icon=o.optString("stream_icon",o.optString("cover",""))
+            list.add(StreamItem(o.optString("name","?"),o.optString("stream_id",null),o.optString("series_id",null),o.optString("container_extension",null),o.optString("category_id",""),null,null,null,if(icon.isNotEmpty()) icon else null)); i++
         }
         return list
     }
@@ -335,4 +347,3 @@ class ContentActivity : AppCompatActivity() {
         return conn.inputStream.bufferedReader(Charsets.UTF_8).use{it.readText()}
     }
 }
-

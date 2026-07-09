@@ -1,0 +1,6 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/nav_live" android:title="Canli TV" android:icon="@drawable/ic_nav_live" />
+    <item android:id="@+id/nav_vod" android:title="Filmler" android:icon="@drawable/ic_nav_vod" />
+    <item android:id="@+id/nav_series" android:title="Diziler" android:icon="@drawable/ic_nav_series" />
+    <item android:id="@+id/nav_settings" android:title="Ayarlar" android:icon="@drawable/ic_nav_settings" />
+</menu>

@@ -3,6 +3,7 @@ package com.erdin.player
 import android.widget.Button
 import android.widget.EditText
 import androidx.test.core.app.ApplicationProvider
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -33,7 +34,13 @@ class LoginFlowCrashTest {
 
         if (nextIntent != null) {
             val nextController = Robolectric.buildActivity(ContentActivity::class.java, nextIntent)
-            nextController.create().start().resume()
+            val contentActivity = nextController.create().start().resume().get()
+
+            val bottomNav = contentActivity.findViewById<BottomNavigationView>(R.id.bottomNav)
+            bottomNav.selectedItemId = R.id.nav_vod
+            bottomNav.selectedItemId = R.id.nav_series
+            bottomNav.selectedItemId = R.id.nav_settings
+            bottomNav.selectedItemId = R.id.nav_live
         }
     }
 
