@@ -793,27 +793,42 @@ jobs:
             private var rewardedAd: RewardedAd? = null
 
             fun init(activity: Activity, onConsentReady: (() -> Unit)? = null) {
-                val params = ConsentRequestParameters.Builder().build()
-                val consentInfo: ConsentInformation = UserMessagingPlatform.getConsentInformation(activity)
+                // Play Services eksik/eski oldugu IPTV/TV kutularinda reklam SDK'si
+                // baslatilamayabilir; bu durum uygulamayi asla cokertmemeli.
+                try {
+                    val params = ConsentRequestParameters.Builder().build()
+                    val consentInfo: ConsentInformation = UserMessagingPlatform.getConsentInformation(activity)
 
-                consentInfo.requestConsentInfoUpdate(activity, params, {
-                    UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) {
+                    consentInfo.requestConsentInfoUpdate(activity, params, {
+                        try {
+                            UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) {
+                                startMobileAdsIfNeeded(activity)
+                                onConsentReady?.invoke()
+                            }
+                        } catch (e: Exception) {
+                            startMobileAdsIfNeeded(activity)
+                            onConsentReady?.invoke()
+                        }
+                    }, {
                         startMobileAdsIfNeeded(activity)
                         onConsentReady?.invoke()
-                    }
-                }, {
-                    startMobileAdsIfNeeded(activity)
+                    })
+                } catch (e: Throwable) {
                     onConsentReady?.invoke()
-                })
+                }
 
-                RemoteConfig.init(activity)
+                try {
+                    RemoteConfig.init(activity)
+                } catch (e: Exception) { }
             }
 
             private fun startMobileAdsIfNeeded(context: Context) {
                 if (!mobileAdsInitialized) {
                     synchronized(this) {
                         if (!mobileAdsInitialized) {
-                            MobileAds.initialize(context.applicationContext) {}
+                            try {
+                                MobileAds.initialize(context.applicationContext) {}
+                            } catch (e: Throwable) { }
                             mobileAdsInitialized = true
                         }
                     }
@@ -821,25 +836,33 @@ jobs:
             }
 
             fun loadNativeAdInto(context: Context, container: ViewGroup, onResult: (Boolean) -> Unit) {
-                val adUnitId = RemoteConfig.getNativeAdId(context)
-                val loader = com.google.android.gms.ads.AdLoader.Builder(context, adUnitId)
-                    .forNativeAd { nativeAd: NativeAd ->
-                        val inflater = LayoutInflater.from(context)
-                        val adView = inflater.inflate(R.layout.ad_native_card, container, false) as NativeAdView
-                        bindNativeAd(adView, nativeAd)
-                        container.removeAllViews()
-                        container.addView(adView)
-                        onResult(true)
-                    }
-                    .withAdListener(object : com.google.android.gms.ads.AdListener() {
-                        override fun onAdFailedToLoad(error: LoadAdError) {
-                            onResult(false)
+                try {
+                    val adUnitId = RemoteConfig.getNativeAdId(context)
+                    val loader = com.google.android.gms.ads.AdLoader.Builder(context, adUnitId)
+                        .forNativeAd { nativeAd: NativeAd ->
+                            try {
+                                val inflater = LayoutInflater.from(context)
+                                val adView = inflater.inflate(R.layout.ad_native_card, container, false) as NativeAdView
+                                bindNativeAd(adView, nativeAd)
+                                container.removeAllViews()
+                                container.addView(adView)
+                                onResult(true)
+                            } catch (e: Exception) {
+                                onResult(false)
+                            }
                         }
-                    })
-                    .withNativeAdOptions(NativeAdOptions.Builder().build())
-                    .build()
+                        .withAdListener(object : com.google.android.gms.ads.AdListener() {
+                            override fun onAdFailedToLoad(error: LoadAdError) {
+                                onResult(false)
+                            }
+                        })
+                        .withNativeAdOptions(NativeAdOptions.Builder().build())
+                        .build()
 
-                loader.loadAd(AdRequest.Builder().build())
+                    loader.loadAd(AdRequest.Builder().build())
+                } catch (e: Throwable) {
+                    onResult(false)
+                }
             }
 
             private fun bindNativeAd(adView: NativeAdView, nativeAd: NativeAd) {
@@ -882,17 +905,22 @@ jobs:
             }
 
             fun loadRewarded(context: Context, onLoaded: (Boolean) -> Unit = {}) {
-                val adUnitId = RemoteConfig.getRewardedAdId(context)
-                RewardedAd.load(context, adUnitId, AdRequest.Builder().build(), object : RewardedAdLoadCallback() {
-                    override fun onAdLoaded(ad: RewardedAd) {
-                        rewardedAd = ad
-                        onLoaded(true)
-                    }
-                    override fun onAdFailedToLoad(error: LoadAdError) {
-                        rewardedAd = null
-                        onLoaded(false)
-                    }
-                })
+                try {
+                    val adUnitId = RemoteConfig.getRewardedAdId(context)
+                    RewardedAd.load(context, adUnitId, AdRequest.Builder().build(), object : RewardedAdLoadCallback() {
+                        override fun onAdLoaded(ad: RewardedAd) {
+                            rewardedAd = ad
+                            onLoaded(true)
+                        }
+                        override fun onAdFailedToLoad(error: LoadAdError) {
+                            rewardedAd = null
+                            onLoaded(false)
+                        }
+                    })
+                } catch (e: Throwable) {
+                    rewardedAd = null
+                    onLoaded(false)
+                }
             }
 
             fun showRewarded(activity: Activity, onEarned: () -> Unit, onDismissed: () -> Unit) {
@@ -901,18 +929,23 @@ jobs:
                     onDismissed()
                     return
                 }
-                ad.fullScreenContentCallback = object : com.google.android.gms.ads.FullScreenContentCallback() {
-                    override fun onAdDismissedFullScreenContent() {
-                        rewardedAd = null
-                        loadRewarded(activity)
-                        onDismissed()
+                try {
+                    ad.fullScreenContentCallback = object : com.google.android.gms.ads.FullScreenContentCallback() {
+                        override fun onAdDismissedFullScreenContent() {
+                            rewardedAd = null
+                            loadRewarded(activity)
+                            onDismissed()
+                        }
+                        override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
+                            rewardedAd = null
+                            onDismissed()
+                        }
                     }
-                    override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
-                        rewardedAd = null
-                        onDismissed()
-                    }
+                    ad.show(activity) { onEarned() }
+                } catch (e: Throwable) {
+                    rewardedAd = null
+                    onDismissed()
                 }
-                ad.show(activity) { onEarned() }
             }
 
             fun hasRewardedLoaded(): Boolean = rewardedAd != null
@@ -1002,13 +1035,17 @@ jobs:
                 holder.txt.text = item.name
                 holder.itemView.setOnClickListener { onClick(item) }
 
-                if (!item.icon_url.isNullOrEmpty()) {
-                    holder.img.load(item.icon_url) {
-                        crossfade(true)
-                        placeholder(R.drawable.bg_poster_placeholder)
-                        error(R.drawable.bg_poster_placeholder)
+                try {
+                    if (!item.icon_url.isNullOrEmpty()) {
+                        holder.img.load(item.icon_url) {
+                            crossfade(true)
+                            placeholder(R.drawable.bg_poster_placeholder)
+                            error(R.drawable.bg_poster_placeholder)
+                        }
+                    } else {
+                        holder.img.setImageResource(R.drawable.bg_poster_placeholder)
                     }
-                } else {
+                } catch (e: Exception) {
                     holder.img.setImageResource(R.drawable.bg_poster_placeholder)
                 }
             }
@@ -1834,7 +1871,11 @@ jobs:
                 findViewById<View>(R.id.btnBackSeries).setOnClickListener { finish() }
 
                 val imgCover = findViewById<ImageView>(R.id.imgSeriesCover)
-                if (poster.isNotEmpty()) imgCover.load(poster) else imgCover.setImageResource(R.drawable.bg_poster_placeholder)
+                try {
+                    if (poster.isNotEmpty()) imgCover.load(poster) else imgCover.setImageResource(R.drawable.bg_poster_placeholder)
+                } catch (e: Exception) {
+                    imgCover.setImageResource(R.drawable.bg_poster_placeholder)
+                }
 
                 val pb = findViewById<ProgressBar>(R.id.pbSeriesLoading)
                 val rvSeasons = findViewById<RecyclerView>(R.id.rvSeasons)
