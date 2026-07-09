@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.gms.ads.nativead.NativeAdView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:background="@drawable/bg_focusable" android:padding="12dp">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <ImageView android:id="@+id/adIcon" android:layout_width="36dp" android:layout_height="36dp"
+                android:layout_marginEnd="10dp" android:contentDescription="@null"/>
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Reklam" android:textColor="@color/hint_yellow" android:textSize="10sp"
+                    android:background="@color/gray_700" android:paddingLeft="6dp" android:paddingRight="6dp"
+                    android:paddingTop="1dp" android:paddingBottom="1dp" android:layout_marginBottom="3dp"/>
+                <TextView android:id="@+id/adHeadline" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:maxLines="2"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView android:id="@+id/adBody" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="@color/hint_yellow" android:textSize="12sp" android:maxLines="3"
+            android:layout_marginTop="6dp"/>
+
+        <Button android:id="@+id/adCallToAction" android:layout_width="match_parent" android:layout_height="40dp"
+            android:textAllCaps="false" android:layout_marginTop="8dp"/>
+    </LinearLayout>
+</com.google.android.gms.ads.nativead.NativeAdView>

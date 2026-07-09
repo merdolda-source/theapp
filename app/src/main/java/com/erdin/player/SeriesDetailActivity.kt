@@ -51,7 +51,7 @@ class SeriesDetailActivity : AppCompatActivity() {
     }
     private fun showSeasons() {
         screen=Screen.SEASONS; tvTitle.text=seriesName
-        val adInterval=RemoteConfig.getBannerListInterval(this)
+        val adInterval=RemoteConfig.getNativeGridInterval(this)
         val titles=ArrayList<String>(); val subs=ArrayList<String>(); val mapIndex=ArrayList<Int>(); var count=0
         for(i in seasons.indices) {
             titles.add("Sezon "+seasons[i]); subs.add(""); mapIndex.add(i); count++
@@ -62,7 +62,7 @@ class SeriesDetailActivity : AppCompatActivity() {
     }
     private fun showEpisodes(season:Int) {
         screen=Screen.EPISODES; displayEpisodes=allEpisodes.filter{it.seasonNumber==season}.sortedBy{it.episodeNumber}
-        val adInterval=RemoteConfig.getBannerListInterval(this)
+        val adInterval=RemoteConfig.getNativeGridInterval(this)
         val titles=ArrayList<String>(); val subs=ArrayList<String>(); val mapIndex=ArrayList<Int>(); var count=0
         for(i in displayEpisodes.indices) {
             val ep=displayEpisodes[i]

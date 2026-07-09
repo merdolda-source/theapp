@@ -20,11 +20,11 @@
 
     <FrameLayout android:id="@+id/posterLayout"
         android:layout_width="match_parent" android:layout_height="150dp"
-        android:visibility="gone" android:background="@color/bg_card">
+        android:visibility="gone" android:background="@drawable/bg_focusable">
         <ImageView android:id="@+id/imgPoster"
             android:layout_width="match_parent" android:layout_height="match_parent"
-            android:scaleType="centerCrop" android:contentDescription="@null"/>
-        <View android:layout_width="match_parent" android:layout_height="52dp"
+            android:scaleType="fitCenter" android:padding="14dp" android:contentDescription="@null"/>
+        <View android:layout_width="match_parent" android:layout_height="46dp"
             android:layout_gravity="bottom" android:background="@drawable/bg_poster_scrim"/>
         <TextView android:id="@+id/txtPosterName"
             android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -33,12 +33,7 @@
             android:maxLines="2" android:ellipsize="end"/>
     </FrameLayout>
 
-    <LinearLayout android:id="@+id/adContainer"
+    <FrameLayout android:id="@+id/adContainer"
         android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:gravity="center"
-        android:visibility="gone">
-        <com.google.android.gms.ads.AdView android:id="@+id/adViewItem"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"
-            ads:adSize="BANNER" ads:adUnitId="@string/admob_banner_test"/>
-    </LinearLayout>
+        android:visibility="gone"/>
 </LinearLayout>

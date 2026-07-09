@@ -59,6 +59,8 @@ class PlayerActivity : AppCompatActivity() {
     private var playUrl = ""; private var playType = "LIVE"; private var playTitle = ""; private var itemKey = ""
     private var isLocked = false; private var sbDragging = false; private var ctrlVisible = true
     private var candidates = listOf<String>(); private var attempt = 0
+    private var errorRetryCount = 0
+    private val MAX_ERROR_RETRIES = 2
     private var audioManager: AudioManager? = null; private var maxVolume = 15
     private var gestureVolStart = 0; private var gestureBrightStart = 0.5f
     private var gestureStartY = 0f; private var isGesture = false
@@ -145,9 +147,12 @@ class PlayerActivity : AppCompatActivity() {
             }
             override fun onPlaybackStateChanged(state: Int) {
                 pbBuffering.visibility = if (state == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
-                if (state == Player.STATE_READY && playType != "LIVE") {
-                    seekBar.visibility = View.VISIBLE
-                    tvPosition.visibility = View.VISIBLE; tvDuration.visibility = View.VISIBLE
+                if (state == Player.STATE_READY) {
+                    errorRetryCount = 0
+                    if (playType != "LIVE") {
+                        seekBar.visibility = View.VISIBLE
+                        tvPosition.visibility = View.VISIBLE; tvDuration.visibility = View.VISIBLE
+                    }
                 }
                 if (state == Player.STATE_ENDED && playType != "LIVE") {
                     itemKey.takeIf { it.isNotEmpty() }?.let { prefs.clearResume(it) }
@@ -157,6 +162,13 @@ class PlayerActivity : AppCompatActivity() {
                 if (attempt + 1 < candidates.size) {
                     attempt++; center("Format ${attempt+1}/${candidates.size} deneniyor...")
                     buildPlayer(candidates[attempt], ref, org, 0L)
+                } else if (errorRetryCount < MAX_ERROR_RETRIES) {
+                    // Seek sirasinda ya da agdaki gecici bir kesintide oynatici hemen
+                    // pes etmesin; kaldigi konumdan birkac kez daha baglanmayi dener.
+                    errorRetryCount++
+                    val resumeAt = (player?.currentPosition ?: 0L).coerceAtLeast(0L)
+                    center("Baglanti sorunu, tekrar deneniyor ($errorRetryCount/$MAX_ERROR_RETRIES)...")
+                    handler.postDelayed({ buildPlayer(url, ref, org, resumeAt) }, 1200)
                 } else {
                     showPlayerError(err)
                     RemoteLogger.sendEvent(this@PlayerActivity,"player_error",mapOf("url" to url,"err" to (err.message?:"")))
@@ -171,7 +183,7 @@ class PlayerActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tvPlayerError).text = "Yayin acilamadi.\n$code\n$msg"
         findViewById<View>(R.id.layoutPlayerError).visibility = View.VISIBLE
         findViewById<View>(R.id.btnPlayerRetry).setOnClickListener {
-            attempt = 0
+            attempt = 0; errorRetryCount = 0
             buildPlayer(candidates[attempt], intent.getStringExtra("REF") ?: "", intent.getStringExtra("ORG") ?: "", 0L)
         }
     }
@@ -324,7 +336,12 @@ class PlayerActivity : AppCompatActivity() {
             override fun onStartTrackingTouch(sb: SeekBar) { sbDragging=true; handler.removeCallbacks(hideCtrlR) }
             override fun onStopTrackingTouch(sb: SeekBar) {
                 sbDragging=false
-                val dur=player?.duration?:0L; if(dur>0) player?.seekTo(sb.progress.toLong()*dur/1000L)
+                val p=player
+                if (p!=null && p.isCurrentMediaItemSeekable) {
+                    val dur=p.duration; if(dur>0) p.seekTo(sb.progress.toLong()*dur/1000L)
+                } else if (p!=null) {
+                    Toast.makeText(this@PlayerActivity,"Bu yayin sarma (seek) desteklemiyor.",Toast.LENGTH_SHORT).show()
+                }
                 schedHide()
             }
         })
@@ -376,7 +393,12 @@ class PlayerActivity : AppCompatActivity() {
     }
     private fun togglePlay() { player?.let { if(it.isPlaying) it.pause() else it.play() } }
     private fun seekBy(ms: Long) {
-        val p=player?:return; p.seekTo((p.currentPosition+ms).coerceIn(0L,if(p.duration>0) p.duration else Long.MAX_VALUE))
+        val p=player?:return
+        if (!p.isCurrentMediaItemSeekable) {
+            Toast.makeText(this,"Bu yayin sarma (seek) desteklemiyor.",Toast.LENGTH_SHORT).show()
+            return
+        }
+        p.seekTo((p.currentPosition+ms).coerceIn(0L,if(p.duration>0) p.duration else Long.MAX_VALUE))
     }
     private fun applyAspect() {
         pvMain.resizeMode=when(aspectMode) { 0->AspectRatioFrameLayout.RESIZE_MODE_FIT; 1->AspectRatioFrameLayout.RESIZE_MODE_FILL; else->AspectRatioFrameLayout.RESIZE_MODE_ZOOM }

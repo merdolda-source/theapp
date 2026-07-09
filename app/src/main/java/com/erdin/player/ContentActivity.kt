@@ -9,7 +9,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.gms.ads.AdView
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import org.json.JSONArray
 import org.json.JSONObject
@@ -61,8 +60,6 @@ class ContentActivity : AppCompatActivity() {
         super.onCreate(s); setContentView(R.layout.activity_content)
         prefs=Prefs(this)
         AdsHelper.init(this); AdsHelper.loadInterstitial(this)
-        AdsHelper.loadBanner(findViewById<AdView>(R.id.adViewTopContent))
-        AdsHelper.loadBanner(findViewById<AdView>(R.id.adViewBottomContent))
         rv=findViewById(R.id.rvContent)
         pb=findViewById(R.id.pbLoading); tvStatus=findViewById(R.id.tvStatus)
         tvTitle=findViewById(R.id.tvTitleBar); etSearch=findViewById(R.id.etSearch)
@@ -128,6 +125,9 @@ class ContentActivity : AppCompatActivity() {
         tvTitle.text="Ayarlar"; etSearch.visibility=View.GONE
         rv.visibility=View.GONE; layoutSettings.visibility=View.VISIBLE
         pb.visibility=View.GONE; tvStatus.visibility=View.GONE
+        val nativeContainer=findViewById<FrameLayout>(R.id.nativeAdContainer)
+        nativeContainer.visibility=View.VISIBLE
+        AdsHelper.loadNativeAdInto(this, nativeContainer) { }
     }
     private fun openMode(mode:String) {
         val acc=activeAcc; if (acc==null) { Toast.makeText(this,"Once hesap ekleyin.",Toast.LENGTH_SHORT).show(); return }
@@ -141,6 +141,9 @@ class ContentActivity : AppCompatActivity() {
         etSearch.visibility=View.VISIBLE; layoutSettings.visibility=View.GONE; rv.visibility=View.VISIBLE
         etSearch.setText(""); screen=Screen.CATEGORIES; selectedCategory=null
         categoriesAll=emptyList(); streamsAll=emptyList()
+        val nativeContainer=findViewById<FrameLayout>(R.id.nativeAdContainer)
+        nativeContainer.visibility=View.VISIBLE
+        AdsHelper.loadNativeAdInto(this, nativeContainer) { }
         fetchCategoriesAndStreams()
     }
     override fun onBackPressed() {
@@ -172,7 +175,7 @@ class ContentActivity : AppCompatActivity() {
     }
     private fun applySearchFilter(qRaw:String) {
         val q=qRaw.trim().lowercase(Locale.getDefault()); if (rv.visibility!=View.VISIBLE) return
-        val adInterval=RemoteConfig.getBannerListInterval(this)
+        val adInterval=RemoteConfig.getNativeGridInterval(this)
         val tt=ArrayList<String>(); val ts=ArrayList<String>(); val ti=ArrayList<Int>(); val ic=ArrayList<String?>()
         if (screen==Screen.CATEGORIES) {
             useListLayout()

@@ -7,10 +7,11 @@ import com.erdin.player.R
 object RemoteConfig {
     private const val CONFIG_URL = "https://creatorapp24.com/erdin/api/config.php"
     @Volatile private var initialized = false
-    @Volatile private var bannerId: String? = null
+    @Volatile private var nativeId: String? = null
     @Volatile private var interstitialId: String? = null
+    @Volatile private var appOpenId: String? = null
     @Volatile private var channelInterval: Int = 4
-    @Volatile private var bannerListInterval: Int = 7
+    @Volatile private var nativeGridInterval: Int = 7
     fun init(context: Context) {
         if (initialized) return
         synchronized(this) {
@@ -25,17 +26,18 @@ object RemoteConfig {
                     val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                     val obj = JSONObject(body)
                     val ads = obj.optJSONObject("ads") ?: obj
-                    bannerId = ads.optString("admob_banner_id", null)
+                    nativeId = ads.optString("admob_native_id", null)
                     interstitialId = ads.optString("admob_interstitial_id", null)
+                    appOpenId = ads.optString("admob_app_open_id", null)
                     val iv = ads.optInt("channel_interval", 0); if (iv > 0) channelInterval = iv
-                    val li = ads.optInt("banner_interval", 7); if (li > 0) bannerListInterval = li
+                    val gi = ads.optInt("native_grid_interval", 0); if (gi > 0) nativeGridInterval = gi
                 } catch (_: Exception) {}
             }.start()
         }
     }
-    fun getBannerId(context: Context): String = bannerId ?: context.getString(R.string.admob_banner_test)
+    fun getNativeId(context: Context): String = nativeId ?: context.getString(R.string.admob_native_test)
     fun getInterstitialId(context: Context): String = interstitialId ?: context.getString(R.string.admob_interstitial_test)
+    fun getAppOpenId(context: Context): String = appOpenId ?: context.getString(R.string.admob_app_open_test)
     fun getChannelInterval(context: Context, def: Int): Int = if (channelInterval > 0) channelInterval else def
-    fun getBannerListInterval(context: Context): Int = bannerListInterval
+    fun getNativeGridInterval(context: Context): Int = nativeGridInterval
 }
-

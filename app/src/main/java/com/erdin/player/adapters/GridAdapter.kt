@@ -9,7 +9,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.google.android.gms.ads.AdView
 import com.erdin.player.R
 import com.erdin.player.utils.AdsHelper
 class GridAdapter(
@@ -25,8 +24,7 @@ class GridAdapter(
         val posterLayout: FrameLayout = v.findViewById(R.id.posterLayout)
         val imgPoster: ImageView = v.findViewById(R.id.imgPoster)
         val txtPosterName: TextView = v.findViewById(R.id.txtPosterName)
-        val adContainer: LinearLayout = v.findViewById(R.id.adContainer)
-        val adView: AdView = v.findViewById(R.id.adViewItem)
+        val adContainer: FrameLayout = v.findViewById(R.id.adContainer)
     }
     override fun onCreateViewHolder(parent: ViewGroup, vt: Int): VH =
         VH(LayoutInflater.from(parent.context).inflate(R.layout.item_grid_pro, parent, false))
@@ -35,7 +33,8 @@ class GridAdapter(
         if (t == "###AD###") {
             h.cardLayout.visibility = View.GONE; h.posterLayout.visibility = View.GONE
             h.adContainer.visibility = View.VISIBLE
-            AdsHelper.loadBanner(h.adView); h.itemView.isFocusable = false; h.itemView.isClickable = false
+            h.itemView.isFocusable = false; h.itemView.isClickable = false
+            AdsHelper.loadNativeAdInto(h.adContainer.context, h.adContainer) { }
             return
         }
         h.adContainer.visibility = View.GONE

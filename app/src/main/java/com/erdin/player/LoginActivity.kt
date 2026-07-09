@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.gms.ads.AdView
 import com.erdin.player.models.AccountProfile
 import com.erdin.player.utils.AdsHelper
 import com.erdin.player.utils.Prefs
@@ -20,8 +19,10 @@ class LoginActivity : AppCompatActivity() {
         if (prefs.getActive() != null) { startActivity(Intent(this,ContentActivity::class.java)); finish(); return }
         RemoteLogger.sendEvent(this,"screen_login_open",emptyMap())
         AdsHelper.init(this)
-        AdsHelper.loadBanner(findViewById<AdView>(R.id.adViewTopLogin))
         AdsHelper.loadInterstitial(this)
+        val nativeContainer = findViewById<FrameLayout>(R.id.nativeAdContainerLogin)
+        nativeContainer.visibility = View.VISIBLE
+        AdsHelper.loadNativeAdInto(this, nativeContainer) { }
         val cardX = findViewById<View>(R.id.cardXtream); val cardM = findViewById<View>(R.id.cardM3u)
         val tvX = findViewById<TextView>(R.id.tvXtream); val tvM = findViewById<TextView>(R.id.tvM3u)
         val lX = findViewById<View>(R.id.layoutXtream); val lM = findViewById<View>(R.id.layoutM3u)

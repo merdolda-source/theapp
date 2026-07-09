@@ -1,15 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:ads="http://schemas.android.com/apk/res-auto"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:background="@color/bg_dark">
-
-    <com.google.android.gms.ads.AdView android:id="@+id/adViewTopContent"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        ads:adSize="BANNER" ads:adUnitId="@string/admob_banner_test"
-        android:layout_marginBottom="4dp"
-        android:focusable="false" android:focusableInTouchMode="false"/>
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="horizontal" android:gravity="center_vertical"
@@ -98,17 +91,21 @@
         </ScrollView>
     </FrameLayout>
 
-    <com.google.android.gms.ads.AdView android:id="@+id/adViewBottomContent"
+    <FrameLayout android:id="@+id/nativeAdContainer"
         android:layout_width="match_parent" android:layout_height="wrap_content"
-        ads:adSize="BANNER" ads:adUnitId="@string/admob_banner_test"
-        android:layout_marginTop="4dp"
-        android:focusable="false" android:focusableInTouchMode="false"/>
+        android:layout_marginTop="4dp" android:visibility="gone"/>
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNav"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_width="match_parent" android:layout_height="64dp"
         android:background="@color/nav_bar_bg"
+        android:elevation="8dp"
+        app:itemIconSize="24dp"
         app:itemIconTint="@color/nav_item_color"
         app:itemTextColor="@color/nav_item_color"
+        app:itemTextAppearanceActive="@style/NavLabelActive"
+        app:itemTextAppearanceInactive="@style/NavLabelInactive"
+        app:labelVisibilityMode="labeled"
+        app:itemRippleColor="@color/gray_700"
         app:menu="@menu/bottom_nav_menu"/>
 </LinearLayout>

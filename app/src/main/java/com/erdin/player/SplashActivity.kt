@@ -9,12 +9,15 @@ import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.erdin.player.utils.AdsHelper
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
     override fun onCreate(s: Bundle?) {
         super.onCreate(s)
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         setContentView(R.layout.activity_splash)
+        AdsHelper.init(this)
+        AdsHelper.loadAppOpenAd(this)
         val logo = findViewById<ImageView>(R.id.ivSplashLogo)
         val name = findViewById<TextView>(R.id.tvSplashName)
         val tag  = findViewById<TextView>(R.id.tvSplashTagline)
@@ -26,10 +29,11 @@ class SplashActivity : AppCompatActivity() {
         Handler(Looper.getMainLooper()).postDelayed({
             val prefs = getSharedPreferences("EP_Prefs",0)
             val target = if (prefs.getInt("active_id",-1) > 0) ContentActivity::class.java else LoginActivity::class.java
-            startActivity(Intent(this, target))
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-            finish()
+            AdsHelper.showAppOpenOnceThenContinue(this) {
+                startActivity(Intent(this, target))
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+                finish()
+            }
         }, 2000)
     }
 }
-
